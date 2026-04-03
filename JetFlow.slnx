@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Abstractions/Abstractions.csproj" />
+  <Project Path="Core/Core.csproj" />
+  <Project Path="Sample/Sample.csproj" Id="7a8e6f6d-656e-4040-9909-4f75149cf527" />
+</Solution>
