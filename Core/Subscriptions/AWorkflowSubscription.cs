@@ -1,23 +1,19 @@
 ﻿using JetFlow.Helpers;
-using JetFlow.Messages;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
+using NATS.Client.KeyValueStore;
 
 namespace JetFlow.Subscriptions;
 
-internal abstract class AWorkflowSubscription<TWorkflow>(NatsConnection connection, INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
+internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, INatsJSConsumer consumer, 
+    MessageSerializer messageSerializer, CancellationToken cancellationToken)
+    : ASubscription(connection, natsJSContext, timerStore, messageSerializer, cancellationToken)
     where TWorkflow : class
 {
-    protected NatsConnection Connection => connection;
-    protected MessageSerializer MessageSerializer => messageSerializer;
-
-    private Task? runningTask;
+    
     protected TWorkflow Workflow = Activator.CreateInstance<TWorkflow>()!;
 
-    public void Start()
-        => runningTask = StartStream();
-
-    private async Task StartStream()
+    protected override async Task StartStream(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -28,9 +24,15 @@ internal abstract class AWorkflowSubscription<TWorkflow>(NatsConnection connecti
                 await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationToken))
                 {
                     (var workflowName, var workflowId, _, var eventType) = SubjectHelper.ExtractWorkflowEventInfo(msg.Subject);
+                    bool isCompleted = false;
                     try
                     {
-                        await HandleEventAsync(workflowName, workflowId, eventType, msg);
+                        if (!Equals(eventType, WorkflowEventTypes.Start) && !Equals(eventType, WorkflowEventTypes.StepEnd)
+                            && !Equals(eventType, WorkflowEventTypes.StepError) && !Equals(eventType, WorkflowEventTypes.StepTimeout)
+                            && !Equals(eventType, WorkflowEventTypes.DelayEnd))
+                            throw new InvalidOperationException($"Unknown event type: {eventType}");
+                        await HandleWorkflowEventAsync(await CreateContext(workflowName, workflowId, msg.Metadata?.Sequence));
+                        isCompleted=true;
                     }
                     catch (WorkflowSuspendedException)
                     {
@@ -44,6 +46,8 @@ internal abstract class AWorkflowSubscription<TWorkflow>(NatsConnection connecti
                     {
                         await msg.AckAsync(cancellationToken: cancellationToken);
                     }
+                    if (isCompleted)
+                        await WorkflowHelper.EndWorkflowAsync<TWorkflow>(Connection, MessageSerializer, workflowId, new Messages.WorkflowEnd(DateTime.UtcNow, null), cancellationToken);
                 }
             }
             catch (NatsJSProtocolException e)
@@ -58,24 +62,8 @@ internal abstract class AWorkflowSubscription<TWorkflow>(NatsConnection connecti
         }
     }
 
-    private async ValueTask HandleEventAsync(string workflowName, string workflowId, WorkflowEventTypes eventType, INatsJSMsg<byte[]> msg)
-        => await (eventType switch
-        {
-            WorkflowEventTypes.Start => HandleWorkflowStartAsync(await CreateContext(workflowName, workflowId), msg),
-            WorkflowEventTypes.StepEnd => HandleStepEventAsync(await CreateContext(workflowName, workflowId), msg),
-            WorkflowEventTypes.StepError => HandleStepEventAsync(await CreateContext(workflowName, workflowId), msg),
-            WorkflowEventTypes.StepTimeout => HandleStepEventAsync(await CreateContext(workflowName, workflowId), msg),
-            _ => throw new InvalidOperationException($"Unknown event type: {eventType}")
-        });
-
-    private async ValueTask<IWorkflowContext> CreateContext(string workflowName, string workflowId)
-    {
-        var context = new WorkflowContext(workflowName, workflowId);
-        // populate context with data from storage if needed
-        return await Task.FromResult(context);
-    }
-
-
-    protected abstract ValueTask HandleWorkflowStartAsync(IWorkflowContext context, INatsJSMsg<byte[]> msg);
-    protected abstract ValueTask HandleStepEventAsync(IWorkflowContext context, INatsJSMsg<byte[]> msg);
+    protected ValueTask<WorkflowContext> CreateContext(string workflowName, string workflowId, NatsJSSequencePair? sequence)
+        => new WorkflowContext(Connection, NatsJSContext, MessageSerializer, TimerStore, workflowName, workflowId, sequence)
+                .LoadAsync();
+    protected abstract ValueTask HandleWorkflowEventAsync(WorkflowContext context);
 }

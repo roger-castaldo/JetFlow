@@ -1,68 +1,89 @@
-﻿using JetFlow.Messages;
-using NATS.Client.Core;
+﻿using NATS.Client.Core;
+using NATS.Client.JetStream;
 
 namespace JetFlow.Helpers;
 
 internal static class WorkflowHelper
 {
-    private record struct MessageInfo(string Subject, NatsHeaders Headers);
-
-    private static async ValueTask PublishMessageAsync(NatsConnection connection, byte[] data, MessageInfo messageInfo, CancellationToken cancellationToken)
-        => await connection.PublishAsync<byte[]>(messageInfo.Subject, data, messageInfo.Headers, cancellationToken: cancellationToken);
+    
 
     private static MessageInfo StartWorkflow<TWorkflow>(NatsHeaders? headers = null)
     {
         var id = Guid.NewGuid();
-        var subject = SubjectHelper.WorkflowStart(typeof(TWorkflow).Name, id.ToString());
-        var natsHeaders = headers ?? new NatsHeaders();
-        natsHeaders.Add(Constants.MessageIdHeader, $"{typeof(TWorkflow).Name}-{id}-start");
+        var subject = SubjectHelper.WorkflowStart(NameHelper.GetWorkflowName<TWorkflow>(), id.ToString());
+        var natsHeaders = ConnectionHelper.CloneHeaders(headers);
+        ConnectionHelper.AddMessageIds(natsHeaders, $"{NameHelper.GetWorkflowName<TWorkflow>()}-{id}-start");
         return new(subject, natsHeaders);
     }
 
-    public static ValueTask StartWorkflowAsync<TWorkflow>(NatsConnection connection, CancellationToken cancellationToken)
+    public static ValueTask StartWorkflowAsync<TWorkflow>(INatsConnection connection, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
-        => PublishMessageAsync(connection, Array.Empty<byte>(), StartWorkflow<TWorkflow>(), cancellationToken);
+        => ConnectionHelper.PublishMessageAsync(connection, Array.Empty<byte>(), StartWorkflow<TWorkflow>(), cancellationToken);
 
-    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput>(NatsConnection connection, MessageSerializer messageSerializer, TInput input, CancellationToken cancellationToken)
+    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput>(INatsConnection connection, MessageSerializer messageSerializer, TInput input, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow<TInput>
     {
         var (data, headers) = await messageSerializer.EncodeAsync<TInput>(input);
-        await PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
+        await ConnectionHelper.PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
     }
 
-    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2>(NatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, CancellationToken cancellationToken)
+    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2>(INatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow<TInput1, TInput2>
     {
-        var (data, headers) = await messageSerializer.EncodeAsync<(TInput1, TInput2)>((input1, input2));
-        await PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
+        var (data, headers) = await messageSerializer.EncodeAsync<TInput1, TInput2>(input1, input2);
+        await ConnectionHelper.PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
     }
 
-    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2, TInput3>(NatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, TInput3 input3, CancellationToken cancellationToken)
+    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2, TInput3>(INatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, TInput3 input3, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow<TInput1, TInput2, TInput3>
     {
-        var (data, headers) = await messageSerializer.EncodeAsync<(TInput1, TInput2, TInput3)>((input1, input2, input3));
-        await PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
+        var (data, headers) = await messageSerializer.EncodeAsync<TInput1, TInput2, TInput3>(input1, input2, input3);
+        await ConnectionHelper.PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
     }
 
-    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2, TInput3, TInput4>(NatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, TInput3 input3, TInput4 input4, CancellationToken cancellationToken)
+    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2, TInput3, TInput4>(INatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, TInput3 input3, TInput4 input4, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow<TInput1, TInput2, TInput3, TInput4>
     {
-        var (data, headers) = await messageSerializer.EncodeAsync<(TInput1, TInput2, TInput3, TInput4)>((input1, input2, input3, input4));
-        await PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
+        var (data, headers) = await messageSerializer.EncodeAsync<TInput1, TInput2, TInput3, TInput4>(input1, input2, input3, input4);
+        await ConnectionHelper.PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
     }
 
     private static MessageInfo EndWorkflow<TWorkflow>(string instanceId, NatsHeaders? headers = null)
     {
-        var subject = SubjectHelper.WorkflowEnd(typeof(TWorkflow).Name, instanceId);
-        var natsHeaders = headers ?? new NatsHeaders();
-        natsHeaders.Add(Constants.MessageIdHeader, $"{typeof(TWorkflow).Name}-{instanceId}-end");
+        var subject = SubjectHelper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), instanceId);
+        var natsHeaders = ConnectionHelper.CloneHeaders(headers);
+        ConnectionHelper.AddMessageIds(natsHeaders, $"{NameHelper.GetWorkflowName<TWorkflow>()}-{instanceId}-end");
         return new(subject, natsHeaders);
     }
 
-    public static async ValueTask EndWorkflowAsync<TWorkflow>(NatsConnection connection, MessageSerializer messageSerializer,string instanceId, Messages.WorkflowEnd workflowEnd, CancellationToken cancellationToken)
+    public static async ValueTask EndWorkflowAsync<TWorkflow>(INatsConnection connection, MessageSerializer messageSerializer,string instanceId, Messages.WorkflowEnd workflowEnd, CancellationToken cancellationToken)
         where TWorkflow : class
     {
         var (data, headers) = await messageSerializer.EncodeAsync<Messages.WorkflowEnd>(workflowEnd);
-        await PublishMessageAsync(connection, data, EndWorkflow<TWorkflow>(instanceId, headers), cancellationToken);
+        await ConnectionHelper.PublishMessageAsync(connection, data, EndWorkflow<TWorkflow>(instanceId, headers), cancellationToken);
+    }
+
+    private static MessageInfo WorkflowDelayStartMessage(string workflowName, string workflowId, Guid id, NatsHeaders? headers = null)
+    {
+        var subject = SubjectHelper.WorkflowDelayStart(workflowName, workflowId);
+        var natsHeaders = ConnectionHelper.CloneHeaders(headers);
+        ConnectionHelper.AddMessageIds(natsHeaders, $"{workflowName}-{workflowId}-{id}-delaystart");
+        return new(subject, natsHeaders);
+    }
+
+    private static MessageInfo WorkflowDelayTimerMessage(string workflowName, string workflowId, Guid id, TimeSpan delay, NatsHeaders? headers = null)
+    {
+        var subject = SubjectHelper.WorkflowDelayTimer(workflowName, workflowId);
+        var natsHeaders = ConnectionHelper.CloneHeaders(headers);
+        ConnectionHelper.AddMessageIds(natsHeaders, $"{workflowName}-{workflowId}-{id}-delaytimer");
+        ConnectionHelper.ScheduleDelayedSend(natsHeaders, delay, SubjectHelper.WorkflowDelayEnd(workflowName, workflowId));
+        return new(subject, natsHeaders);
+    }
+
+    internal static async Task StartWorkflowDelayAsync(string workflowName, string workflowId, TimeSpan delay, INatsConnection connection, INatsJSContext jsContext, CancellationToken cancellationToken)
+    {
+        var id = Guid.NewGuid();
+        await ConnectionHelper.PublishMessageAsync(connection, [], WorkflowDelayStartMessage(workflowName, workflowId, id), cancellationToken);
+        await ConnectionHelper.PublishMessageAsync(jsContext, [], WorkflowDelayTimerMessage(workflowName, workflowId, id, delay), cancellationToken);
     }
 }
