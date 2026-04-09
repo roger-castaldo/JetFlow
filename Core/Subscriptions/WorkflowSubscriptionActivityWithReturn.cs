@@ -8,7 +8,7 @@ internal class WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput
     : AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>(instance, connection, natsJSContext, timerStore, consumer, messageSerializer, cancellationToken)
      where TWorkflowActivity : IActivityWithReturn<TOutput>
 {
-    protected override ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, string workflowName, string workflowId, Guid activityId, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
+    protected override ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
         => Instance.ExecuteAsync(workflowState, cancellationToken);
 }
 
@@ -17,6 +17,6 @@ internal class WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput
     : AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>(instance, connection, natsJSContext, timerStore, consumer, messageSerializer, cancellationToken)
      where TWorkflowActivity : IActivityWithReturn<TOutput, TInput>
 {
-    protected async override ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, string workflowName, string workflowId, Guid activityId, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
-        => await Instance.ExecuteAsync(workflowState, (await MessageSerializer.DecodeAsync<TInput>(msg)), cancellationToken);
+    protected async override ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
+        => await Instance.ExecuteAsync(workflowState, (await MessageSerializer.DecodeAsync<TInput>(message.Message)), cancellationToken);
 }

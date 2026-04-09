@@ -16,9 +16,6 @@ internal static class ConnectionHelper
     public static async ValueTask PublishMessageAsync(INatsJSContext connection, byte[] data, MessageInfo messageInfo, CancellationToken cancellationToken)
         => await connection.PublishAsync<byte[]>(messageInfo.Subject, data, headers: messageInfo.Headers, cancellationToken: cancellationToken);
 
-    public static NatsHeaders CloneHeaders(NatsHeaders? source)
-        => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(source?.ToArray() ?? []));
-
     private static string CreateTTLString(TimeSpan ttl)
     {
         if (ttl == TimeSpan.Zero)

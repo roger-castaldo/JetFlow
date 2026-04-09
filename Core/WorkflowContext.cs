@@ -8,7 +8,7 @@ using System.Xml.Linq;
 namespace JetFlow;
 
 internal class WorkflowContext(INatsConnection connection, INatsJSContext jsContext, MessageSerializer messageSerializer, INatsKVStore timerStore, 
-    string workflowName, string workflowId, NatsJSSequencePair? sequence) 
+    EventMessage message) 
     : IWorkflowContext
 {
     private IReadOnlyCollection<INatsJSMsg<byte[]>> messages = [];
@@ -25,23 +25,23 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
                 DeliverPolicy = ConsumerConfigDeliverPolicy.All,
                 AckPolicy = ConsumerConfigAckPolicy.None,
                 FilterSubjects = [
-                    SubjectHelper.WorkflowStart(workflowName, workflowId),
-                    SubjectHelper.WorkflowEnd(workflowName, workflowId),
-                    SubjectHelper.WorkflowDelayEnd(workflowName, workflowId),
-                    SubjectHelper.WorkflowStepEnd(workflowName, workflowId, "*"),
-                    SubjectHelper.WorkflowStepError(workflowName, workflowId, "*"),
-                    SubjectHelper.WorkflowStepTimeout(workflowName, workflowId, "*")
+                    SubjectHelper.WorkflowStart(message.WorkflowName, message.WorkflowId),
+                    SubjectHelper.WorkflowEnd(message.WorkflowName, message.WorkflowId),
+                    SubjectHelper.WorkflowDelayEnd(message.WorkflowName, message.WorkflowId),
+                    SubjectHelper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepError(message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*")
                 ]
             }
         );
         var msgs = new List<INatsJSMsg<byte[]>>();
         await foreach(var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs=5, Expires=TimeSpan.FromSeconds(1)  }))
         {
-            if (Equals(SubjectHelper.WorkflowStart(workflowName, workflowId), msg.Subject))
+            if (Equals(SubjectHelper.WorkflowStart(message.WorkflowName, message.WorkflowId), msg.Subject))
                 StartMessage=msg;
             else
                 msgs.Add(msg);
-            if (Equals(msg.Metadata?.Sequence, sequence))
+            if (Equals(msg.Metadata?.Sequence, message.Message.Metadata?.Sequence))
                 break;
         }
         await jsContext.DeleteConsumerAsync(SubjectHelper.WorkflowEventsStreamsName,consumer.Info.Name);
@@ -55,7 +55,7 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
             return null;
         var result = messages.ElementAt(index);
         index++;
-        if (Equals(result.Subject, SubjectHelper.WorkflowEnd(workflowName, workflowId)))
+        if (Equals(result.Subject, SubjectHelper.WorkflowEnd(message.WorkflowName, message.WorkflowId)))
             throw new WorkflowEndedException();
         return result;
     }
@@ -104,7 +104,7 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
         var result = GetNextActivity<TActivity>();
         if (result!=null)
             return result;
-        await ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, workflowName, workflowId, cancellationToken);
+        await ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, message, cancellationToken);
         throw new WorkflowSuspendedException();
     }
 
@@ -113,7 +113,7 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
         var result = GetNextActivity<TActivity>();
         if (result!=null)
             return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
+        await ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, message, cancellationToken);
         throw new WorkflowSuspendedException();
     }
 
@@ -122,7 +122,7 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
         var result = await GetNextActivityAsync<TActivity, TOutput>(messageSerializer);
         if (result!=null)
             return result;
-        await ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, workflowName, workflowId, cancellationToken);
+        await ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, message, cancellationToken);
         throw new WorkflowSuspendedException();
     }
 
@@ -131,7 +131,7 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
         var result = await GetNextActivityAsync<TActivity, TOutput>(messageSerializer);
         if (result!=null)
             return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
+        await ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, message, cancellationToken);
         throw new WorkflowSuspendedException();
     }
 
@@ -145,7 +145,7 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
                 throw new InvalidDelayStepException(msg.Subject);
             return;
         }
-        await WorkflowHelper.StartWorkflowDelayAsync(workflowName, workflowId, delay, connection, jsContext, cancellationToken);
+        await WorkflowHelper.StartWorkflowDelayAsync(message, delay, connection, jsContext, cancellationToken);
         throw new WorkflowSuspendedException();
     }
 }

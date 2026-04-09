@@ -9,10 +9,10 @@ internal abstract class AWorkflowActivitySubscriptionWithReturn<TWorkflowActivit
     (TWorkflowActivity instance, INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
     : AWorkflowActivitySubscription<TWorkflowActivity>(instance, connection, natsJSContext, timerStore, consumer, messageSerializer, cancellationToken)
 {
-    protected override sealed async ValueTask HandleActivityRunAsync(IWorkflowState workflowState, string workflowName, string workflowId, Guid activityId, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
+    protected override sealed async ValueTask HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
     {
-        var result = await HandleActivityRunWithReturnAsync(workflowState, workflowName, workflowId, activityId, msg, cancellationToken);
-        await ActivityHelper.EndActivityAsync<TOutput>(workflowName, workflowId, NameHelper.GetActivityName<TWorkflowActivity>(), activityId, result, MessageSerializer, Connection, cancellationToken);
+        var result = await HandleActivityRunWithReturnAsync(workflowState, message, cancellationToken);
+        await ActivityHelper.EndActivityAsync<TOutput>(message, result, MessageSerializer, Connection, cancellationToken);
     }
-    protected abstract ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, string workflowName, string workflowId, Guid activityId, INatsJSMsg<byte[]> msg, CancellationToken cancellation);
+    protected abstract ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellation);
 }
