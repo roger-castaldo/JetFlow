@@ -117,33 +117,6 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
         throw new WorkflowSuspendedException();
     }
 
-    async ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput1, TInput2>(ActivityExecutionRequest<TInput1, TInput2> executionRequest)
-    {
-        var result = GetNextActivity<TActivity>();
-        if (result!=null)
-            return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput1, TInput2>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
-        throw new WorkflowSuspendedException();
-    }
-
-    async ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput1, TInput2, TInput3>(ActivityExecutionRequest<TInput1, TInput2, TInput3> executionRequest)
-    {
-        var result = GetNextActivity<TActivity>();
-        if (result!=null)
-            return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput1, TInput2, TInput3>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
-        throw new WorkflowSuspendedException();
-    }
-
-    async ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput1, TInput2, TInput3, TInput4>(ActivityExecutionRequest<TInput1, TInput2, TInput3, TInput4> executionRequest)
-    {
-        var result = GetNextActivity<TActivity>();
-        if (result!=null)
-            return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput1, TInput2, TInput3, TInput4>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
-        throw new WorkflowSuspendedException();
-    }
-
     async ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest)
     {
         var result = await GetNextActivityAsync<TActivity, TOutput>(messageSerializer);
@@ -159,33 +132,6 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
         if (result!=null)
             return result;
         await ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
-        throw new WorkflowSuspendedException();
-    }
-
-    async ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput1, TInput2>(ActivityExecutionRequest<TInput1, TInput2> executionRequest)
-    {
-        var result = await GetNextActivityAsync<TActivity, TOutput>(messageSerializer);
-        if (result!=null)
-            return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput1, TInput2>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
-        throw new WorkflowSuspendedException();
-    }
-
-    async ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput1, TInput2, TInput3>(ActivityExecutionRequest<TInput1, TInput2, TInput3> executionRequest)
-    {
-        var result = await GetNextActivityAsync<TActivity, TOutput>(messageSerializer);
-        if (result!=null)
-            return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput1, TInput2, TInput3>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
-        throw new WorkflowSuspendedException();
-    }
-
-    async ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput1, TInput2, TInput3, TInput4>(ActivityExecutionRequest<TInput1, TInput2, TInput3, TInput4> executionRequest)
-    {
-        var result = await GetNextActivityAsync<TActivity, TOutput>(messageSerializer);
-        if (result!=null)
-            return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput1, TInput2, TInput3, TInput4>(executionRequest, connection, jsContext, messageSerializer, timerStore, workflowName, workflowId, cancellationToken);
         throw new WorkflowSuspendedException();
     }
 

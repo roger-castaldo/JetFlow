@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace JetFlow.Configs;
 
-public record WorkflowOptions
+public sealed class WorkflowOptions
 {
 
 }

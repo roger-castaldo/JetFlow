@@ -27,27 +27,6 @@ internal static class WorkflowHelper
         await ConnectionHelper.PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
     }
 
-    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2>(INatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, CancellationToken cancellationToken)
-        where TWorkflow : IWorkflow<TInput1, TInput2>
-    {
-        var (data, headers) = await messageSerializer.EncodeAsync<TInput1, TInput2>(input1, input2);
-        await ConnectionHelper.PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
-    }
-
-    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2, TInput3>(INatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, TInput3 input3, CancellationToken cancellationToken)
-        where TWorkflow : IWorkflow<TInput1, TInput2, TInput3>
-    {
-        var (data, headers) = await messageSerializer.EncodeAsync<TInput1, TInput2, TInput3>(input1, input2, input3);
-        await ConnectionHelper.PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
-    }
-
-    public static async ValueTask StartWorkflowAsync<TWorkflow, TInput1, TInput2, TInput3, TInput4>(INatsConnection connection, MessageSerializer messageSerializer, TInput1 input1, TInput2 input2, TInput3 input3, TInput4 input4, CancellationToken cancellationToken)
-        where TWorkflow : IWorkflow<TInput1, TInput2, TInput3, TInput4>
-    {
-        var (data, headers) = await messageSerializer.EncodeAsync<TInput1, TInput2, TInput3, TInput4>(input1, input2, input3, input4);
-        await ConnectionHelper.PublishMessageAsync(connection, data, StartWorkflow<TWorkflow>(headers), cancellationToken);
-    }
-
     private static MessageInfo EndWorkflow<TWorkflow>(string instanceId, NatsHeaders? headers = null)
     {
         var subject = SubjectHelper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), instanceId);

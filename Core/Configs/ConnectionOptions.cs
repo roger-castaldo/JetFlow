@@ -15,7 +15,7 @@ namespace JetFlow.Configs
         GZip
     }
 
-    public sealed record ConnectionOptions
+    public sealed class ConnectionOptions
     {
         public ConnectionOptions(NatsOpts options)
         {
