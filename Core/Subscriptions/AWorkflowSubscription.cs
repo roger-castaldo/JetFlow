@@ -3,6 +3,8 @@ using JetFlow.Messages;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
+using System.Diagnostics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JetFlow.Subscriptions;
 
@@ -38,6 +40,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
         }
         catch (Exception ex)
         {
+            Activity.Current?.SetStatus(ActivityStatusCode.Error, ex.Message);
             await WorkflowHelper.EndWorkflowAsync(connection, messageSerializer, message, new Messages.WorkflowEnd(DateTime.UtcNow, ex.Message), CancellationToken);
         }
         finally

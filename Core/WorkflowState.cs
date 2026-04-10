@@ -28,12 +28,12 @@ internal class WorkflowState(INatsJSContext jsContext, MessageSerializer message
         );
         await foreach (var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs=5, Expires=TimeSpan.FromSeconds(1) }))
         {
-            (_, _, var stepName, var eventType) = SubjectHelper.ExtractWorkflowEventInfo(msg.Subject);
-            messages.Remove(stepName!);
-            if (Equals(eventType, WorkflowEventTypes.StepStart) && Equals(message.ActivityID, ConnectionHelper.GetActivityID(msg)))
+            var eventMessage = new EventMessage(msg);
+            messages.Remove(eventMessage.ActivityName!);
+            if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepStart) && Equals(message.ActivityID, eventMessage.ActivityID))
                 break;
-            if (Equals(eventType, WorkflowEventTypes.StepEnd))
-                messages.Add(stepName!, msg);
+            if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepEnd))
+                messages.Add(eventMessage.ActivityName!, msg);
         }
         await jsContext.DeleteConsumerAsync(SubjectHelper.WorkflowEventsStreamsName, consumer.Info.Name);
         return this;

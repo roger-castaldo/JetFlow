@@ -3,6 +3,7 @@ using JetFlow.Messages;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
+using System.Diagnostics;
 
 namespace JetFlow.Subscriptions;
 
@@ -20,7 +21,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
     {
         try
         {
-            if (Equals(message.ActivityName, ActivityName))
+            if (Equals(message.ActivityName, ActivityName))  
                 await HandleEventAsync(message);
             else
                 await message.Message.NakAsync();
@@ -31,6 +32,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
         }
         catch (Exception error)
         {
+            Activity.Current?.SetStatus(ActivityStatusCode.Error, error.Message);
             await ActivityHelper.ErrorActivityAsync(message, error, connection, CancellationToken);
         }
         finally
@@ -43,10 +45,15 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
     private async ValueTask HandleEventAsync(EventMessage message)
     {
         if (await ActivityHelper.CanActivityRun<TWorkflowActivity>(timerStore, message, CancellationToken.None))
-            await (message.ActivityEventType! switch { 
-                ActivityEventTypes.Start => HandleActivityRunAsync(await CreateState(message), message, CancellationToken.None),
-                _ => throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}")
-            });
+        {
+            if (Equals(ActivityEventTypes.Start, message.ActivityEventType))
+            {
+                using var acitvity = TraceHelper.StartActivity(message);
+                await HandleActivityRunAsync(await CreateState(message), message, CancellationToken.None);
+            }
+            else
+                throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");
+        }
     }
 
     private ValueTask<IWorkflowState> CreateState(EventMessage message)

@@ -3,6 +3,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
+using System.Diagnostics;
 using System.Xml.Linq;
 
 namespace JetFlow;
@@ -60,89 +61,82 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
         return result;
     }
 
-    private (Guid activityID, WorkflowEventTypes eventType, INatsJSMsg<byte[]> msg)? GetNextActivityMessage<TActivity>()
+    private EventMessage? GetNextActivityMessage<TActivity>()
     {
         var name = typeof(TActivity).Name;
         var msg = GetNextMessage();
         if (msg == null)
             return null;
-        (_ ,_ , var stepName, var eventType) = SubjectHelper.ExtractWorkflowEventInfo(msg.Subject);
-        if (!Equals(stepName, name))    
-            throw new InvalidStepException(name, stepName!);
-        var activityID = ConnectionHelper.GetActivityID(msg);
-        return (activityID, eventType, msg);
+        var result = new EventMessage(msg);
+        if (!Equals(result.ActivityName, name))    
+            throw new InvalidStepException(name, result.ActivityName??string.Empty);
+        return result;
     }
 
     private ActivityResult? GetNextActivity<TActivity>()
     {
         var nextActivityMsg = GetNextActivityMessage<TActivity>();
-        return nextActivityMsg?.eventType switch
+        return nextActivityMsg?.WorkflowEventType switch
         {
             null => null,
-            WorkflowEventTypes.StepEnd => new(nextActivityMsg.Value.activityID, ActivityResultStatus.Success),
-            WorkflowEventTypes.StepError => new(nextActivityMsg.Value.activityID, ActivityResultStatus.Failure, nextActivityMsg.Value.msg.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Value.msg.Data) : null),
-            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.Value.activityID, ActivityResultStatus.Timeout),
-            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Value.msg.Subject, ConnectionHelper.GetMessageID(nextActivityMsg.Value.msg))
+            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Success),
+            WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
+            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Timeout),
+            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, ConnectionHelper.GetMessageID(nextActivityMsg.Message))
         };
     }
 
     private async ValueTask<ActivityResult<TOutput>?> GetNextActivityAsync<TActivity, TOutput>(MessageSerializer messageSerializer)
     {
         var nextActivityMsg = GetNextActivityMessage<TActivity>();
-        return nextActivityMsg?.eventType switch
+        return nextActivityMsg?.WorkflowEventType switch
         {
             null => null,
-            WorkflowEventTypes.StepEnd => new(nextActivityMsg.Value.activityID, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Value.msg)),
-            WorkflowEventTypes.StepError => new(nextActivityMsg.Value.activityID, ActivityResultStatus.Failure, nextActivityMsg.Value.msg.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Value.msg.Data) : null),
-            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.Value.activityID, ActivityResultStatus.Timeout),
-            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Value.msg.Subject, ConnectionHelper.GetMessageID(nextActivityMsg.Value.msg))
+            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message)),
+            WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
+            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Timeout),
+            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, ConnectionHelper.GetMessageID(nextActivityMsg.Message))
         };
     }
 
-    async ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest)
+    private async ValueTask<ActivityResult> HandleNextActivity<TActivity>(Func<ValueTask> invokeCall)
     {
         var result = GetNextActivity<TActivity>();
         if (result!=null)
             return result;
-        await ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, message, cancellationToken);
+        await invokeCall();
         throw new WorkflowSuspendedException();
     }
 
-    async ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput>(ActivityExecutionRequest<TInput> executionRequest)
-    {
-        var result = GetNextActivity<TActivity>();
-        if (result!=null)
-            return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, message, cancellationToken);
-        throw new WorkflowSuspendedException();
-    }
+    ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest)
+        => HandleNextActivity<TActivity>(() => ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, message, cancellationToken));
 
-    async ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest)
+    ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput>(ActivityExecutionRequest<TInput> executionRequest)
+        => HandleNextActivity<TActivity>(() => ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, message, cancellationToken));
+
+    private async ValueTask<ActivityResult<TOutput>> HandleNextActivity<TActivity, TOutput>(Func<ValueTask> invokeCall)
     {
         var result = await GetNextActivityAsync<TActivity, TOutput>(messageSerializer);
         if (result!=null)
             return result;
-        await ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, message, cancellationToken);
+        await invokeCall();
         throw new WorkflowSuspendedException();
     }
 
-    async ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest)
-    {
-        var result = await GetNextActivityAsync<TActivity, TOutput>(messageSerializer);
-        if (result!=null)
-            return result;
-        await ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, message, cancellationToken);
-        throw new WorkflowSuspendedException();
-    }
+    ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest)
+        => HandleNextActivity<TActivity, TOutput>(() => ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, message, cancellationToken));
+
+    ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest)
+        => HandleNextActivity<TActivity, TOutput>(() => ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, message, cancellationToken));
 
     async ValueTask IWorkflowContext.WaitAsync(TimeSpan delay)
     {
         var msg = GetNextMessage();
         if (msg!=null)
         {
-            (_, _, _, var eventType) = SubjectHelper.ExtractWorkflowEventInfo(msg.Subject);
-            if (!Equals(eventType, WorkflowEventTypes.DelayEnd))
-                throw new InvalidDelayStepException(msg.Subject);
+            var eventMessage = new EventMessage(msg);
+            if (!Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.DelayEnd))
+                throw new InvalidDelayStepException(eventMessage.Message.Subject);
             return;
         }
         await WorkflowHelper.StartWorkflowDelayAsync(message, delay, connection, jsContext, cancellationToken);

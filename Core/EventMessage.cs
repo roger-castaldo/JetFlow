@@ -7,7 +7,10 @@ namespace JetFlow;
 
 internal record EventMessage
 {
-    private static readonly string[] SharedHeaders = [];
+    private static readonly string[] SharedHeaders = [
+        TraceHelper.WorkflowTraceHeaderKey,
+        TraceHelper.WorkflowTraceSpanHeaderKey
+    ];
     private static readonly Regex workflowSubjectRegex = new(@"^wf\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|delaytimer|stepstart|stepend|steperror|steptimeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 

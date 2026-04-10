@@ -42,11 +42,15 @@ internal static class ActivityHelper
     private static async ValueTask TransmitStartActivityMessages<TActivity>(byte[] data, NatsHeaders? headers, INatsConnection connection, INatsJSContext jsContext, INatsKVStore timerStore, EventMessage message, TimeSpan? timeout, CancellationToken cancellationToken)
     {
         var activityId = Guid.NewGuid();
+        using var activity = TraceHelper.StartWorkflowStep(message, NameHelper.GetActivityName<TActivity>(), activityId.ToString());
         await timerStore.PutAsync(GetTimerKey<TActivity>(message.WorkflowName, message.WorkflowId), Array.Empty<byte>(), cancellationToken: cancellationToken);
         await ConnectionHelper.PublishMessageAsync(connection, [], StartWorkflowStep<TActivity>(message, activityId, headers), cancellationToken);
         await ConnectionHelper.PublishMessageAsync(connection, data, StartActivityMessage<TActivity>(message, activityId, timeout, headers), cancellationToken);
         if (timeout.HasValue)
+        {
+            TraceHelper.AddActivityTimeout(timeout.Value);
             await ConnectionHelper.PublishMessageAsync(jsContext, [], TimerActivityMessage<TActivity>(message, activityId, timeout.Value, headers), cancellationToken);
+        }
     }
 
     public static async ValueTask<bool> CanActivityRun<TActivity>(INatsKVStore timerStore, EventMessage message, CancellationToken cancellationToken)
@@ -70,11 +74,11 @@ internal static class ActivityHelper
         await TransmitStartActivityMessages<TActivity>(data, headers, connection, jsContext, timerStore, message, executionRequest.OverallTimeout, cancellationToken);
     }
 
-    public static async ValueTask TimeoutActivityAsync(string workflowName, string workflowId, string activityName, Guid activityId, INatsConnection connection, CancellationToken cancellationToken)
+    public static async ValueTask TimeoutActivityAsync(EventMessage message, INatsConnection connection, CancellationToken cancellationToken)
     {
-        var subject = SubjectHelper.WorkflowStepTimeout(workflowName, workflowId, activityName);
-        var natsHeaders = new NatsHeaders();
-        ConnectionHelper.AddMessageIds(natsHeaders, $"{workflowName}-{workflowId}-{activityName}-{activityId}-timeout", activityId);
+        var subject = SubjectHelper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, message.ActivityName!);
+        var natsHeaders = message.InjectHeaders(null);
+        ConnectionHelper.AddMessageIds(natsHeaders, $"{message.WorkflowName}-{message.WorkflowId}-{message.ActivityName}-{message.ActivityID}-timeout", message.ActivityID);
         await ConnectionHelper.PublishMessageAsync(connection, Array.Empty<byte>(), new MessageInfo(subject, natsHeaders), cancellationToken);
     }
 

@@ -92,12 +92,10 @@ public static class Connection
 
                     await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
                     {
-                        (var activityName, var workflowName, var workflowId, var eventType) = SubjectHelper.ExtractActivityEventInfo(msg.Subject);
-                        var activityId = ConnectionHelper.GetActivityID(msg);
-                        var context = TraceHelper.Extract(msg);
-                        if (Equals(eventType, ActivityEventTypes.Timeout))
+                        var message = new EventMessage(msg);
+                        if (Equals(message.ActivityEventType, ActivityEventTypes.Timeout))
                         {
-                            await ActivityHelper.TimeoutActivityAsync(workflowName, workflowId, activityName, activityId, connection, cancellationTokenSource.Token);
+                            await ActivityHelper.TimeoutActivityAsync(message, connection, cancellationTokenSource.Token);
                             await msg.AckAsync(cancellationToken: cancellationTokenSource.Token);
                         }
                         else
