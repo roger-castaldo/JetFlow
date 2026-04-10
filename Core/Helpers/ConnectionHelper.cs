@@ -13,9 +13,15 @@ internal static class ConnectionHelper
     private const string ActivityIdHeader = "JetFlow-Activity-Id";
 
     public static async ValueTask PublishMessageAsync(INatsConnection connection, byte[] data, MessageInfo messageInfo, CancellationToken cancellationToken)
-        => await connection.PublishAsync<byte[]>(messageInfo.Subject, data, TraceHelper.InjectCurrentActivity(messageInfo.Headers), cancellationToken: cancellationToken);
+    {   
+        await connection.PublishAsync<byte[]>(messageInfo.Subject, data, TraceHelper.InjectCurrentActivity(messageInfo.Headers), cancellationToken: cancellationToken);
+        TraceHelper.AddPublishEvent(messageInfo.Subject);
+    }
     public static async ValueTask PublishMessageAsync(INatsJSContext connection, byte[] data, MessageInfo messageInfo, CancellationToken cancellationToken)
-        => await connection.PublishAsync<byte[]>(messageInfo.Subject, data, headers: TraceHelper.InjectCurrentActivity(messageInfo.Headers), cancellationToken: cancellationToken);
+    {
+        await connection.PublishAsync<byte[]>(messageInfo.Subject, data, headers: TraceHelper.InjectCurrentActivity(messageInfo.Headers), cancellationToken: cancellationToken);
+        TraceHelper.AddPublishEvent(messageInfo.Subject);
+    }
 
     private static string CreateTTLString(TimeSpan ttl)
     {

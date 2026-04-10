@@ -1,10 +1,8 @@
 ﻿using JetFlow.Helpers;
-using JetFlow.Messages;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
 using System.Diagnostics;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JetFlow.Subscriptions;
 
@@ -31,6 +29,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
         {
             if (!ValidOperations.Any(m=>Equals(m,message.WorkflowEventType)))
                 throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
+            MetricsHelper.ProcessWorkflowMessage(message);
             await HandleWorkflowEventAsync(await CreateContext(message));
             isCompleted=true;
         }
@@ -41,6 +40,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
         catch (Exception ex)
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            MetricsHelper.EndWorkflow(message.WorkflowName);
             await WorkflowHelper.EndWorkflowAsync(connection, messageSerializer, message, new Messages.WorkflowEnd(DateTime.UtcNow, ex.Message), CancellationToken);
         }
         finally
@@ -48,7 +48,10 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
             await message.Message.AckAsync(cancellationToken: CancellationToken);
         }
         if (isCompleted)
+        {
+            MetricsHelper.EndWorkflow(message.WorkflowName);
             await WorkflowHelper.EndWorkflowAsync(connection, messageSerializer, message, new Messages.WorkflowEnd(DateTime.UtcNow, null), CancellationToken);
+        }
     }
 
     protected ValueTask<WorkflowContext> CreateContext(EventMessage message)

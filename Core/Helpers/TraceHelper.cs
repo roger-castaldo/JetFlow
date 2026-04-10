@@ -1,12 +1,5 @@
 ﻿using NATS.Client.Core;
-using NATS.Client.JetStream;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JetFlow.Helpers;
 
@@ -17,24 +10,16 @@ internal static class TraceHelper
     private const string WorkflowStepTraceParentHeaderKey = "jetflow-workflowstep-traceParentId";
     private const string WorkflowStepTraceParentSpanHeaderKey = "jetflow-workflowstep-traceParentSpanId";
 
-    private const string BaseTag = "jetflow";
-    private const string BaseWorkflowTag = $"{BaseTag}.workflow";
-    private const string WorkflowNameTag = $"{BaseWorkflowTag}.name";
-    private const string WorkflowIdTag = $"{BaseWorkflowTag}.id";
-    private const string BaseActivityTag = $"{BaseTag}.workflowactivity";
-    private const string ActivityNameTag = $"{BaseActivityTag}.name";
-    private const string ActivityIdTag = $"{BaseActivityTag}.id";
-
     private const string WorkflowStepStartActivityName = "WorkflowStepStart";
     private const string WorkflowStartName = "WorkflowStart";
 
     private static readonly ActivitySource activitySource = new(Connection.TraceProviderName);
 
     public static void AddActivityTimeout(TimeSpan timeout)
-        => Activity.Current?.AddTag($"{BaseActivityTag}.timeout", timeout);
+        => Activity.Current?.AddTag($"{TraceConstants.BaseActivityTag}.timeout", timeout);
 
     public static Activity? StartWorkflow(string name, string id)
-        => activitySource.StartActivity(WorkflowStartName, ActivityKind.Internal, default(ActivityContext), new[] { new KeyValuePair<string, object?>(WorkflowNameTag, name), new KeyValuePair<string, object?>(WorkflowIdTag, id) }, null);
+        => activitySource.StartActivity(WorkflowStartName, ActivityKind.Internal, default(ActivityContext), new[] { new KeyValuePair<string, object?>(TraceConstants.WorkflowNameTag, name), new KeyValuePair<string, object?>(TraceConstants.WorkflowIdTag, id) }, null);
     public static Activity? StartWorkflowStep(EventMessage message, string activityName, string id)
         => activitySource.StartActivity(WorkflowStepStartActivityName, ActivityKind.Producer, default(ActivityContext), ExtractWorkflowTags(message), ExtractWorkflowLink(message));
     public static Activity? StartDelay(EventMessage message)
@@ -56,6 +41,12 @@ internal static class TraceHelper
             _ => headers
         };
 
+    public static void AddPublishEvent(string subject)
+        => Activity.Current?.AddEvent(new("MessagePublished", tags: new([new($"{TraceConstants.MessageBaseTag}.subject", subject)])));
+
+    public static void AddMessageDecodedEvent(string contentHeader)
+        => Activity.Current?.AddEvent(new("MessageDecoded", tags: new([new($"{TraceConstants.MessageBaseTag}.contentheader", contentHeader)])));
+
     private static IEnumerable<ActivityLink>? ExtractWorkflowLink(EventMessage message)
     {
         if (message.Message.Headers!=null
@@ -76,13 +67,15 @@ internal static class TraceHelper
 
     private static IEnumerable<KeyValuePair<string, object?>> ExtractWorkflowTags(EventMessage message)
         => [
-            new(WorkflowNameTag, message.WorkflowName),
-            new(WorkflowIdTag, message.WorkflowId)
+            new(TraceConstants.WorkflowNameTag, message.WorkflowName),
+            new(TraceConstants.WorkflowIdTag, message.WorkflowId)
         ];
 
     private static IEnumerable<KeyValuePair<string, object?>> ExtractWorkflowActivityTags(EventMessage message)
         => [ .. ExtractWorkflowTags(message),
-            new(ActivityNameTag, message.ActivityName),
-            new(ActivityIdTag, message.ActivityID)
+            new(TraceConstants.ActivityNameTag, message.ActivityName),
+            new(TraceConstants.ActivityIdTag, message.ActivityID)
         ];
+
+    
 }

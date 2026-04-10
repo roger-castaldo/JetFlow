@@ -5,13 +5,13 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
 using NATS.Net;
-using System.Text.Json.Serialization.Metadata;
 
 namespace JetFlow;
 
 public static class Connection 
 {
     public const string TraceProviderName = "JetFlow";
+    public const string MetricsMeterName = "JetFlow.Runtime";
     public static async ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
     {
         var result = new ConnectionInstance(options);

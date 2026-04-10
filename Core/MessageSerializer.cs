@@ -1,9 +1,9 @@
 ﻿using JetFlow.Configs;
+using JetFlow.Helpers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using System.IO.Compression;
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 
 namespace JetFlow;
 
@@ -70,6 +70,7 @@ internal class MessageSerializer
             JsonEncoding => new MemoryStream(msg.Data),
             _ => throw new InvalidContentTypeException(encoding)
         };
+        TraceHelper.AddMessageDecodedEvent(encoding!);
         return JsonSerializer.Deserialize<T>(input, options);
     }
 

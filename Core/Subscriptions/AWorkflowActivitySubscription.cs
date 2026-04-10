@@ -1,5 +1,4 @@
 ﻿using JetFlow.Helpers;
-using JetFlow.Messages;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
@@ -44,12 +43,14 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
 
     private async ValueTask HandleEventAsync(EventMessage message)
     {
+        var start = MetricsHelper.StartActivity(message);
         if (await ActivityHelper.CanActivityRun<TWorkflowActivity>(timerStore, message, CancellationToken.None))
         {
             if (Equals(ActivityEventTypes.Start, message.ActivityEventType))
             {
                 using var acitvity = TraceHelper.StartActivity(message);
                 await HandleActivityRunAsync(await CreateState(message), message, CancellationToken.None);
+                MetricsHelper.CompleteActivity(message, start);
             }
             else
                 throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");

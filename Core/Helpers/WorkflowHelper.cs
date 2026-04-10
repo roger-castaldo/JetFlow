@@ -1,6 +1,5 @@
 ﻿using NATS.Client.Core;
 using NATS.Client.JetStream;
-using System.Diagnostics;
 
 namespace JetFlow.Helpers;
 
