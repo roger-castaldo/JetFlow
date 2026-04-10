@@ -1,11 +1,6 @@
 ﻿using NATS.Client.Core;
 using NATS.Client.JetStream;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization.Metadata;
-using System.Threading.Tasks;
 
 namespace JetFlow.Configs
 {
@@ -15,7 +10,7 @@ namespace JetFlow.Configs
         GZip
     }
 
-    public sealed record ConnectionOptions
+    public sealed class ConnectionOptions
     {
         public ConnectionOptions(NatsOpts options)
         {

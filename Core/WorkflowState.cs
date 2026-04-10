@@ -5,7 +5,7 @@ using NATS.Client.JetStream.Models;
 namespace JetFlow;
 
 internal class WorkflowState(INatsJSContext jsContext, MessageSerializer messageSerializer,
-    string workflowName, string workflowId, Guid activityId) : IWorkflowState
+    EventMessage message) : IWorkflowState
 {
     private Dictionary<string, INatsJSMsg<byte[]>> messages = [];
 
@@ -19,21 +19,21 @@ internal class WorkflowState(INatsJSContext jsContext, MessageSerializer message
                 DeliverPolicy = ConsumerConfigDeliverPolicy.All,
                 AckPolicy = ConsumerConfigAckPolicy.None,
                 FilterSubjects = [
-                    SubjectHelper.WorkflowStepStart(workflowName, workflowId, "*"),
-                    SubjectHelper.WorkflowStepEnd(workflowName, workflowId, "*"),
-                    SubjectHelper.WorkflowStepError(workflowName, workflowId, "*"),
-                    SubjectHelper.WorkflowStepTimeout(workflowName, workflowId, "*")
+                    SubjectHelper.WorkflowStepStart(message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepError(message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*")
                 ]
             }
         );
         await foreach (var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs=5, Expires=TimeSpan.FromSeconds(1) }))
         {
-            (_, _, var stepName, var eventType) = SubjectHelper.ExtractWorkflowEventInfo(msg.Subject);
-            messages.Remove(stepName!);
-            if (Equals(eventType, WorkflowEventTypes.StepStart) && Equals(activityId, ConnectionHelper.GetActivityID(msg)))
+            var eventMessage = new EventMessage(msg);
+            messages.Remove(eventMessage.ActivityName!);
+            if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepStart) && Equals(message.ActivityID, eventMessage.ActivityID))
                 break;
-            if (Equals(eventType, WorkflowEventTypes.StepEnd))
-                messages.Add(stepName!, msg);
+            if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepEnd))
+                messages.Add(eventMessage.ActivityName!, msg);
         }
         await jsContext.DeleteConsumerAsync(SubjectHelper.WorkflowEventsStreamsName, consumer.Info.Name);
         return this;

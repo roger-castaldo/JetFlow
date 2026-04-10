@@ -2,74 +2,64 @@
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
+using System.Diagnostics;
 
 namespace JetFlow.Subscriptions;
 
 internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkflowActivity instance,
     INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, 
     INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
-    : ASubscription(connection, natsJSContext, timerStore, messageSerializer, cancellationToken)
+    : ASubscription(consumer, cancellationToken)
 {
     protected TWorkflowActivity Instance = instance;
+    private string ActivityName = NameHelper.GetActivityName<TWorkflowActivity>();
+    protected MessageSerializer MessageSerializer => messageSerializer;
+    protected INatsConnection Connection => connection;
 
-    protected override async Task StartStream(CancellationToken cancellationToken)
+    protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            try
-            {
-                await consumer.RefreshAsync(cancellationToken); // or try to recreate consumer
-
-                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationToken))
-                {
-                    (var activityName, var workflowName, var workflowId, var eventType) = SubjectHelper.ExtractActivityEventInfo(msg.Subject);
-                    var activityId = ConnectionHelper.GetActivityID(msg);
-                    try
-                    {
-                        if (Equals(activityName, NameHelper.GetActivityName<TWorkflowActivity>()))
-                            await HandleEventAsync(activityName, workflowName, workflowId, activityId, eventType, msg);
-                        else
-                            await msg.NakAsync(cancellationToken: cancellationToken);
-                    }
-                    catch (WorkflowSuspendedException)
-                    {
-                        // handle workflow suspension by doing nothing
-                    }
-                    catch (Exception error)
-                    {
-                        await ActivityHelper.ErrorActivityAsync(workflowName, workflowId, activityName, activityId, error, Connection, cancellationToken);
-                    }
-                    finally
-                    {
-                        if (Equals(activityName, NameHelper.GetActivityName<TWorkflowActivity>()))
-                            await msg.AckAsync(cancellationToken: cancellationToken);
-                    }
-                }
-            }
-            catch (NatsJSProtocolException e)
-            {
-                //bury error
-            }
-            catch (NatsJSException e)
-            {
-                // log exception
-                await Task.Delay(1000, cancellationToken); // backoff
-            }
+            if (Equals(message.ActivityName, ActivityName))  
+                await HandleEventAsync(message);
+            else
+                await message.Message.NakAsync();
+        }
+        catch (WorkflowSuspendedException)
+        {
+            // handle workflow suspension by doing nothing
+        }
+        catch (Exception error)
+        {
+            Activity.Current?.SetStatus(ActivityStatusCode.Error, error.Message);
+            await ActivityHelper.ErrorActivityAsync(message, error, connection, CancellationToken);
+        }
+        finally
+        {
+            if (Equals(message.ActivityName, ActivityName))
+                await message.Message.AckAsync();
         }
     }
 
-    private async ValueTask HandleEventAsync(string activityName, string workflowName, string workflowId, Guid activityId, ActivityEventTypes eventType, INatsJSMsg<byte[]> msg)
+    private async ValueTask HandleEventAsync(EventMessage message)
     {
-        if (await ActivityHelper.CanActivityRun<TWorkflowActivity>(TimerStore, workflowName, workflowId, CancellationToken.None))
-            await (eventType switch { 
-                ActivityEventTypes.Start => HandleActivityRunAsync(await CreateState(workflowName, workflowId, activityId), workflowName, workflowId, activityId, msg, CancellationToken.None),
-                _ => throw new InvalidOperationException($"Unsupported event type: {eventType}")
-            });
+        var start = MetricsHelper.StartActivity(message);
+        if (await ActivityHelper.CanActivityRun<TWorkflowActivity>(timerStore, message, CancellationToken.None))
+        {
+            if (Equals(ActivityEventTypes.Start, message.ActivityEventType))
+            {
+                using var acitvity = TraceHelper.StartActivity(message);
+                await HandleActivityRunAsync(await CreateState(message), message, CancellationToken.None);
+                MetricsHelper.CompleteActivity(message, start);
+            }
+            else
+                throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");
+        }
     }
 
-    private ValueTask<IWorkflowState> CreateState(string workflowName, string workflowId, Guid activityId)
-        => new WorkflowState(NatsJSContext, MessageSerializer, workflowName, workflowId, activityId)
+    private ValueTask<IWorkflowState> CreateState(EventMessage message)
+        => new WorkflowState(natsJSContext, messageSerializer, message)
             .LoadAsync();
 
-    protected abstract ValueTask HandleActivityRunAsync(IWorkflowState workflowState, string workflowName, string workflowId, Guid activityId, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken);
+    protected abstract ValueTask HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken);
 }

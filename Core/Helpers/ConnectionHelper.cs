@@ -11,13 +11,17 @@ internal static class ConnectionHelper
     private const string ScheduledTargetTTL = "Nats-Schedule-TTL";
     private const string MessageIdHeader = "Nats-Msg-Id";
     private const string ActivityIdHeader = "JetFlow-Activity-Id";
-    public static async ValueTask PublishMessageAsync(INatsConnection connection, byte[] data, MessageInfo messageInfo, CancellationToken cancellationToken)
-        => await connection.PublishAsync<byte[]>(messageInfo.Subject, data, messageInfo.Headers, cancellationToken: cancellationToken);
-    public static async ValueTask PublishMessageAsync(INatsJSContext connection, byte[] data, MessageInfo messageInfo, CancellationToken cancellationToken)
-        => await connection.PublishAsync<byte[]>(messageInfo.Subject, data, headers: messageInfo.Headers, cancellationToken: cancellationToken);
 
-    public static NatsHeaders CloneHeaders(NatsHeaders? source)
-        => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(source?.ToArray() ?? []));
+    public static async ValueTask PublishMessageAsync(INatsConnection connection, byte[] data, MessageInfo messageInfo, CancellationToken cancellationToken)
+    {   
+        await connection.PublishAsync<byte[]>(messageInfo.Subject, data, TraceHelper.InjectCurrentActivity(messageInfo.Headers), cancellationToken: cancellationToken);
+        TraceHelper.AddPublishEvent(messageInfo.Subject);
+    }
+    public static async ValueTask PublishMessageAsync(INatsJSContext connection, byte[] data, MessageInfo messageInfo, CancellationToken cancellationToken)
+    {
+        await connection.PublishAsync<byte[]>(messageInfo.Subject, data, headers: TraceHelper.InjectCurrentActivity(messageInfo.Headers), cancellationToken: cancellationToken);
+        TraceHelper.AddPublishEvent(messageInfo.Subject);
+    }
 
     private static string CreateTTLString(TimeSpan ttl)
     {

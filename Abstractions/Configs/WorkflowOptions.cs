@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace JetFlow.Configs;
 
-namespace JetFlow.Configs;
-
-public record WorkflowOptions
+public sealed class WorkflowOptions
 {
 
 }

@@ -1,7 +1,28 @@
 ﻿using JetFlow;
 using NATS.Client.Core;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Sample;
 using Sample.Activities;
+
+var tracerProvider = Sdk.CreateTracerProviderBuilder()
+    .AddSource(Connection.TraceProviderName)
+    .SetResourceBuilder(
+        OpenTelemetry.Resources.ResourceBuilder.CreateDefault()
+            .AddService(Connection.TraceProviderName)
+    )
+    .AddOtlpExporter(options =>
+    {
+        options.Endpoint = new("http://localhost:4317");
+    })     // Optional: Export to OTLP endpoint
+    .Build();
+
+var meterProvider = Sdk.CreateMeterProviderBuilder()
+    .AddMeter(Connection.MetricsMeterName)
+    .AddConsoleExporter()
+    .Build();
 
 Console.WriteLine("Establishing Core Connection...");
 
