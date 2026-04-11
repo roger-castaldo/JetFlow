@@ -1,4 +1,5 @@
-﻿using JetFlow.Helpers;
+﻿using JetFlow.Configs;
+using JetFlow.Helpers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
@@ -6,7 +7,7 @@ using System.Diagnostics;
 
 namespace JetFlow.Subscriptions;
 
-internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, INatsJSConsumer consumer, 
+internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, WorkflowConfigurationContainer workflowConfigurationContainer, INatsJSConsumer consumer, 
     MessageSerializer messageSerializer, CancellationToken cancellationToken)
     : ASubscription(consumer, cancellationToken)
     where TWorkflow : class
@@ -25,12 +26,14 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
         bool isCompleted = false;
+        WorkflowOptions? workflowOptions = null;
         try
         {
             if (!ValidOperations.Any(m=>Equals(m,message.WorkflowEventType)))
                 throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
             MetricsHelper.ProcessWorkflowMessage(message);
-            await HandleWorkflowEventAsync(await CreateContext(message));
+            workflowOptions = await workflowConfigurationContainer.GetInstanceConfigAsync(message);
+            await HandleWorkflowEventAsync(await CreateContext(message, workflowOptions!));
             isCompleted=true;
         }
         catch (WorkflowSuspendedException)
@@ -54,8 +57,8 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
         }
     }
 
-    protected ValueTask<WorkflowContext> CreateContext(EventMessage message)
-        => new WorkflowContext(connection, natsJSContext, messageSerializer, timerStore, message)
+    protected ValueTask<WorkflowContext> CreateContext(EventMessage message, WorkflowOptions workflowOptions)
+        => new WorkflowContext(connection, natsJSContext, messageSerializer, timerStore, workflowOptions, message)
                 .LoadAsync();
     protected abstract ValueTask HandleWorkflowEventAsync(WorkflowContext context);
 }

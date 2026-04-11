@@ -18,10 +18,33 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
 
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
+        using var cancellationTokenSource = new CancellationTokenSource();
         try
         {
-            if (Equals(message.ActivityName, ActivityName))  
-                await HandleEventAsync(message);
+            if (Equals(message.ActivityName, ActivityName))
+            {
+                if (!Equals(ActivityEventTypes.Start, message.ActivityEventType))
+                    throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");
+                var (canRun, aliveKey) = await ActivityHelper.CanActivityRun(timerStore, natsJSContext, message, CancellationToken.None);
+                if (canRun)
+                {
+                    var start = MetricsHelper.StartActivity(message);
+                    using var acitvity = TraceHelper.StartActivity(message);
+                    var cancellationToken = new CancellationTokenSource();
+                    Task.Run(async () =>
+                    {
+                        ulong currentRevision = 1;
+                        while (!cancellationToken.IsCancellationRequested)
+                        {
+                            await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken.Token);
+                            currentRevision = await ActivityHelper.KeepActivityAlive(timerStore, message, currentRevision, cancellationToken.Token);
+                        }
+                    });
+                    await HandleActivityRunAsync(await CreateState(message), message, CancellationToken.None);
+                    MetricsHelper.CompleteActivity(message, start);
+                    await ActivityHelper.MarkActivityDoneInStore(timerStore, message, cancellationToken.Token);
+                }
+            }
             else
                 await message.Message.NakAsync();
         }
@@ -36,24 +59,9 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
         }
         finally
         {
+            await cancellationTokenSource.CancelAsync();
             if (Equals(message.ActivityName, ActivityName))
                 await message.Message.AckAsync();
-        }
-    }
-
-    private async ValueTask HandleEventAsync(EventMessage message)
-    {
-        var start = MetricsHelper.StartActivity(message);
-        if (await ActivityHelper.CanActivityRun<TWorkflowActivity>(timerStore, message, CancellationToken.None))
-        {
-            if (Equals(ActivityEventTypes.Start, message.ActivityEventType))
-            {
-                using var acitvity = TraceHelper.StartActivity(message);
-                await HandleActivityRunAsync(await CreateState(message), message, CancellationToken.None);
-                MetricsHelper.CompleteActivity(message, start);
-            }
-            else
-                throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");
         }
     }
 

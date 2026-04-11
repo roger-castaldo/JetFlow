@@ -1,4 +1,5 @@
-﻿using JetFlow.Helpers;
+﻿using JetFlow.Configs;
+using JetFlow.Helpers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
@@ -6,7 +7,7 @@ using NATS.Client.KeyValueStore;
 
 namespace JetFlow;
 
-internal class WorkflowContext(INatsConnection connection, INatsJSContext jsContext, MessageSerializer messageSerializer, INatsKVStore timerStore, 
+internal class WorkflowContext(INatsConnection connection, INatsJSContext jsContext, MessageSerializer messageSerializer, INatsKVStore timerStore, WorkflowOptions workflowOptions,
     EventMessage message) 
     : IWorkflowContext
 {
@@ -17,33 +18,33 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
     internal async ValueTask<WorkflowContext> LoadAsync()
     {
         var consumer = await jsContext.CreateOrUpdateConsumerAsync(
-            SubjectHelper.WorkflowEventsStreamsName,
+            SubjectHelper.WorkflowEventsStreamsName(message.Namespace),
             new ConsumerConfig
             {
                 Name = Guid.NewGuid().ToString(), // ephemeral identity
                 DeliverPolicy = ConsumerConfigDeliverPolicy.All,
                 AckPolicy = ConsumerConfigAckPolicy.None,
                 FilterSubjects = [
-                    SubjectHelper.WorkflowStart(message.WorkflowName, message.WorkflowId),
-                    SubjectHelper.WorkflowEnd(message.WorkflowName, message.WorkflowId),
-                    SubjectHelper.WorkflowDelayEnd(message.WorkflowName, message.WorkflowId),
-                    SubjectHelper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*"),
-                    SubjectHelper.WorkflowStepError(message.WorkflowName, message.WorkflowId, "*"),
-                    SubjectHelper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*")
+                    SubjectHelper.WorkflowStart(message.Namespace, message.WorkflowName, message.WorkflowId),
+                    SubjectHelper.WorkflowEnd(message.Namespace, message.WorkflowName, message.WorkflowId),
+                    SubjectHelper.WorkflowDelayEnd(message.Namespace, message.WorkflowName, message.WorkflowId),
+                    SubjectHelper.WorkflowStepEnd(message.Namespace, message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepError(message.Namespace, message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepTimeout(message.Namespace, message.WorkflowName, message.WorkflowId, "*")
                 ]
             }
         );
         var msgs = new List<INatsJSMsg<byte[]>>();
         await foreach(var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs=5, Expires=TimeSpan.FromSeconds(1)  }))
         {
-            if (Equals(SubjectHelper.WorkflowStart(message.WorkflowName, message.WorkflowId), msg.Subject))
+            if (Equals(SubjectHelper.WorkflowStart(message.Namespace, message.WorkflowName, message.WorkflowId), msg.Subject))
                 StartMessage=msg;
             else
                 msgs.Add(msg);
             if (Equals(msg.Metadata?.Sequence, message.Message.Metadata?.Sequence))
                 break;
         }
-        await jsContext.DeleteConsumerAsync(SubjectHelper.WorkflowEventsStreamsName,consumer.Info.Name);
+        await jsContext.DeleteConsumerAsync(SubjectHelper.WorkflowEventsStreamsName(message.Namespace),consumer.Info.Name);
         messages = msgs;
         return this;
     }
@@ -54,7 +55,7 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
             return null;
         var result = messages.ElementAt(index);
         index++;
-        if (Equals(result.Subject, SubjectHelper.WorkflowEnd(message.WorkflowName, message.WorkflowId)))
+        if (Equals(result.Subject, SubjectHelper.WorkflowEnd(message.Namespace, message.WorkflowName, message.WorkflowId)))
             throw new WorkflowEndedException();
         return result;
     }
@@ -107,10 +108,10 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
     }
 
     ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest)
-        => HandleNextActivity<TActivity>(() => ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, message, cancellationToken));
+        => HandleNextActivity<TActivity>(() => ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, message, cancellationToken));
 
     ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput>(ActivityExecutionRequest<TInput> executionRequest)
-        => HandleNextActivity<TActivity>(() => ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, message, cancellationToken));
+        => HandleNextActivity<TActivity>(() => ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, message, cancellationToken));
 
     private async ValueTask<ActivityResult<TOutput>> HandleNextActivity<TActivity, TOutput>(Func<ValueTask> invokeCall)
     {
@@ -122,10 +123,10 @@ internal class WorkflowContext(INatsConnection connection, INatsJSContext jsCont
     }
 
     ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest)
-        => HandleNextActivity<TActivity, TOutput>(() => ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, timerStore, message, cancellationToken));
+        => HandleNextActivity<TActivity, TOutput>(() => ActivityHelper.StartActivityAsync<TActivity>(executionRequest, connection, jsContext, message, cancellationToken));
 
     ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest)
-        => HandleNextActivity<TActivity, TOutput>(() => ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, timerStore, message, cancellationToken));
+        => HandleNextActivity<TActivity, TOutput>(() => ActivityHelper.StartActivityAsync<TActivity, TInput>(executionRequest, connection, jsContext, messageSerializer, message, cancellationToken));
 
     async ValueTask IWorkflowContext.WaitAsync(TimeSpan delay)
     {

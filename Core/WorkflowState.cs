@@ -1,4 +1,5 @@
 ﻿using JetFlow.Helpers;
+using Microsoft.Extensions.Options;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 
@@ -12,17 +13,17 @@ internal class WorkflowState(INatsJSContext jsContext, MessageSerializer message
     public async ValueTask<IWorkflowState> LoadAsync()
     {
         var consumer = await jsContext.CreateOrUpdateConsumerAsync(
-            SubjectHelper.WorkflowEventsStreamsName,
+            SubjectHelper.WorkflowEventsStreamsName(message.Namespace),
             new ConsumerConfig
             {
                 Name = Guid.NewGuid().ToString(), // ephemeral identity
                 DeliverPolicy = ConsumerConfigDeliverPolicy.All,
                 AckPolicy = ConsumerConfigAckPolicy.None,
                 FilterSubjects = [
-                    SubjectHelper.WorkflowStepStart(message.WorkflowName, message.WorkflowId, "*"),
-                    SubjectHelper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*"),
-                    SubjectHelper.WorkflowStepError(message.WorkflowName, message.WorkflowId, "*"),
-                    SubjectHelper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*")
+                    SubjectHelper.WorkflowStepStart(message.Namespace, message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepEnd(message.Namespace, message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepError(message.Namespace, message.WorkflowName, message.WorkflowId, "*"),
+                    SubjectHelper.WorkflowStepTimeout(message.Namespace, message.WorkflowName, message.WorkflowId, "*")
                 ]
             }
         );
@@ -35,7 +36,7 @@ internal class WorkflowState(INatsJSContext jsContext, MessageSerializer message
             if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepEnd))
                 messages.Add(eventMessage.ActivityName!, msg);
         }
-        await jsContext.DeleteConsumerAsync(SubjectHelper.WorkflowEventsStreamsName, consumer.Info.Name);
+        await jsContext.DeleteConsumerAsync(SubjectHelper.WorkflowEventsStreamsName(message.Namespace), consumer.Info.Name);
         return this;
     }
 
