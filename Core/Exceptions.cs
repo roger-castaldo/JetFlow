@@ -17,6 +17,18 @@ internal class WorkflowSuspendedException : Exception
     public WorkflowSuspendedException() : base() { }
 }
 
+internal class ActivityTimeoutException : TimeoutException
+{
+    internal ActivityTimeoutException(string activityName) :
+        base($"Activity {activityName} has timed out") { }
+}
+
+internal class ActivityFailedException : Exception
+{
+    internal ActivityFailedException(string activityName, string errorMessage) :
+        base($"Activity {activityName} has failed with error: {errorMessage}") { }
+}
+
 public class WorkflowEndedException : InvalidOperationException
 {
     internal WorkflowEndedException() : 

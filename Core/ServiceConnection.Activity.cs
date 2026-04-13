@@ -75,7 +75,7 @@ internal partial class ServiceConnection
         var value = await timerStore.TryCreateAsync<byte[]>(key, [], cancellationToken: cancellationToken);
         if (value.Success)
         {
-            await using var query = await QueryStream(
+            await using var query = await QueryStreamAsync(
                 subjectMapper.WorkflowEventsStreamsName,
                 true,
                 subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, message.ActivityName!),

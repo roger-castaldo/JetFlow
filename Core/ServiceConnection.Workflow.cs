@@ -43,14 +43,36 @@ internal partial class ServiceConnection
         var id = Guid.NewGuid();
         using var activity = TraceHelper.StartDelay(message);
         await PublishMessageAsync([], 
-            subjectMapper.WorkflowDelayStart(message.WorkflowId, message.WorkflowId), 
+            subjectMapper.WorkflowDelayStart(message.WorkflowName, message.WorkflowId), 
             message.InjectHeaders(null), 
             $"{message.WorkflowName}-{message.WorkflowId}-{id}-delaystart", cancellationToken: cancellationToken);
         await PublishDelayedMessageAsync([],
-                subjectMapper.WorkflowDelayTimer(message.WorkflowName, message.WorkflowId),
+                subjectMapper.WorkflowTimer(message.WorkflowName, message.WorkflowId),
                 message.InjectHeaders(null),
                 delay, 
                 subjectMapper.WorkflowDelayEnd(message.WorkflowName, message.WorkflowId),
                 $"{message.WorkflowName}-{message.WorkflowId}-{id}-delaytimer", cancellationToken: cancellationToken);
     }
+    public ValueTask MarkWorkflowArchived(EventMessage message, CancellationToken cancellationToken)
+        => PublishMessageAsync([],
+            subjectMapper.WorkflowArchived(message.WorkflowName, message.WorkflowId),
+            message.InjectHeaders(null),
+            $"{message.WorkflowName}-{message.WorkflowId}-archived",
+            cancellationToken: cancellationToken
+        );
+    public ValueTask MarkWorkflowForPurge(EventMessage message, TimeSpan? purgeDelay, CancellationToken cancellationToken)
+        => (purgeDelay.HasValue ?
+           PublishDelayedMessageAsync([],
+                subjectMapper.WorkflowTimer(message.WorkflowName, message.WorkflowId),
+                message.InjectHeaders(null),
+                purgeDelay.Value,
+                subjectMapper.WorkflowPurge(message.WorkflowName, message.WorkflowId),
+                $"{message.WorkflowName}-{message.WorkflowId}-purge",
+                cancellationToken: cancellationToken)
+           : PublishMessageAsync([],
+                subjectMapper.WorkflowPurge(message.WorkflowName, message.WorkflowId),
+                message.InjectHeaders(null),
+                $"{message.WorkflowName}-{message.WorkflowId}-purge",
+                cancellationToken: cancellationToken)
+        );
 }

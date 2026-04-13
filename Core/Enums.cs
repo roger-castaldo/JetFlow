@@ -6,11 +6,13 @@ internal enum WorkflowEventTypes
     End,
     DelayStart,
     DelayEnd,
-    DelayTimer,
+    Timer,
     StepStart,
     StepEnd,
     StepError,
-    StepTimeout
+    StepTimeout,
+    Archived,
+    Purge
 }
 
 internal enum ActivityEventTypes

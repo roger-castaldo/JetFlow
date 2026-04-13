@@ -12,4 +12,6 @@ public sealed record WorkflowOptions
 {
     public WorkflowCompletionActions CompletionAction { get; init; } = WorkflowCompletionActions.None;
     public TimeSpan? PurgeDelay { get; init;  } = null;
+    public bool ErrorOnActivityTimeout { get; init; } = false;
+    public bool ErrorOnActivityFailure { get; init; } = false;
 }

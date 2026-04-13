@@ -125,7 +125,7 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
         CancellationToken cancellationToken = default)
         => jsContext.CreateOrUpdateConsumerAsync(stream, config, cancellationToken);
 
-    public async ValueTask<IJetstreamQuery> QueryStream(string streamName, bool headersOnly, params string[] filterSubjects)
+    public async ValueTask<IJetstreamQuery> QueryStreamAsync(string streamName, bool headersOnly, params string[] filterSubjects)
         => new JetstreamQuery(await jsContext.CreateOrUpdateConsumerAsync(
                 streamName,
                 new ConsumerConfig
@@ -138,6 +138,9 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
                     InactiveThreshold = TimeSpan.FromSeconds(10)
                 }
             ), jsContext);
+
+    public async ValueTask PurgeWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
+        => await jsContext.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
 
     private class JetstreamQuery(INatsJSConsumer consumer, INatsJSContext jsContext) : IJetstreamQuery
     {

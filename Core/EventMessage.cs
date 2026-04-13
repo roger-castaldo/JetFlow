@@ -11,7 +11,7 @@ internal record EventMessage
         TraceHelper.WorkflowTraceHeaderKey,
         TraceHelper.WorkflowTraceSpanHeaderKey
     ];
-    private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?wf\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|delaytimer|stepstart|stepend|steperror|steptimeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?wf\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|stepstart|stepend|steperror|steptimeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 
     public EventMessage(INatsJSMsg<byte[]> msg)

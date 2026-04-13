@@ -17,7 +17,7 @@ internal class WorkflowState : IWorkflowState
     public static async ValueTask<IWorkflowState> CreateAsync(ServiceConnection serviceConnection, MessageSerializer messageSerializer, SubjectMapper subjectMapper, EventMessage message) 
     {
         var messages = new Dictionary<string, INatsJSMsg<byte[]>>();
-        await using var query = await serviceConnection.QueryStream(
+        await using var query = await serviceConnection.QueryStreamAsync(
             subjectMapper.WorkflowEventsStreamsName,
             false,
             subjectMapper.WorkflowStepStart(message.WorkflowName, message.WorkflowId, "*"),

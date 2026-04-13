@@ -46,9 +46,11 @@ public static class Connection
                 subjectMapper.WorkflowConfigure("*", "*"),
                 subjectMapper.WorkflowStart("*", "*"),
                 subjectMapper.WorkflowEnd("*", "*"),
+                subjectMapper.WorkflowArchived("*", "*"),
+                subjectMapper.WorkflowPurge("*", "*"),
                 subjectMapper.WorkflowDelayStart("*", "*"),
                 subjectMapper.WorkflowDelayEnd("*", "*"),
-                subjectMapper.WorkflowDelayTimer("*", "*"),
+                subjectMapper.WorkflowTimer("*", "*"),
                 subjectMapper.WorkflowStepStart("*", "*", "*"),
                 subjectMapper.WorkflowStepEnd("*", "*", "*"),
                 subjectMapper.WorkflowStepError("*", "*", "*"),
@@ -72,15 +74,6 @@ public static class Connection
                 AllowMsgTTL=true,
                 Retention = StreamConfigRetention.Workqueue
             });
-            //await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ActivityTimersStream, [
-            //    subjectMapper.ActivityTimeout("*", "*", "*"),
-            //    subjectMapper.ActivityTimer("*", "*", "*")
-            //])
-            //{
-            //    DuplicateWindow = TimeSpan.FromMinutes(10),
-            //    AllowDirect = true,
-            //    AllowMsgSchedules = true
-            //});
             var kc = jsContext.CreateKeyValueStoreContext();
             var timerStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.ActivityLocksKeystore)
             {
@@ -189,6 +182,8 @@ public static class Connection
                         DurableName = $"wfr_{NameHelper.GetWorkflowName<TWorkflow>()}",
                         FilterSubjects= [
                             subjectMapper.WorkflowStart(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
+                            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
+                            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
                             subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
                             subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
                             subjectMapper.WorkflowStepError(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),

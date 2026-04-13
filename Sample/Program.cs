@@ -34,7 +34,12 @@ var connection = await Connection.CreateInstanceAsync(new(
 ));
 
 Console.WriteLine("Registering workflow...");
-await connection.RegisterWorkflowAsync<CreateUserWorkflow, User>();
+await connection.RegisterWorkflowAsync<CreateUserWorkflow, User>(new()
+{
+    ErrorOnActivityTimeout = true,
+    PurgeDelay = TimeSpan.FromSeconds(30),
+    CompletionAction = JetFlow.Configs.WorkflowCompletionActions.Purge
+});
 
 Console.WriteLine("Registering activities...");
 await connection.RegisterWorkflowActivityWithReturnAsync<DefineUsername,string,User>(new(), CancellationToken.None);
