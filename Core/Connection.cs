@@ -1,5 +1,6 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
+using JetFlow.Serializers;
 using JetFlow.Subscriptions;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
@@ -13,37 +14,45 @@ public static class Connection
 {
     public const string TraceProviderName = "JetFlow";
     public const string MetricsMeterName = "JetFlow.Runtime";
-    public static async ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
-    {
-        var result = new ConnectionInstance(options);
-        return await result.OpenAsync();
-    }
+    public static ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
+        => ConnectionInstance.CreateAsync(options);
 
-    internal class ConnectionInstance(ConnectionOptions options) : IConnection
+    internal class ConnectionInstance : IConnection
     {
-        private readonly INatsConnection connection = options.Connection;
-        private readonly INatsJSContext jsContext = options.NatsJSContext;
-        private readonly MessageSerializer messageSerializer = new(options);
+        private readonly MessageSerializer messageSerializer;
+        private readonly ServiceConnection serviceConnection;
+        private readonly SubjectMapper subjectMapper;
         private readonly CancellationTokenSource cancellationTokenSource = new();
-        private INatsKVStore timerStore;
-        private WorkflowConfigurationContainer workflowConfigurationContainer;
         private Task? timeoutRunner;
 
-        public async ValueTask<IConnection> OpenAsync()
+        private ConnectionInstance(INatsConnection connection, INatsJSContext natsJSContext, MessageSerializer messageSerializer, 
+            SubjectMapper subjectMapper, INatsKVStore timerStore, INatsKVStore configurationStore)
         {
+            this.messageSerializer = messageSerializer;
+            this.subjectMapper = subjectMapper;
+            serviceConnection = new(connection, natsJSContext, timerStore, configurationStore, subjectMapper, messageSerializer);
+            timeoutRunner = StartActivityTimeoutRunner();
+        }
+
+        public static async ValueTask<IConnection> CreateAsync(ConnectionOptions options)
+        {
+            var connection = options.Connection;
+            var jsContext = options.NatsJSContext;
             await connection.ConnectAsync();
             if (connection.ConnectionState != NatsConnectionState.Open)
                 throw new UnableToConnectException();
-            await jsContext.CreateOrUpdateStreamAsync(new(SubjectHelper.WorkflowEventsStreamsName(options.Namespace), [
-                SubjectHelper.WorkflowStart(options.Namespace, "*", "*"),
-                SubjectHelper.WorkflowEnd(options.Namespace, "*", "*"),
-                SubjectHelper.WorkflowDelayStart(options.Namespace, "*", "*"),
-                SubjectHelper.WorkflowDelayEnd(options.Namespace, "*", "*"),
-                SubjectHelper.WorkflowDelayTimer(options.Namespace, "*", "*"),
-                SubjectHelper.WorkflowStepStart(options.Namespace, "*", "*", "*"),
-                SubjectHelper.WorkflowStepEnd(options.Namespace, "*", "*", "*"),
-                SubjectHelper.WorkflowStepError(options.Namespace, "*", "*", "*"),
-                SubjectHelper.WorkflowStepTimeout(options.Namespace, "*", "*", "*")
+            var subjectMapper = new SubjectMapper(options.Namespace);
+            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.WorkflowEventsStreamsName, [
+                subjectMapper.WorkflowConfigure("*", "*"),
+                subjectMapper.WorkflowStart("*", "*"),
+                subjectMapper.WorkflowEnd("*", "*"),
+                subjectMapper.WorkflowDelayStart("*", "*"),
+                subjectMapper.WorkflowDelayEnd("*", "*"),
+                subjectMapper.WorkflowDelayTimer("*", "*"),
+                subjectMapper.WorkflowStepStart("*", "*", "*"),
+                subjectMapper.WorkflowStepEnd("*", "*", "*"),
+                subjectMapper.WorkflowStepError("*", "*", "*"),
+                subjectMapper.WorkflowStepTimeout("*", "*", "*")
             ])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
@@ -51,47 +60,52 @@ public static class Connection
                 AllowMsgSchedules = true,
                 AllowMsgTTL=true
             });
-            await jsContext.CreateOrUpdateStreamAsync(new(SubjectHelper.ActivityQueueStream(options.Namespace), [
-                SubjectHelper.ActivityStart(options.Namespace, "*","*", "*")
+            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ActivityQueueStream, [
+                subjectMapper.ActivityStart("*","*", "*"),
+                subjectMapper.ActivityTimeout("*", "*", "*"),
+                subjectMapper.ActivityTimer("*", "*", "*")
             ])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
                 AllowDirect = true,
                 AllowMsgSchedules = true,
-                AllowMsgTTL=true
+                AllowMsgTTL=true,
+                Retention = StreamConfigRetention.Workqueue
             });
-            await jsContext.CreateOrUpdateStreamAsync(new(SubjectHelper.ActivityTimersStream(options.Namespace), [
-                SubjectHelper.ActivityTimeout(options.Namespace, "*", "*", "*"),
-                SubjectHelper.ActivityTimer(options.Namespace, "*", "*", "*")
-            ])
-            {
-                DuplicateWindow = TimeSpan.FromMinutes(10),
-                AllowDirect = true,
-                AllowMsgSchedules = true
-            });
+            //await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ActivityTimersStream, [
+            //    subjectMapper.ActivityTimeout("*", "*", "*"),
+            //    subjectMapper.ActivityTimer("*", "*", "*")
+            //])
+            //{
+            //    DuplicateWindow = TimeSpan.FromMinutes(10),
+            //    AllowDirect = true,
+            //    AllowMsgSchedules = true
+            //});
             var kc = jsContext.CreateKeyValueStoreContext();
-            timerStore = await kc.CreateOrUpdateStoreAsync(new(SubjectHelper.ActivityLocksKeystore(options.Namespace))
+            var timerStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.ActivityLocksKeystore)
             {
                 Description = "KeyValue store for workflow timers",
                 History = 1, 
                 MaxAge = TimeSpan.FromMinutes(5)
             });
-            workflowConfigurationContainer = await WorkflowConfigurationContainer.CreateAsync(kc, options);
-            
-            timeoutRunner = StartActivityTimeoutRunner();
-            return this;
+            var configurationStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.WorkflowConfigKeytore)
+            {
+                Description = "KeyValue store for workflow configurations",
+                History = 1,
+                LimitMarkerTTL = TimeSpan.FromMinutes(1)
+            });
+            await configurationStore.PutAsync<WorkflowOptions>(ServiceConnection.DefaultConfigKey, options.DefaultWorkflowOptions, serializer: new WorkflowOptionsSerializer());
+            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, timerStore, configurationStore);
         }
 
         private async Task StartActivityTimeoutRunner()
         {
-            var consumer = await jsContext.CreateOrUpdateConsumerAsync(
-                    SubjectHelper.ActivityTimersStream(options.Namespace),
+            var consumer = await serviceConnection.CreateOrUpdateConsumerAsync(
+                    subjectMapper.ActivityQueueStream,
                     new($"jetflow_activity_timeouts")
                     {
-                        FilterSubjects= [
-                            SubjectHelper.ActivityTimeout(options.Namespace, "*", "*", "*")
-                        ],
-                        DeliverPolicy = NATS.Client.JetStream.Models.ConsumerConfigDeliverPolicy.New,
+                        DurableName = $"jetflow_activity_timeouts",
+                        FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*"),
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     },
                     cancellationTokenSource.Token
@@ -107,11 +121,11 @@ public static class Connection
                         var message = new EventMessage(msg);
                         if (Equals(message.ActivityEventType, ActivityEventTypes.Timeout))
                         {
-                            var (canRun, _) = await ActivityHelper.CanActivityRun(timerStore, jsContext, message, cancellationTokenSource.Token);
+                            var (canRun, _) = await serviceConnection.CanActivityRun(message, cancellationTokenSource.Token);
                             if (canRun)
                             {
-                                await ActivityHelper.MarkActivityDoneInStore(timerStore, message, cancellationTokenSource.Token);
-                                await ActivityHelper.TimeoutActivityAsync(message, connection, cancellationTokenSource.Token);
+                                await serviceConnection.MarkActivityDoneInStore(message, cancellationTokenSource.Token);
+                                await serviceConnection.TimeoutActivityAsync(message, cancellationTokenSource.Token);
                                 await msg.AckAsync(cancellationToken: cancellationTokenSource.Token);
                             }
                         }
@@ -132,14 +146,12 @@ public static class Connection
         }
 
         private ValueTask<INatsJSConsumer> CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(CancellationToken cancellationToken)
-            => jsContext.CreateOrUpdateConsumerAsync(
-                    SubjectHelper.ActivityQueueStream(options.Namespace),
+            => serviceConnection.CreateOrUpdateConsumerAsync(
+                    subjectMapper.ActivityQueueStream,
                     new($"act_{NameHelper.GetActivityName<TWorkflowActivity>()}")
                     {
-                        FilterSubjects= [
-                            SubjectHelper.ActivityStart(options.Namespace, NameHelper.GetActivityName<TWorkflowActivity>(), "*", "*")
-                        ],
-                        DeliverPolicy = NATS.Client.JetStream.Models.ConsumerConfigDeliverPolicy.New,
+                        DurableName= $"act_{NameHelper.GetActivityName<TWorkflowActivity>()}",
+                        FilterSubject = subjectMapper.ActivityStart(NameHelper.GetActivityName<TWorkflowActivity>(), "*", "*"),
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     },
                     cancellationToken
@@ -147,39 +159,40 @@ public static class Connection
 
         async ValueTask IConnection.RegisterWorkflowActivityAsync<TWorkflowActivity>(TWorkflowActivity activity, CancellationToken cancellationToken)
         {
-            var sub = new WorkflowActivitySubscription<TWorkflowActivity>(activity, connection, jsContext, timerStore, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), messageSerializer, cancellationToken);
+            var sub = new WorkflowActivitySubscription<TWorkflowActivity>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationToken);
             sub.Start();
         }
 
         async ValueTask IConnection.RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken)
         {
-            var sub = new WorkflowActivitySubscription<TWorkflowActivity, TInput>(activity, connection, jsContext, timerStore, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), messageSerializer, cancellationToken);
+            var sub = new WorkflowActivitySubscription<TWorkflowActivity, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationToken);
             sub.Start();
         }
 
         async ValueTask IConnection.RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(TWorkflowActivity activity, CancellationToken cancellationToken)
         {
-            var sub = new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput>(activity, connection, jsContext, timerStore, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), messageSerializer, cancellationToken);
+            var sub = new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationToken);
             sub.Start();
         }
 
         async ValueTask IConnection.RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken)
         {
-            var sub = new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>(activity, connection, jsContext, timerStore, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), messageSerializer, cancellationToken);
+            var sub = new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationToken);
             sub.Start();
         }
 
         private ValueTask<INatsJSConsumer> CreateWorkflowConsumerAsync<TWorkflow>(CancellationToken cancellationToken)
-            => jsContext.CreateOrUpdateConsumerAsync(
-                    SubjectHelper.WorkflowEventsStreamsName(options.Namespace),
+            => serviceConnection.CreateOrUpdateConsumerAsync(
+                    subjectMapper.WorkflowEventsStreamsName,
                     new($"wfr_{NameHelper.GetWorkflowName<TWorkflow>()}")
                     {
+                        DurableName = $"wfr_{NameHelper.GetWorkflowName<TWorkflow>()}",
                         FilterSubjects= [
-                            SubjectHelper.WorkflowStart(options.Namespace, NameHelper.GetWorkflowName<TWorkflow>(), "*"),
-                            SubjectHelper.WorkflowDelayEnd(options.Namespace, NameHelper.GetWorkflowName<TWorkflow>(), "*"),
-                            SubjectHelper.WorkflowStepEnd(options.Namespace, NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
-                            SubjectHelper.WorkflowStepError(options.Namespace, NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
-                            SubjectHelper.WorkflowStepTimeout(options.Namespace, NameHelper.GetWorkflowName<TWorkflow>(), "*", "*")
+                            subjectMapper.WorkflowStart(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
+                            subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
+                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
+                            subjectMapper.WorkflowStepError(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
+                            subjectMapper.WorkflowStepTimeout(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*")
                         ],
                         DeliverPolicy = NATS.Client.JetStream.Models.ConsumerConfigDeliverPolicy.New,
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
@@ -189,22 +202,22 @@ public static class Connection
 
         async ValueTask IConnection.RegisterWorkflowAsync<TWorkflow>(WorkflowOptions? options, CancellationToken cancellationToken)
         {
-            await workflowConfigurationContainer.RegisterWorkflowConfigAsync<TWorkflow>(options);
-            var sub = new WorkflowSubscription<TWorkflow>(connection, jsContext, timerStore, workflowConfigurationContainer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), messageSerializer, cancellationTokenSource.Token);
+            await serviceConnection.RegisterWorkflowConfigAsync<TWorkflow>(options);
+            var sub = new WorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), cancellationTokenSource.Token);
             sub.Start();
         }
 
         async ValueTask IConnection.RegisterWorkflowAsync<TWorkflow, TInput>(WorkflowOptions? options, CancellationToken cancellationToken)
         {
-            await workflowConfigurationContainer.RegisterWorkflowConfigAsync<TWorkflow>(options);
-            var sub = new WorkflowSubscription<TWorkflow, TInput>(connection, jsContext, timerStore, workflowConfigurationContainer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), messageSerializer, cancellationTokenSource.Token);
+            await serviceConnection.RegisterWorkflowConfigAsync<TWorkflow>(options);
+            var sub = new WorkflowSubscription<TWorkflow, TInput>(serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), cancellationTokenSource.Token);
             sub.Start();
         }
         ValueTask IConnection.StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
-            => WorkflowHelper.StartWorkflowAsync<TWorkflow>(options.Namespace, connection, cancellationToken);
+            => serviceConnection.StartWorkflowAsync<TWorkflow>(cancellationToken);
 
         ValueTask IConnection.StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
-            => WorkflowHelper.StartWorkflowAsync<TWorkflow, TInput>(options.Namespace, connection, messageSerializer, input, cancellationToken);
+            => serviceConnection.StartWorkflowAsync<TWorkflow, TInput>(input, cancellationToken);
 
     }
 }

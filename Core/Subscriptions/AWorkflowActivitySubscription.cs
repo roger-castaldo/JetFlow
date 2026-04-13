@@ -1,20 +1,17 @@
 ﻿using JetFlow.Helpers;
-using NATS.Client.Core;
 using NATS.Client.JetStream;
-using NATS.Client.KeyValueStore;
 using System.Diagnostics;
 
 namespace JetFlow.Subscriptions;
 
 internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkflowActivity instance,
-    INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, 
-    INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
-    : ASubscription(consumer, cancellationToken)
+    ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
+    INatsJSConsumer consumer, CancellationToken cancellationToken)
+    : ASubscription(serviceConnection, consumer, cancellationToken)
 {
     protected TWorkflowActivity Instance = instance;
     private string ActivityName = NameHelper.GetActivityName<TWorkflowActivity>();
     protected MessageSerializer MessageSerializer => messageSerializer;
-    protected INatsConnection Connection => connection;
 
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
@@ -25,7 +22,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
             {
                 if (!Equals(ActivityEventTypes.Start, message.ActivityEventType))
                     throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");
-                var (canRun, aliveKey) = await ActivityHelper.CanActivityRun(timerStore, natsJSContext, message, CancellationToken.None);
+                var (canRun, aliveKey) = await ServiceConnection.CanActivityRun(message, CancellationToken.None);
                 if (canRun)
                 {
                     var start = MetricsHelper.StartActivity(message);
@@ -37,12 +34,12 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
                         while (!cancellationToken.IsCancellationRequested)
                         {
                             await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken.Token);
-                            currentRevision = await ActivityHelper.KeepActivityAlive(timerStore, message, currentRevision, cancellationToken.Token);
+                            currentRevision = await ServiceConnection.KeepActivityAlive(message, currentRevision, cancellationToken.Token);
                         }
                     });
-                    await HandleActivityRunAsync(await CreateState(message), message, CancellationToken.None);
+                    await HandleActivityRunAsync(await WorkflowState.CreateAsync(ServiceConnection, messageSerializer, subjectMapper, message), message, CancellationToken.None);
                     MetricsHelper.CompleteActivity(message, start);
-                    await ActivityHelper.MarkActivityDoneInStore(timerStore, message, cancellationToken.Token);
+                    await ServiceConnection.MarkActivityDoneInStore(message, cancellationToken.Token);
                 }
             }
             else
@@ -55,7 +52,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
         catch (Exception error)
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, error.Message);
-            await ActivityHelper.ErrorActivityAsync(message, error, connection, CancellationToken);
+            await ServiceConnection.ErrorActivityAsync(message, error, CancellationToken);
         }
         finally
         {
@@ -64,10 +61,5 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
                 await message.Message.AckAsync();
         }
     }
-
-    private ValueTask<IWorkflowState> CreateState(EventMessage message)
-        => new WorkflowState(natsJSContext, messageSerializer, message)
-            .LoadAsync();
-
     protected abstract ValueTask HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken);
 }

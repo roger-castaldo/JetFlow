@@ -2,9 +2,10 @@
 
 namespace JetFlow.Subscriptions;
 
-internal abstract class ASubscription(INatsJSConsumer consumer, CancellationToken cancellationToken)
+internal abstract class ASubscription(ServiceConnection serviceConnection, INatsJSConsumer consumer, CancellationToken cancellationToken)
 {
     protected CancellationToken CancellationToken => cancellationToken;
+    protected ServiceConnection ServiceConnection => serviceConnection;
 
     private Task? runningTask;
     public void Start()

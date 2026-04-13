@@ -19,10 +19,10 @@ var tracerProvider = Sdk.CreateTracerProviderBuilder()
     })     // Optional: Export to OTLP endpoint
     .Build();
 
-var meterProvider = Sdk.CreateMeterProviderBuilder()
-    .AddMeter(Connection.MetricsMeterName)
-    .AddConsoleExporter()
-    .Build();
+//var meterProvider = Sdk.CreateMeterProviderBuilder()
+//    .AddMeter(Connection.MetricsMeterName)
+//    .AddConsoleExporter()
+//    .Build();
 
 Console.WriteLine("Establishing Core Connection...");
 

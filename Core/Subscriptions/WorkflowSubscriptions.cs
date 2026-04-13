@@ -1,12 +1,11 @@
-﻿using NATS.Client.Core;
-using NATS.Client.JetStream;
-using NATS.Client.KeyValueStore;
+﻿using NATS.Client.JetStream;
 
 namespace JetFlow.Subscriptions;
 
 internal class WorkflowSubscription<TWorkflow>
-    (INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, WorkflowConfigurationContainer workflowConfigurationContainer, INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
-    : AWorkflowSubscription<TWorkflow>(connection, natsJSContext, timerStore, workflowConfigurationContainer, consumer, messageSerializer, cancellationToken)
+    (ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
+    INatsJSConsumer consumer, CancellationToken cancellationToken)
+    : AWorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
      where TWorkflow : class, IWorkflow
 {
     protected override ValueTask HandleWorkflowEventAsync(WorkflowContext context)
@@ -14,8 +13,9 @@ internal class WorkflowSubscription<TWorkflow>
 }
 
 internal class WorkflowSubscription<TWorkflow, TInput>
-    (INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, WorkflowConfigurationContainer workflowConfigurationContainer, INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
-    : AWorkflowSubscription<TWorkflow>(connection, natsJSContext, timerStore, workflowConfigurationContainer, consumer, messageSerializer, cancellationToken)
+    (ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
+    INatsJSConsumer consumer, CancellationToken cancellationToken)
+    : AWorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
      where TWorkflow : class, IWorkflow<TInput>
 {
     protected override async ValueTask HandleWorkflowEventAsync(WorkflowContext context)

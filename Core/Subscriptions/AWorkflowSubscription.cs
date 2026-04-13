@@ -1,15 +1,13 @@
-﻿using JetFlow.Configs;
-using JetFlow.Helpers;
-using NATS.Client.Core;
+﻿using JetFlow.Helpers;
 using NATS.Client.JetStream;
-using NATS.Client.KeyValueStore;
 using System.Diagnostics;
 
 namespace JetFlow.Subscriptions;
 
-internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, WorkflowConfigurationContainer workflowConfigurationContainer, INatsJSConsumer consumer, 
-    MessageSerializer messageSerializer, CancellationToken cancellationToken)
-    : ASubscription(consumer, cancellationToken)
+internal abstract class AWorkflowSubscription<TWorkflow>(
+    ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
+    INatsJSConsumer consumer, CancellationToken cancellationToken)
+    : ASubscription(serviceConnection, consumer, cancellationToken)
     where TWorkflow : class
 {
     private static readonly WorkflowEventTypes[] ValidOperations = [
@@ -26,14 +24,12 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
         bool isCompleted = false;
-        WorkflowOptions? workflowOptions = null;
         try
         {
             if (!ValidOperations.Any(m=>Equals(m,message.WorkflowEventType)))
                 throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
             MetricsHelper.ProcessWorkflowMessage(message);
-            workflowOptions = await workflowConfigurationContainer.GetInstanceConfigAsync(message);
-            await HandleWorkflowEventAsync(await CreateContext(message, workflowOptions!));
+            await HandleWorkflowEventAsync(await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, message));
             isCompleted=true;
         }
         catch (WorkflowSuspendedException)
@@ -44,7 +40,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, ex.Message);
             MetricsHelper.EndWorkflow(message.WorkflowName);
-            await WorkflowHelper.EndWorkflowAsync(connection, messageSerializer, message, new Messages.WorkflowEnd(DateTime.UtcNow, ex.Message), CancellationToken);
+            await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, ex.Message), CancellationToken);
         }
         finally
         {
@@ -53,12 +49,8 @@ internal abstract class AWorkflowSubscription<TWorkflow>(INatsConnection connect
         if (isCompleted)
         {
             MetricsHelper.EndWorkflow(message.WorkflowName);
-            await WorkflowHelper.EndWorkflowAsync(connection, messageSerializer, message, new Messages.WorkflowEnd(DateTime.UtcNow, null), CancellationToken);
+            await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, null), CancellationToken);
         }
     }
-
-    protected ValueTask<WorkflowContext> CreateContext(EventMessage message, WorkflowOptions workflowOptions)
-        => new WorkflowContext(connection, natsJSContext, messageSerializer, timerStore, workflowOptions, message)
-                .LoadAsync();
     protected abstract ValueTask HandleWorkflowEventAsync(WorkflowContext context);
 }

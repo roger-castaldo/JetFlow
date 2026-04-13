@@ -1,18 +1,17 @@
-﻿using JetFlow.Helpers;
-using NATS.Client.Core;
-using NATS.Client.JetStream;
-using NATS.Client.KeyValueStore;
+﻿using NATS.Client.JetStream;
 
 namespace JetFlow.Subscriptions;
 
 internal abstract class AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>
-    (TWorkflowActivity instance, INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
-    : AWorkflowActivitySubscription<TWorkflowActivity>(instance, connection, natsJSContext, timerStore, consumer, messageSerializer, cancellationToken)
+    (TWorkflowActivity instance,
+    ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
+    INatsJSConsumer consumer, CancellationToken cancellationToken)
+    : AWorkflowActivitySubscription<TWorkflowActivity>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
 {
     protected override sealed async ValueTask HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
     {
         var result = await HandleActivityRunWithReturnAsync(workflowState, message, cancellationToken);
-        await ActivityHelper.EndActivityAsync<TOutput>(message, result, MessageSerializer, Connection, cancellationToken);
+        await ServiceConnection.EndActivityAsync<TOutput>(message, result, cancellationToken);
     }
     protected abstract ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellation);
 }

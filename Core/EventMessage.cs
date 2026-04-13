@@ -29,7 +29,7 @@ internal record EventMessage
                 throw new ArgumentException($"Invalid event subject {msg.Subject}");
             ActivityName = match.Groups["activityName"].Value;
             ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
-            ActivityID = ConnectionHelper.GetActivityID(msg);
+            ActivityID = ServiceConnection.GetActivityID(msg);
         }
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
         WorkflowName = match.Groups["workflowName"].Value;
