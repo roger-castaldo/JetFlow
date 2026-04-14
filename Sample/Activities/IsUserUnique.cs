@@ -1,4 +1,4 @@
-﻿using JetFlow;
+﻿using JetFlow.Interfaces;
 using System.Security.Cryptography;
 
 namespace Sample.Activities

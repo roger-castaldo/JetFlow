@@ -34,5 +34,7 @@ namespace JetFlow.Configs
         internal INatsJSContext NatsJSContext { get; private init; }
         public IJsonTypeInfoResolver? JsonTypeInfoResolver { get; init; }
         public CompressionTypes CompressionType { get; init; } = CompressionTypes.Brotli;
+        public WorkflowOptions DefaultWorkflowOptions { get; init; } = new();
+        public string? Namespace { get; init; } = null;
     }
 }

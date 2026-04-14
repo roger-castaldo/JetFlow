@@ -27,7 +27,7 @@ internal static class TraceHelper
     public static Activity? StartActivity(EventMessage message)
         => activitySource.StartActivity("WorkflowActivityStart", ActivityKind.Consumer, default(ActivityContext), ExtractWorkflowActivityTags(message), ExtractWorkflowActivityLink(message));
 
-    public static NatsHeaders? InjectCurrentActivity(NatsHeaders? headers)
+    public static NatsHeaders InjectCurrentActivity(NatsHeaders headers)
         => (Activity.Current?.OperationName) switch
         {
             WorkflowStartName => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>([

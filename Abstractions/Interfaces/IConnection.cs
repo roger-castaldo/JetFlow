@@ -1,6 +1,6 @@
 ﻿using JetFlow.Configs;
 
-namespace JetFlow
+namespace JetFlow.Interfaces
 {
     public interface IConnection
     {

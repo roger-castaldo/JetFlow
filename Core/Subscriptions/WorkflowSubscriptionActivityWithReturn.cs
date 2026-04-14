@@ -1,11 +1,12 @@
-﻿using NATS.Client.Core;
+﻿using JetFlow.Interfaces;
 using NATS.Client.JetStream;
-using NATS.Client.KeyValueStore;
 
 namespace JetFlow.Subscriptions;
 internal class WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput>
-    (TWorkflowActivity instance, INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
-    : AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>(instance, connection, natsJSContext, timerStore, consumer, messageSerializer, cancellationToken)
+    (TWorkflowActivity instance,
+    ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
+    INatsJSConsumer consumer, CancellationToken cancellationToken)
+    : AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
      where TWorkflowActivity : IActivityWithReturn<TOutput>
 {
     protected override ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
@@ -13,8 +14,10 @@ internal class WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput
 }
 
 internal class WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>
-    (TWorkflowActivity instance, INatsConnection connection, INatsJSContext natsJSContext, INatsKVStore timerStore, INatsJSConsumer consumer, MessageSerializer messageSerializer, CancellationToken cancellationToken)
-    : AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>(instance, connection, natsJSContext, timerStore, consumer, messageSerializer, cancellationToken)
+    (TWorkflowActivity instance,
+    ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
+    INatsJSConsumer consumer, CancellationToken cancellationToken)
+    : AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
      where TWorkflowActivity : IActivityWithReturn<TOutput, TInput>
 {
     protected async override ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)

@@ -19,10 +19,10 @@ var tracerProvider = Sdk.CreateTracerProviderBuilder()
     })     // Optional: Export to OTLP endpoint
     .Build();
 
-var meterProvider = Sdk.CreateMeterProviderBuilder()
-    .AddMeter(Connection.MetricsMeterName)
-    .AddConsoleExporter()
-    .Build();
+//var meterProvider = Sdk.CreateMeterProviderBuilder()
+//    .AddMeter(Connection.MetricsMeterName)
+//    .AddConsoleExporter()
+//    .Build();
 
 Console.WriteLine("Establishing Core Connection...");
 
@@ -34,7 +34,12 @@ var connection = await Connection.CreateInstanceAsync(new(
 ));
 
 Console.WriteLine("Registering workflow...");
-await connection.RegisterWorkflowAsync<CreateUserWorkflow, User>();
+await connection.RegisterWorkflowAsync<CreateUserWorkflow, User>(new()
+{
+    ErrorOnActivityTimeout = true,
+    PurgeDelay = TimeSpan.FromSeconds(30),
+    CompletionAction = JetFlow.Configs.WorkflowCompletionActions.ArchiveThenPurge
+});
 
 Console.WriteLine("Registering activities...");
 await connection.RegisterWorkflowActivityWithReturnAsync<DefineUsername,string,User>(new(), CancellationToken.None);

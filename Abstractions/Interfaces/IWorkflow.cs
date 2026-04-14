@@ -1,4 +1,4 @@
-﻿namespace JetFlow;
+﻿namespace JetFlow.Interfaces;
 
 public interface IWorkflow
 {
