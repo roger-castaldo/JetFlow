@@ -1,4 +1,4 @@
-﻿using JetFlow;
+﻿using JetFlow.Interfaces;
 
 namespace Sample.Activities
 {

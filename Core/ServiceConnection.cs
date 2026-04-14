@@ -4,11 +4,12 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
+using NATS.Client.ObjectStore;
 
 namespace JetFlow;
 
 internal partial class ServiceConnection(INatsConnection connection, INatsJSContext jsContext, 
-    INatsKVStore timerStore, INatsKVStore configurationStore, 
+    INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore,
     SubjectMapper subjectMapper, MessageSerializer messageSerializer)
 {
     private const string TTLHeader = "Nats-TTL";

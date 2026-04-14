@@ -1,4 +1,5 @@
 ﻿using JetFlow.Helpers;
+using JetFlow.Interfaces;
 using NATS.Client.JetStream;
 using System.Diagnostics;
 

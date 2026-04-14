@@ -1,4 +1,5 @@
-﻿using NATS.Client.JetStream;
+﻿using JetFlow.Interfaces;
+using NATS.Client.JetStream;
 
 namespace JetFlow.Subscriptions;
 

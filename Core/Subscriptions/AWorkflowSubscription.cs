@@ -84,7 +84,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         var options = InternalsSerializer.DeserializeWorkflowOptions(config.Data!)!;
         if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenNothing) || Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge))
         {
-            //archive callback here
+            await ServiceConnection.ArchiveWorkflowAsync(message, CancellationToken);
             await ServiceConnection.MarkWorkflowArchived(message, CancellationToken);
         }
         if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge) || Equals(options.CompletionAction, WorkflowCompletionActions.Purge))

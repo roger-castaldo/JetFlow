@@ -1,11 +1,13 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
+using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using JetFlow.Subscriptions;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
+using NATS.Client.ObjectStore;
 using NATS.Net;
 
 namespace JetFlow;
@@ -26,11 +28,11 @@ public static class Connection
         private Task? timeoutRunner;
 
         private ConnectionInstance(INatsConnection connection, INatsJSContext natsJSContext, MessageSerializer messageSerializer, 
-            SubjectMapper subjectMapper, INatsKVStore timerStore, INatsKVStore configurationStore)
+            SubjectMapper subjectMapper, INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore)
         {
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
-            serviceConnection = new(connection, natsJSContext, timerStore, configurationStore, subjectMapper, messageSerializer);
+            serviceConnection = new(connection, natsJSContext, timerStore, configurationStore, archiveStore, subjectMapper, messageSerializer);
             timeoutRunner = StartActivityTimeoutRunner();
         }
 
@@ -81,14 +83,16 @@ public static class Connection
                 History = 1, 
                 MaxAge = TimeSpan.FromMinutes(5)
             });
-            var configurationStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.WorkflowConfigKeytore)
+            var configurationStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.WorkflowConfigKeystore)
             {
                 Description = "KeyValue store for workflow configurations",
                 History = 1,
                 LimitMarkerTTL = TimeSpan.FromMinutes(1)
             });
             await configurationStore.PutAsync<WorkflowOptions>(ServiceConnection.DefaultConfigKey, options.DefaultWorkflowOptions, serializer: new WorkflowOptionsSerializer());
-            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, timerStore, configurationStore);
+            var objContext = jsContext.CreateObjectStoreContext();
+            var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
+            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, timerStore, configurationStore, archiveStore);
         }
 
         private async Task StartActivityTimeoutRunner()

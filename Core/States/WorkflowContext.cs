@@ -1,4 +1,5 @@
 ﻿using JetFlow.Configs;
+using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using NATS.Client.JetStream;
 

@@ -12,7 +12,8 @@ internal enum WorkflowEventTypes
     StepError,
     StepTimeout,
     Archived,
-    Purge
+    Purge,
+    Config
 }
 
 internal enum ActivityEventTypes

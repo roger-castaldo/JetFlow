@@ -38,7 +38,7 @@ await connection.RegisterWorkflowAsync<CreateUserWorkflow, User>(new()
 {
     ErrorOnActivityTimeout = true,
     PurgeDelay = TimeSpan.FromSeconds(30),
-    CompletionAction = JetFlow.Configs.WorkflowCompletionActions.Purge
+    CompletionAction = JetFlow.Configs.WorkflowCompletionActions.ArchiveThenPurge
 });
 
 Console.WriteLine("Registering activities...");

@@ -46,6 +46,9 @@ internal class SubjectMapper(string? instanceNamespace)
     public string ActivityLocksKeystore
         => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_ACTIVITY_LOCKS";
 
-    public string WorkflowConfigKeytore
+    public string WorkflowConfigKeystore
         => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_WORKFLOW_CONFIGS";
+    
+    public string WorkflowArchiveKeystore
+        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_WORKFLOW_ARCHIVES";
 }

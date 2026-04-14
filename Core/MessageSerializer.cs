@@ -85,6 +85,8 @@ internal class MessageSerializer
 
     public ValueTask<TInput?> DecodeAsync<TInput>(INatsJSMsg<byte[]> msg)
         => DecodeObjectAsync<TInput>(msg);
+    public ValueTask<object?> DecodeAsync(INatsJSMsg<byte[]> msg)
+        => DecodeObjectAsync<object>(msg);
     public async ValueTask<(TInput1?, TInput2?)> DecodeAsync<TInput1, TInput2>(INatsJSMsg<byte[]> msg)
     {
         var array = await DecodeObjectAsync<JsonElement[]>(msg);
