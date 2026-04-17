@@ -22,3 +22,9 @@ internal enum ActivityEventTypes
     Timer,
     Timeout
 }
+
+internal enum RetryTypes
+{
+    Timeout,
+    Error
+}

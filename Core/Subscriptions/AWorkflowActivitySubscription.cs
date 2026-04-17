@@ -53,7 +53,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
         catch (Exception error)
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, error.Message);
-            await ServiceConnection.ErrorActivityAsync(message, error, CancellationToken);
+            await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Error, message, ServiceConnection, CancellationToken, error);
         }
         finally
         {

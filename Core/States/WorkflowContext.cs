@@ -84,10 +84,6 @@ internal class WorkflowContext
         var result = new EventMessage(msg);
         if (!Equals(result.ActivityName, name))    
             throw new InvalidStepException(name, result.ActivityName??string.Empty);
-        if (Equals(result.WorkflowEventType, WorkflowEventTypes.StepTimeout) && Options.ErrorOnActivityTimeout)
-            throw new ActivityTimeoutException(result.ActivityName);
-        if (Equals(result.WorkflowEventType, WorkflowEventTypes.StepError) && Options.ErrorOnActivityFailure)
-            throw new ActivityFailedException(result.ActivityName, result.Message.Data != null ? System.Text.Encoding.UTF8.GetString(result.Message.Data) : string.Empty);
         return result;
     }
 

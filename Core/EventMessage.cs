@@ -30,6 +30,21 @@ internal record EventMessage
             ActivityName = match.Groups["activityName"].Value;
             ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
             ActivityID = ServiceConnection.GetActivityID(msg);
+            if (msg.Headers!=null)
+            {
+                if (msg.Headers.TryGetValue(Constants.ActivityTimeoutHeader, out var timeoutValue) && int.TryParse(timeoutValue, out var timeoutSeconds))
+                    ActivityTimeout = TimeSpan.FromSeconds(timeoutSeconds);
+                if (msg.Headers.TryGetValue(Constants.ActivityAttemptHeader, out var attemptValue) && ushort.TryParse(attemptValue, out var attempt))
+                    ActivityAttempt = attempt;
+                if (msg.Headers.TryGetValue(Constants.ActivityMaximumAttemptsHeader, out var maxAttemptValue) && ushort.TryParse(maxAttemptValue, out var maxAttempt)) 
+                    RetryConfiguration = new(
+                        maxAttempt,
+                        msg.Headers.TryGetValue(Constants.ActiviyRetryDelayBetweenHeader, out var delayValue) && TimeSpan.TryParse(delayValue, out var delay) ? delay : (TimeSpan?)null,
+                        msg.Headers.TryGetValue(Constants.ActivityRetryOnTimeoutHeader, out var retryOnTimeoutValue) && bool.TryParse(retryOnTimeoutValue, out var retryOnTimeout) ? retryOnTimeout : true,
+                        msg.Headers.TryGetValue(Constants.ActivityRetryOnErrorHeader, out var retryOnErrorValue) && bool.TryParse(retryOnErrorValue, out var retryOnError) ? retryOnError : true,
+                        msg.Headers.TryGetValue(Constants.ActivityRetryBlockedErrorsHeader, out var blockedErrorsValue) ? (string[]?)blockedErrorsValue.ToArray().Where(s => !string.IsNullOrWhiteSpace(s)) : null
+                    );
+            }
         }
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
         WorkflowName = match.Groups["workflowName"].Value;
@@ -44,6 +59,9 @@ internal record EventMessage
     public string? ActivityName { get; private init; }
     public ActivityEventTypes? ActivityEventType { get; private init; } = null;
     public Guid? ActivityID { get; private init; } = null;
+    public TimeSpan ActivityTimeout { get; private init; } = TimeSpan.MaxValue;
+    public ushort ActivityAttempt { get; private init; } = 0;
+    public ActivityRetryConfiguration? RetryConfiguration { get; private init; } = null;
     public INatsJSMsg<byte[]> Message { get; private init; }
     public NatsHeaders InjectHeaders(NatsHeaders? headers)
     {
