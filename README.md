@@ -10,5 +10,5 @@ Eventually this service will include:
 * Examples of how to use this
 * Full documentation
 * Unit Testing
-* Built in Retry/Circuit Break policies
-* Workflow Activity execution timeouts
+* ~~Built in Retry/Circuit Break policies~~
+* ~~Workflow Activity execution timeouts~~

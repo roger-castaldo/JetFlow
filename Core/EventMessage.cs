@@ -32,8 +32,8 @@ internal record EventMessage
             ActivityID = ServiceConnection.GetActivityID(msg);
             if (msg.Headers!=null)
             {
-                if (msg.Headers.TryGetValue(Constants.ActivityTimeoutHeader, out var timeoutValue) && int.TryParse(timeoutValue, out var timeoutSeconds))
-                    ActivityTimeout = TimeSpan.FromSeconds(timeoutSeconds);
+                if (msg.Headers.TryGetValue(Constants.ActivityTimeoutHeader, out var timeoutValue) && TimeSpan.TryParse(timeoutValue, out var timeSpan))
+                    ActivityTimeout = timeSpan;
                 if (msg.Headers.TryGetValue(Constants.ActivityAttemptHeader, out var attemptValue) && ushort.TryParse(attemptValue, out var attempt))
                     ActivityAttempt = attempt;
                 if (msg.Headers.TryGetValue(Constants.ActivityMaximumAttemptsHeader, out var maxAttemptValue) && ushort.TryParse(maxAttemptValue, out var maxAttempt)) 
@@ -59,7 +59,7 @@ internal record EventMessage
     public string? ActivityName { get; private init; }
     public ActivityEventTypes? ActivityEventType { get; private init; } = null;
     public Guid? ActivityID { get; private init; } = null;
-    public TimeSpan ActivityTimeout { get; private init; } = TimeSpan.MaxValue;
+    public TimeSpan? ActivityTimeout { get; private init; } = null;
     public ushort ActivityAttempt { get; private init; } = 0;
     public ActivityRetryConfiguration? RetryConfiguration { get; private init; } = null;
     public INatsJSMsg<byte[]> Message { get; private init; }

@@ -9,7 +9,7 @@ internal class WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput
     : AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
      where TWorkflowActivity : IActivityWithReturn<TOutput>
 {
-    protected override ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
+    protected override Task<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
         => Instance.ExecuteAsync(workflowState, cancellationToken);
 }
 
@@ -20,6 +20,6 @@ internal class WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput
     : AWorkflowActivitySubscriptionWithReturn<TWorkflowActivity, TOutput>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
      where TWorkflowActivity : IActivityWithReturn<TOutput, TInput>
 {
-    protected async override ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
+    protected async override Task<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
         => await Instance.ExecuteAsync(workflowState, (await MessageSerializer.DecodeAsync<TInput>(message.Message)), cancellationToken);
 }
