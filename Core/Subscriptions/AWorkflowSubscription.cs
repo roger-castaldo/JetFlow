@@ -39,7 +39,15 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                 if (!ValidOperations.Any(m => Equals(m, message.WorkflowEventType)))
                     throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
                 MetricsHelper.ProcessWorkflowMessage(message);
-                await HandleWorkflowEventAsync(await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, message));
+                var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, message);
+                if (!string.IsNullOrEmpty(message.ActivityName))
+                {
+                    if (Equals(message.WorkflowEventType, WorkflowEventTypes.StepTimeout) && context.Options.ErrorOnActivityTimeout)
+                        throw new ActivityTimeoutException(message.ActivityName);
+                    if (Equals(message.WorkflowEventType, WorkflowEventTypes.StepError) && context.Options.ErrorOnActivityFailure)
+                        throw new ActivityFailedException(message.ActivityName, message.Message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Message.Data) : string.Empty);
+                }
+                await HandleWorkflowEventAsync(context);
                 isCompleted=true;
             }
             catch (WorkflowSuspendedException)

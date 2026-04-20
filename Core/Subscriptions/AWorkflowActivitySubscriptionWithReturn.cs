@@ -9,10 +9,10 @@ internal abstract class AWorkflowActivitySubscriptionWithReturn<TWorkflowActivit
     INatsJSConsumer consumer, CancellationToken cancellationToken)
     : AWorkflowActivitySubscription<TWorkflowActivity>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
 {
-    protected override sealed async ValueTask HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
+    protected override sealed async Task HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
     {
         var result = await HandleActivityRunWithReturnAsync(workflowState, message, cancellationToken);
         await ServiceConnection.EndActivityAsync<TOutput>(message, result, cancellationToken);
     }
-    protected abstract ValueTask<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellation);
+    protected abstract Task<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellation);
 }

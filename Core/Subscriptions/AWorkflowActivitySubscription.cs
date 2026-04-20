@@ -2,6 +2,7 @@
 using JetFlow.Interfaces;
 using NATS.Client.JetStream;
 using System.Diagnostics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JetFlow.Subscriptions;
 
@@ -16,7 +17,12 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
 
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
-        using var cancellationTokenSource = new CancellationTokenSource();
+        using var activityKeepaliveCTS = new CancellationTokenSource();
+        using var timeoutCts = (message.ActivityTimeout.HasValue ? new CancellationTokenSource(message.ActivityTimeout.Value) : null);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            CancellationToken,
+            timeoutCts?.Token??CancellationToken.None);
+        var ackMessage = true;
         try
         {
             if (Equals(message.ActivityName, ActivityName))
@@ -28,39 +34,52 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
                 {
                     var start = MetricsHelper.StartActivity(message);
                     using var acitvity = TraceHelper.StartActivity(message);
-                    var cancellationToken = new CancellationTokenSource();
                     Task.Run(async () =>
                     {
                         ulong currentRevision = 1;
-                        while (!cancellationToken.IsCancellationRequested)
+                        while (!activityKeepaliveCTS.IsCancellationRequested)
                         {
-                            await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken.Token);
-                            currentRevision = await ServiceConnection.KeepActivityAlive(message, currentRevision, cancellationToken.Token);
+                            await Task.Delay(TimeSpan.FromMinutes(1), activityKeepaliveCTS.Token);
+                            currentRevision = await ServiceConnection.KeepActivityAlive(message, currentRevision, activityKeepaliveCTS.Token);
                         }
                     });
-                    await HandleActivityRunAsync(await WorkflowState.CreateAsync(ServiceConnection, messageSerializer, subjectMapper, message), message, CancellationToken.None);
+                    await HandleActivityRunAsync(await WorkflowState.CreateAsync(ServiceConnection, messageSerializer, subjectMapper, message), message, linkedCts.Token)
+                        .WaitAsync(linkedCts.Token);
                     MetricsHelper.CompleteActivity(message, start);
-                    await ServiceConnection.MarkActivityDoneInStore(message, cancellationToken.Token);
+                    await ServiceConnection.MarkActivityDoneInStore(message, CancellationToken);
                 }
             }
             else
-                await message.Message.NakAsync();
+                ackMessage=false;
         }
         catch (WorkflowSuspendedException)
         {
             // handle workflow suspension by doing nothing
         }
+        catch (OperationCanceledException) when (timeoutCts?.IsCancellationRequested??false)
+        {
+            // timed out
+            Activity.Current?.SetStatus(ActivityStatusCode.Error, "Activity execution timed out");
+            await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Timeout, message, ServiceConnection, CancellationToken);
+        }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
+            // caller explicitly canceled
+            ackMessage=false;
+        }
         catch (Exception error)
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, error.Message);
-            await ServiceConnection.ErrorActivityAsync(message, error, CancellationToken);
+            await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Error, message, ServiceConnection, CancellationToken, error);
         }
         finally
         {
-            await cancellationTokenSource.CancelAsync();
-            if (Equals(message.ActivityName, ActivityName))
+            await activityKeepaliveCTS.CancelAsync();
+            if (ackMessage)
                 await message.Message.AckAsync();
+            else
+                await message.Message.NakAsync();
         }
     }
-    protected abstract ValueTask HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken);
+    protected abstract Task HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken);
 }

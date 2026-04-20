@@ -5,10 +5,10 @@ namespace JetFlow.Helpers;
 
 internal static class TraceHelper
 {
-    public const string WorkflowTraceHeaderKey = "jetflow-workflow-traceParentId";
-    public const string WorkflowTraceSpanHeaderKey = "jetflow-workflow-traceParentSpanId";
-    private const string WorkflowStepTraceParentHeaderKey = "jetflow-workflowstep-traceParentId";
-    private const string WorkflowStepTraceParentSpanHeaderKey = "jetflow-workflowstep-traceParentSpanId";
+    public const string WorkflowTraceHeaderKey = "x-jetflow-workflow-traceParentId";
+    public const string WorkflowTraceSpanHeaderKey = "x-jetflow-workflow-traceParentSpanId";
+    private const string WorkflowStepTraceParentHeaderKey = "x-jetflow-workflowstep-traceParentId";
+    private const string WorkflowStepTraceParentSpanHeaderKey = "x-jetflow-workflowstep-traceParentSpanId";
 
     private const string WorkflowStepStartActivityName = "WorkflowStepStart";
     private const string WorkflowStartName = "WorkflowStart";

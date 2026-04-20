@@ -23,7 +23,8 @@ internal class CreateUserWorkflow : IWorkflow<User>
             Console.WriteLine("Delay complete...");
             var unregisteredResult = await context.ExecuteActivityAsync<UnregisteredActivity>(new()
             {
-                OverallTimeout=TimeSpan.FromSeconds(5)
+                Timeouts=new(OverallTimeout: TimeSpan.FromSeconds(5)),
+                Retries=new(MaximumAttempts:3)
             });
             Console.WriteLine($"Unregistered result: {unregisteredResult.Status}");
         }else

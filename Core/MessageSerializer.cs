@@ -10,7 +10,7 @@ namespace JetFlow;
 internal class MessageSerializer
 {
     private const int CompressionThreshold = 32 * 1024; // 32 KB
-    private const string ContentEncodingHeader = "content-encoding";
+    private const string ContentEncodingHeader = "x-jetflow-content-encoding";
     private const string JsonEncoding = "application/json";
     private const string BrotliEncoding = "application/brotli";
     private const string GZipEncoding = "application/gzip";

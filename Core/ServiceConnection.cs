@@ -17,7 +17,7 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
     private const string ScheduleTargetHeader = "Nats-Schedule-Target";
     private const string ScheduledTargetTTL = "Nats-Schedule-TTL";
     private const string MessageIdHeader = "Nats-Msg-Id";
-    private const string ActivityIdHeader = "JetFlow-Activity-Id";
+    private const string ActivityIdHeader = "x-jetflow-activity-id";
 
     private static string CreateTTLString(TimeSpan ttl)
     {
@@ -141,7 +141,10 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
             ), jsContext);
 
     public async ValueTask PurgeWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
-        => await jsContext.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
+    {
+        await jsContext.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
+        await jsContext.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
+    }
 
     private class JetstreamQuery(INatsJSConsumer consumer, INatsJSContext jsContext) : IJetstreamQuery
     {
@@ -172,14 +175,14 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
             // If a fetch returns no messages, treat the query as complete and exit the enumerator.
             while (!cancellationToken.IsCancellationRequested)
             {
-                var any = false;
-                await foreach (var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs = 5, Expires = TimeSpan.FromSeconds(1) }, cancellationToken: cancellationToken))
+                var cnt = 0;
+                await foreach (var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs = 10, Expires = TimeSpan.FromSeconds(1) }, cancellationToken: cancellationToken))
                 {
-                    any = true;
+                    cnt++;
                     yield return msg;
                 }
 
-                if (!any)
+                if (cnt!=10)
                 {
                     // No messages in this fetch, end the query.
                     yield break;

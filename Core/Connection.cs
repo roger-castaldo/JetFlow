@@ -56,7 +56,8 @@ public static class Connection
                 subjectMapper.WorkflowStepStart("*", "*", "*"),
                 subjectMapper.WorkflowStepEnd("*", "*", "*"),
                 subjectMapper.WorkflowStepError("*", "*", "*"),
-                subjectMapper.WorkflowStepTimeout("*", "*", "*")
+                subjectMapper.WorkflowStepTimeout("*", "*", "*"),
+                subjectMapper.WorkflowStepRetry("*", "*", "*")
             ])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
@@ -122,12 +123,12 @@ public static class Connection
                             if (canRun)
                             {
                                 await serviceConnection.MarkActivityDoneInStore(message, cancellationTokenSource.Token);
-                                await serviceConnection.TimeoutActivityAsync(message, cancellationTokenSource.Token);
-                                await msg.AckAsync(cancellationToken: cancellationTokenSource.Token);
+                                await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Timeout, message, serviceConnection, cancellationTokenSource.Token);
+                                await message.Message.AckAsync(cancellationToken: cancellationTokenSource.Token);
                             }
                         }
                         else
-                            await msg.NakAsync(cancellationToken: cancellationTokenSource.Token);
+                            await message.Message.NakAsync(cancellationToken: cancellationTokenSource.Token);
                     }
                 }
                 catch (NatsJSProtocolException e)
