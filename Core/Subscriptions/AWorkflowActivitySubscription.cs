@@ -2,7 +2,6 @@
 using JetFlow.Interfaces;
 using NATS.Client.JetStream;
 using System.Diagnostics;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JetFlow.Subscriptions;
 
