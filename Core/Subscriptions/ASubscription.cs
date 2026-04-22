@@ -2,24 +2,29 @@
 
 namespace JetFlow.Subscriptions;
 
-internal abstract class ASubscription(ServiceConnection serviceConnection, INatsJSConsumer consumer, CancellationToken cancellationToken)
+internal abstract class ASubscription
 {
-    protected CancellationToken CancellationToken => cancellationToken;
-    protected ServiceConnection ServiceConnection => serviceConnection;
+    protected CancellationToken CancellationToken { get; private init; }
+    protected ServiceConnection ServiceConnection { get; private init; }
+    private readonly INatsJSConsumer consumer;
+    private readonly Task runningTask;
 
-    private Task? runningTask;
-    public void Start()
-        => runningTask = StartStream();
-
-    protected async Task StartStream()
+    protected ASubscription(ServiceConnection serviceConnection, INatsJSConsumer consumer, CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        ServiceConnection = serviceConnection;
+        this.consumer = consumer;
+        CancellationToken = cancellationToken;
+        runningTask = StartStream();
+    }
+
+    private async Task StartStream()
+    {
+        while (!CancellationToken.IsCancellationRequested)
         {
             try
             {
-                await consumer.RefreshAsync(cancellationToken); // or try to recreate consumer
-
-                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationToken))
+                await consumer.RefreshAsync(CancellationToken); // or try to recreate consumer
+                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: CancellationToken))
                 {
                     var message = new EventMessage(msg);
                     await ProcessMessageAsync(new(msg));
@@ -32,10 +37,17 @@ internal abstract class ASubscription(ServiceConnection serviceConnection, INats
             catch (NatsJSException e)
             {
                 // log exception
-                await Task.Delay(1000, cancellationToken); // backoff
+                await Task.Delay(1000, CancellationToken); // backoff
+            }
+            catch (OperationCanceledException)
+            {
+                // expected on cancellation, ignore
             }
         }
     }
 
     protected abstract ValueTask ProcessMessageAsync(EventMessage message);
+
+    public async Task AwaitClose()
+        => await (runningTask.IsCompleted ? Task.CompletedTask : runningTask);
 }

@@ -7,5 +7,5 @@ public interface IActivity
 
 public interface IActivity<TInput>
 {
-    Task ExecuteAsync(IWorkflowState state, TInput? input, CancellationToken cancellationToken);
+    Task ExecuteAsync(TInput? input, IWorkflowState state, CancellationToken cancellationToken);
 }

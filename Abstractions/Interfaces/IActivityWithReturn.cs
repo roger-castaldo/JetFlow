@@ -7,5 +7,5 @@ public interface IActivityWithReturn<TOutput>
 
 public interface IActivityWithReturn<TOutput, TInput>
 {
-    Task<TOutput> ExecuteAsync(IWorkflowState state, TInput? input, CancellationToken cancellationToken);
+    Task<TOutput> ExecuteAsync(TInput? input, IWorkflowState state, CancellationToken cancellationToken);
 }

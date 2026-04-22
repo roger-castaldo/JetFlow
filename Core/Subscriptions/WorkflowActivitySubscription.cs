@@ -22,5 +22,5 @@ internal class WorkflowActivitySubscription<TWorkflowActivity, TInput>
      where TWorkflowActivity : IActivity<TInput>
 {
     protected async override Task HandleActivityRunWithoutReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
-        => await Instance.ExecuteAsync(workflowState, (await MessageSerializer.DecodeAsync<TInput>(message.Message)), cancellationToken);
+        => await Instance.ExecuteAsync((await MessageSerializer.DecodeAsync<TInput>(message.Message)), workflowState, cancellationToken);
 }
