@@ -26,16 +26,16 @@ public static class Connection
         private readonly ServiceConnection serviceConnection;
         private readonly SubjectMapper subjectMapper;
         private readonly CancellationTokenSource cancellationTokenSource = new();
-        private readonly Task timeoutRunner;
         private readonly ConcurrentBag<ASubscription> subscriptions = new();
 
         private ConnectionInstance(INatsConnection connection, INatsJSContext natsJSContext, MessageSerializer messageSerializer, 
-            SubjectMapper subjectMapper, INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore)
+            SubjectMapper subjectMapper, INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore,
+            INatsJSConsumer activityTimeoutsConsumer)
         {
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
             serviceConnection = new(connection, natsJSContext, timerStore, configurationStore, archiveStore, subjectMapper, messageSerializer);
-            timeoutRunner = StartActivityTimeoutRunner();
+            subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, activityTimeoutsConsumer, cancellationTokenSource.Token));
         }
 
         public static async ValueTask<IConnection> CreateAsync(ConnectionOptions options)
@@ -102,7 +102,17 @@ public static class Connection
             await configurationStore.PutAsync<WorkflowOptions>(ServiceConnection.DefaultConfigKey, options.DefaultWorkflowOptions, serializer: new WorkflowOptionsSerializer());
             var objContext = jsContext.CreateObjectStoreContext();
             var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
-            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, timerStore, configurationStore, archiveStore);
+            var activityTimeoutsConsumer = await jsContext.CreateOrUpdateConsumerAsync(
+                    subjectMapper.ActivityQueueStream,
+                    new($"jetflow_activity_timeouts")
+                    {
+                        DurableName = $"jetflow_activity_timeouts",
+                        FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*"),
+                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
+                    },
+                    CancellationToken.None
+                );
+            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, timerStore, configurationStore, archiveStore, activityTimeoutsConsumer);
         }
 
         private async Task StartActivityTimeoutRunner()
@@ -212,10 +222,10 @@ public static class Connection
             await serviceConnection.RegisterWorkflowConfigAsync<TWorkflow>(options);
             subscriptions.Add(new WorkflowSubscription<TWorkflow, TInput>(serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), cancellationTokenSource.Token));
         }
-        ValueTask IConnection.StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
+        ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
             => serviceConnection.StartWorkflowAsync<TWorkflow>(cancellationToken);
 
-        ValueTask IConnection.StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
+        ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
             => serviceConnection.StartWorkflowAsync<TWorkflow, TInput>(input, cancellationToken);
 
         async ValueTask IAsyncDisposable.DisposeAsync()
@@ -225,7 +235,6 @@ public static class Connection
                 await cancellationTokenSource.CancelAsync();
                 await Task.WhenAll(
                     subscriptions.Select(s => s.AwaitClose())
-                    .Append(timeoutRunner.IsCompleted ? Task.CompletedTask : timeoutRunner)
                 );
                 subscriptions.Clear();
             }

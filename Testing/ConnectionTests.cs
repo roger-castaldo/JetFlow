@@ -6,8 +6,6 @@ using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
-using NATS.Client.KeyValueStore;
-using NATS.Client.ObjectStore;
 using NATS.Net;
 
 namespace JetFlow.Testing;
@@ -279,5 +277,56 @@ public class ConnectionTests
         var inputConfig = await configStorage.TryGetEntryAsync<WorkflowOptions>(NameHelper.GetWorkflowName<WorkflowWithInput>(), serializer: new WorkflowOptionsSerializer());
         Assert.IsTrue(inputConfig.Success);
         Assert.AreEqual(withInputConfig, inputConfig.Value.Value);
+    }
+
+    private class StartableWorkflowWithNoInput : IWorkflow
+    {
+        public static bool Started = false;
+        ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
+        {
+            Started=true;
+            return ValueTask.CompletedTask;
+        }
+    }
+    private class StartableWorkflowWithInput : IWorkflow<string>
+    {
+        public static string Input = string.Empty;
+        ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string? input)
+        {
+            Input = input ?? string.Empty;
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [TestMethod]
+    [DataRow(null, DisplayName = "Default namespace")]
+    [DataRow("mydomain", DisplayName = "Custom namespace")]
+    public async Task EnsureWorkflowStart(string instanceNamespace)
+    {
+        Assert.IsNotNull(natsTestHarness);
+        StartableWorkflowWithInput.Input=string.Empty;
+        StartableWorkflowWithNoInput.Started=false;
+        // Arrange
+        var subjectMapper = new SubjectMapper(instanceNamespace);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        // Act
+        var connection = await Connection.CreateInstanceAsync(new(natsConnection)
+        {
+            Namespace = instanceNamespace
+        });
+        await connection.RegisterWorkflowAsync<StartableWorkflowWithNoInput>(null, CancellationToken.None);
+        await connection.RegisterWorkflowAsync<StartableWorkflowWithInput, string>(null, CancellationToken.None);
+        await Task.WhenAll(
+            WorkflowsHelper.StartWorkflowAndWaitForCompletion<StartableWorkflowWithNoInput>(natsConnection, subjectMapper, () => connection.StartWorkflowAsync<StartableWorkflowWithNoInput>(CancellationToken.None)),
+            WorkflowsHelper.StartWorkflowAndWaitForCompletion<StartableWorkflowWithInput>(natsConnection, subjectMapper, () => connection.StartWorkflowAsync<StartableWorkflowWithInput, string>("test input", CancellationToken.None))
+        );
+
+        // Assert
+        await ((IAsyncDisposable)connection).DisposeAsync();
+
+        //Verify
+        Assert.IsTrue(StartableWorkflowWithNoInput.Started);
+        Assert.AreEqual("test input", StartableWorkflowWithInput.Input);
     }
 }

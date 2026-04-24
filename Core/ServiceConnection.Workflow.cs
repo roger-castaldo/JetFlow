@@ -7,7 +7,7 @@ namespace JetFlow;
 
 internal partial class ServiceConnection
 {
-    private async ValueTask StartWorkflowAsync<TWorkflow>(byte[] data, NatsHeaders? headers, CancellationToken cancellationToken)
+    private async ValueTask<Guid> StartWorkflowAsync<TWorkflow>(byte[] data, NatsHeaders? headers, CancellationToken cancellationToken)
     {
         var id = Guid.NewGuid();
         var name = NameHelper.GetWorkflowName<TWorkflow>();
@@ -21,15 +21,16 @@ internal partial class ServiceConnection
             subjectMapper.WorkflowStart(name, id.ToString()),
             new(headers.ToDictionary()), 
             $"{name}-{id}-start", cancellationToken: cancellationToken);
+        return id;
     }
-    public ValueTask StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
+    public ValueTask<Guid> StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
         => StartWorkflowAsync<TWorkflow>([], null, cancellationToken);
-    public async ValueTask StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
+    public async ValueTask<Guid> StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow<TInput>
     {
         var (data, headers) = await messageSerializer.EncodeAsync<TInput>(input);
-        await StartWorkflowAsync<TWorkflow>(data, headers, cancellationToken);
+        return await StartWorkflowAsync<TWorkflow>(data, headers, cancellationToken);
     }
     public async ValueTask EndWorkflowAsync(EventMessage message, Messages.WorkflowEnd workflowEnd, CancellationToken cancellationToken)
     {

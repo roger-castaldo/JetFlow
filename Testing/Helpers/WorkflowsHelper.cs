@@ -1,0 +1,26 @@
+﻿using JetFlow.Helpers;
+using NATS.Client.Core;
+
+namespace JetFlow.Testing.Helpers;
+
+internal static class WorkflowsHelper
+{
+    public static async Task<byte[]?> StartWorkflowAndWaitForCompletion<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid>> startCall)
+    {
+        var completion = new TaskCompletionSource<byte[]?>();
+        var runId = Guid.Empty;
+        _ = Task.Run(async () =>
+        {
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*")))
+            {
+                if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), runId.ToString())))
+                {
+                    completion.TrySetResult(msg.Data);
+                    break;
+                }
+            }
+        });
+        runId = await startCall();
+        return await completion.Task;
+    }
+}

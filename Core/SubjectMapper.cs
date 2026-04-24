@@ -1,7 +1,22 @@
 ﻿namespace JetFlow;
 
-internal class SubjectMapper(string? instanceNamespace)
+internal class SubjectMapper
 {
+    private readonly string? instanceNamespace;
+
+    public SubjectMapper(string? instanceNamespace)
+    {
+        if (!string.IsNullOrWhiteSpace(instanceNamespace))
+        {
+            instanceNamespace = new string([.. instanceNamespace.Where(c => char.IsLetterOrDigit(c))]);
+            if (instanceNamespace.Length>32)
+                throw new ArgumentException("Namespace must be less than or equal to 32 characters after removing non-alphanumeric characters.", nameof(instanceNamespace));
+        }
+        else
+            instanceNamespace=null;
+        this.instanceNamespace = instanceNamespace;
+    }
+
     public string WorkflowEventsStreamsName
         => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_WORKFLOW_EVENTS";
     public string WorkflowConfigure(string workflowName, string instance)
