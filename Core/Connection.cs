@@ -115,57 +115,6 @@ public static class Connection
             return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, timerStore, configurationStore, archiveStore, activityTimeoutsConsumer);
         }
 
-        private async Task StartActivityTimeoutRunner()
-        {
-            var consumer = await serviceConnection.CreateOrUpdateConsumerAsync(
-                    subjectMapper.ActivityQueueStream,
-                    new($"jetflow_activity_timeouts")
-                    {
-                        DurableName = $"jetflow_activity_timeouts",
-                        FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*"),
-                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
-                    },
-                    cancellationTokenSource.Token
-                );
-            while (!cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                try
-                {
-                    await consumer.RefreshAsync(cancellationTokenSource.Token); // or try to recreate consumer
-
-                    await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
-                    {
-                        var message = new EventMessage(msg);
-                        if (Equals(message.ActivityEventType, ActivityEventTypes.Timeout))
-                        {
-                            var (canRun, _) = await serviceConnection.CanActivityRun(message, cancellationTokenSource.Token);
-                            if (canRun)
-                            {
-                                await serviceConnection.MarkActivityDoneInStore(message, cancellationTokenSource.Token);
-                                await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Timeout, message, serviceConnection, cancellationTokenSource.Token);
-                                await message.Message.AckAsync(cancellationToken: cancellationTokenSource.Token);
-                            }
-                        }
-                        else
-                            await message.Message.NakAsync(cancellationToken: cancellationTokenSource.Token);
-                    }
-                }
-                catch (NatsJSProtocolException e)
-                {
-                    //bury error
-                }
-                catch (NatsJSException e)
-                {
-                    // log exception
-                    await Task.Delay(1000, cancellationTokenSource.Token); // backoff
-                }
-                catch(OperationCanceledException)
-                {
-                    // expected on cancellation, ignore
-                }
-            }
-        }
-
         private ValueTask<INatsJSConsumer> CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(CancellationToken cancellationToken)
             => serviceConnection.CreateOrUpdateConsumerAsync(
                     subjectMapper.ActivityQueueStream,

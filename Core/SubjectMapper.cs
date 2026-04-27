@@ -2,7 +2,8 @@
 
 internal class SubjectMapper
 {
-    private readonly string? instanceNamespace;
+    private readonly string streamNamespace;
+    private readonly string subjectNamespace;
 
     public SubjectMapper(string? instanceNamespace)
     {
@@ -14,57 +15,58 @@ internal class SubjectMapper
         }
         else
             instanceNamespace=null;
-        this.instanceNamespace = instanceNamespace;
+        this.streamNamespace = (instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_");
+        this.subjectNamespace = (instanceNamespace==null ? "" : $"{instanceNamespace.ToLower()}.");
     }
 
     public string WorkflowEventsStreamsName
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_WORKFLOW_EVENTS";
+        => $"{streamNamespace}JETFLOW_WORKFLOW_EVENTS";
     public string WorkflowConfigure(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.config";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.config";
     public string WorkflowStart(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.start";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.start";
     public string WorkflowEnd(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.end";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.end";
     public string WorkflowArchived(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.archived";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.archived";
     public string WorkflowPurge(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.purge";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.purge";
     public string WorkflowDelayStart(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.delaystart";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.delaystart";
     public string WorkflowDelayEnd(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.delayend";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.delayend";
     public string WorkflowTimer(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.timer";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.timer";
     public string WorkflowStepStart(string workflowName, string instance, string stepName)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.{stepName}.stepstart";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.{stepName}.stepstart";
     public string WorkflowStepEnd(string workflowName, string instance, string stepName)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.{stepName}.stepend";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.{stepName}.stepend";
     public string WorkflowStepError(string workflowName, string instance, string stepName)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.{stepName}.steperror";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.{stepName}.steperror";
     public string WorkflowStepTimeout(string workflowName, string instance, string stepName)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.{stepName}.steptimeout";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.{stepName}.steptimeout";
     public string WorkflowStepRetry(string workflowName, string instance, string stepName)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.{stepName}.stepretry";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.{stepName}.stepretry";
     public string WorkflowPurgeFilter(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}wf.{workflowName}.{instance}.>";
+        => $"{subjectNamespace}wf.{workflowName}.{instance}.>";
 
     public string ActivityQueueStream
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_ACTIVITY_QUEUE";
+        => $"{streamNamespace}JETFLOW_ACTIVITY_QUEUE";
     public string ActivityStart(string activityName, string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}act.{activityName}.{workflowName}.{instance}.start";
+        => $"{subjectNamespace}act.{activityName}.{workflowName}.{instance}.start";
     public string ActivityTimer(string activityName, string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}act.{activityName}.{workflowName}.{instance}.timer";
+        => $"{subjectNamespace}act.{activityName}.{workflowName}.{instance}.timer";
     public string ActivityTimeout(string activityName, string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}act.{activityName}.{workflowName}.{instance}.timeout";
+        => $"{subjectNamespace}act.{activityName}.{workflowName}.{instance}.timeout";
     public string WorkflowActivityPurgeFilter(string workflowName, string instance)
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace}.")}act.*.{workflowName}.{instance}.>";
+        => $"{subjectNamespace}act.*.{workflowName}.{instance}.>";
 
     public string ActivityLocksKeystore
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_ACTIVITY_LOCKS";
+        => $"{streamNamespace}JETFLOW_ACTIVITY_LOCKS";
 
     public string WorkflowConfigKeystore
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_WORKFLOW_CONFIGS";
+        => $"{streamNamespace}JETFLOW_WORKFLOW_CONFIGS";
     
     public string WorkflowArchiveKeystore
-        => $"{(instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_")}JETFLOW_WORKFLOW_ARCHIVES";
+        => $"{streamNamespace}JETFLOW_WORKFLOW_ARCHIVES";
 }
