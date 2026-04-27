@@ -106,7 +106,7 @@ internal class WorkflowContext
         return nextActivityMsg?.WorkflowEventType switch
         {
             null => null,
-            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message)),
+            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message.Data, nextActivityMsg.Message.Headers)),
             WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
             WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Timeout),
             _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, ServiceConnection.GetMessageID(nextActivityMsg.Message))

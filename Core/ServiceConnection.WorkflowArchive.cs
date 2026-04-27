@@ -38,11 +38,11 @@ internal partial class ServiceConnection
                     break;
                 case WorkflowEventTypes.Start:
                     start = eventMessage.Message.Metadata?.Timestamp.UtcDateTime;
-                    arguments = await messageSerializer.DecodeAsync(eventMessage.Message);
+                    arguments = await messageSerializer.DecodeAsync(eventMessage.Message.Data, eventMessage.Message.Headers);
                     break;
                 case WorkflowEventTypes.End:
                     end = eventMessage.Message.Metadata?.Timestamp.UtcDateTime;
-                    workflowEnd = await messageSerializer.DecodeAsync<WorkflowEnd>(eventMessage.Message);
+                    workflowEnd = await messageSerializer.DecodeAsync<WorkflowEnd>(eventMessage.Message.Data, eventMessage.Message.Headers);
                     break;
                 case WorkflowEventTypes.DelayStart:
                 case WorkflowEventTypes.StepStart:
@@ -76,7 +76,7 @@ internal partial class ServiceConnection
                             _ => throw new InvalidOperationException() 
                         },
                         eventMessage.WorkflowEventType == WorkflowEventTypes.StepError ? System.Text.UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!) : null,
-                        eventMessage.WorkflowEventType == WorkflowEventTypes.StepEnd && (eventMessage.Message.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Message)  : null
+                        eventMessage.WorkflowEventType == WorkflowEventTypes.StepEnd && (eventMessage.Message.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Message.Data, eventMessage.Message.Headers)  : null
                     ));
                     break;
             }

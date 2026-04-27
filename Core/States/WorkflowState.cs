@@ -45,7 +45,7 @@ internal class WorkflowState : IWorkflowState
     async ValueTask<TValue?> IWorkflowState.GetActivityResultValueAsync<TValue>(string activityName) where TValue : default
     {
         if (messages.TryGetValue(activityName, out var msg))
-            return await messageSerializer.DecodeAsync<TValue>(msg);
+            return await messageSerializer.DecodeAsync<TValue>(msg.Data, msg.Headers);
         return default;
     }
 }

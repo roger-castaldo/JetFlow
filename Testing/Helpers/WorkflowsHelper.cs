@@ -5,9 +5,9 @@ namespace JetFlow.Testing.Helpers;
 
 internal static class WorkflowsHelper
 {
-    public static async Task<byte[]?> StartWorkflowAndWaitForCompletion<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid>> startCall)
+    public static async Task<NatsMsg<byte[]>?> StartWorkflowAndWaitForCompletion<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid>> startCall)
     {
-        var completion = new TaskCompletionSource<byte[]?>();
+        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var runId = Guid.Empty;
         _ = Task.Run(async () =>
         {
@@ -15,7 +15,7 @@ internal static class WorkflowsHelper
             {
                 if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), runId.ToString())))
                 {
-                    completion.TrySetResult(msg.Data);
+                    completion.TrySetResult(msg);
                     break;
                 }
             }
