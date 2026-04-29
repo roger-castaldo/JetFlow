@@ -30,11 +30,11 @@ internal abstract class ASubscription
                     await ProcessMessageAsync(new(msg));
                 }
             }
-            catch (NatsJSProtocolException e)
+            catch (NatsJSProtocolException)
             {
                 //bury error
             }
-            catch (NatsJSException e)
+            catch (NatsJSException)
             {
                 // log exception
                 await Task.Delay(1000, CancellationToken); // backoff

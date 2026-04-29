@@ -35,16 +35,26 @@ internal class MessageSerializer
     {
         if (data==null)
             return default;
-        if (headers?.TryGetValue(ContentEncodingHeader, out var encoding)==false)
-            encoding = JsonEncoding;
-        using Stream input = encoding.ToString() switch
+
+        // Ensure encoding is always assigned to avoid CS8887.
+        string encoding = JsonEncoding;
+        if (headers != null && headers.TryGetValue(ContentEncodingHeader, out var headerVal))
+            encoding = headerVal.ToString() ?? JsonEncoding;
+
+        var split = encoding.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        Stream input = new MemoryStream(data);
+        foreach (var itemRaw in split)
         {
-            BrotliEncoding => new BrotliStream(new MemoryStream(data), CompressionMode.Decompress),
-            GZipEncoding => new GZipStream(new MemoryStream(data), CompressionMode.Decompress),
-            JsonEncoding => new MemoryStream(data),
-            _ => throw new InvalidContentTypeException(encoding)
-        };
-        TraceHelper.AddMessageDecodedEvent(encoding!);
+            var item = itemRaw.Trim();
+            input = item switch
+            {
+                BrotliEncoding => new BrotliStream(input, CompressionMode.Decompress),
+                GZipEncoding => new GZipStream(input, CompressionMode.Decompress),
+                JsonEncoding => input,
+                _ => throw new InvalidContentTypeException(encoding)
+            };
+        }
+        TraceHelper.AddMessageDecodedEvent(encoding);
         return JsonSerializer.Deserialize<T>(input, options);
     }
 
@@ -52,26 +62,31 @@ internal class MessageSerializer
     {
         var headers = new NatsHeaders();
         var data = JsonSerializer.SerializeToUtf8Bytes<TInput?>(input, options);
+        var encoding = new List<string>
+        {
+            JsonEncoding
+        };
 
-        if (data.Length < CompressionThreshold)
+        if (data.Length >= CompressionThreshold)
         {
-            headers.Add(ContentEncodingHeader, JsonEncoding);
-            return (data, headers);
+            using var output = new MemoryStream();
+            if (Equals(compressionType, CompressionTypes.Brotli))
+            {
+                encoding.Add(BrotliEncoding);
+                using var brotli = new BrotliStream(output, CompressionLevel.Optimal, leaveOpen: true);
+                await brotli.WriteAsync(data);
+            }
+            else
+            {
+                encoding.Add(GZipEncoding);
+                using var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true);
+                await gzip.WriteAsync(data);
+            }
+            data=output.ToArray();
         }
-        using var output = new MemoryStream();
-        if (Equals(compressionType, CompressionTypes.Brotli))
-        {
-            headers.Add(ContentEncodingHeader, BrotliEncoding);
-            using var brotli = new BrotliStream(output, CompressionLevel.Optimal, leaveOpen: true);
-            await brotli.WriteAsync(data);
-        }
-        else
-        {
-            headers.Add(ContentEncodingHeader, GZipEncoding);
-            using var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true);
-            await gzip.WriteAsync(data);
-        }
-        return (output.ToArray(), headers);
+        encoding.Reverse();
+        headers.Add(ContentEncodingHeader, string.Join(';', encoding));
+        return (data, headers);
     }
 
     public ValueTask<TInput?> DecodeAsync<TInput>(byte[]? data, NatsHeaders? headers)

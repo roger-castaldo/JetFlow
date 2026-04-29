@@ -119,6 +119,52 @@ public class WorkflowOptionTests
         Assert.AreEqual($"Activity {NameHelper.GetActivityName<SlowActivity>()} has timed out", endResult.ErrorMessage);
     }
 
+    private class ActivityThatThrowsException : IActivity
+    {
+        public Task ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    private class WorkflowWithActivityError : IWorkflow
+    {
+        async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
+        {
+            _ = await context.ExecuteActivityAsync<ActivityThatThrowsException>(new());
+        }
+    }
+
+    [TestMethod]
+    public async Task TestErrorOnActivityThrowsException()
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var connectionOptions = new ConnectionOptions(natsConnection);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<WorkflowWithActivityError>(new() { ErrorOnActivityFailure=true }, CancellationToken.None);
+        await connection.RegisterWorkflowActivityAsync<ActivityThatThrowsException>(new(), CancellationToken.None);
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithActivityError>(natsConnection, subjectMapper,
+            () => connection.StartWorkflowAsync<WorkflowWithActivityError>(CancellationToken.None)
+        );
+
+        // Assert
+        await ((IAsyncDisposable)connection).DisposeAsync();
+        Assert.IsTrue(result.HasValue);
+        var endResult = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
+
+        //Verify
+        Assert.IsNotNull(endResult);
+        Assert.IsFalse(endResult.IsSuccess);
+        Assert.AreEqual($"Activity {NameHelper.GetActivityName<ActivityThatThrowsException>()} has failed with error: {new NotImplementedException().Message}", endResult.ErrorMessage);
+    }
+
     private class WorkflowWithNoSteps : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
