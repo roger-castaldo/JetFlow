@@ -8,11 +8,13 @@ internal class WorkflowState : IWorkflowState
 {
     private readonly Dictionary<string, INatsJSMsg<byte[]>> messages;
     private readonly MessageSerializer messageSerializer;
+    private readonly ushort activityAttempt;
 
-    private WorkflowState(Dictionary<string, INatsJSMsg<byte[]>> messages, MessageSerializer messageSerializer)
+    private WorkflowState(Dictionary<string, INatsJSMsg<byte[]>> messages, MessageSerializer messageSerializer, ushort activityAttempt)
     {
         this.messages = messages;
         this.messageSerializer = messageSerializer;
+        this.activityAttempt = activityAttempt;
     }
 
     public static async ValueTask<IWorkflowState> CreateAsync(ServiceConnection serviceConnection, MessageSerializer messageSerializer, SubjectMapper subjectMapper, EventMessage message) 
@@ -35,8 +37,10 @@ internal class WorkflowState : IWorkflowState
             if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepEnd))
                 messages.Add(eventMessage.ActivityName!, msg);
         }
-        return new WorkflowState(messages, messageSerializer);
+        return new WorkflowState(messages, messageSerializer, message.ActivityAttempt);
     }
+
+    ushort IWorkflowState.ActivityAttempt => activityAttempt;
 
     ValueTask<TValue?> IWorkflowState.GetActivityResultValueAsync<TWorkflowActivity, TValue>() 
         where TValue : default
