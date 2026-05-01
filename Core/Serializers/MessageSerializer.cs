@@ -1,19 +1,21 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using NATS.Client.Core;
-using NATS.Client.JetStream;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
-namespace JetFlow;
+namespace JetFlow.Serializers;
 
 internal class MessageSerializer
 {
     private const int CompressionThreshold = 32 * 1024; // 32 KB
     private const string ContentEncodingHeader = "x-jetflow-content-encoding";
     private const string JsonEncoding = "application/json";
-    private const string BrotliEncoding = "application/brotli";
-    private const string GZipEncoding = "application/gzip";
+    private const string BrotliEncoding = "/brotli";
+    private const string GZipEncoding = "/gzip";
+
+    private static readonly Regex regContentEncoding = new($"^(?<contenttype>(?!(?:{BrotliEncoding}|{GZipEncoding})$).+?)(?<compression>{BrotliEncoding}|{GZipEncoding})?$", RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(500));
 
     private readonly JsonSerializerOptions options;
     private readonly CompressionTypes compressionType;
@@ -40,52 +42,50 @@ internal class MessageSerializer
         string encoding = JsonEncoding;
         if (headers != null && headers.TryGetValue(ContentEncodingHeader, out var headerVal))
             encoding = headerVal.ToString() ?? JsonEncoding;
+        var match = regContentEncoding.Match(encoding);
+        if (!match.Success)
+            throw new InvalidContentTypeException(encoding);
 
-        var split = encoding.Split(';', StringSplitOptions.RemoveEmptyEntries);
-        Stream input = new MemoryStream(data);
-        foreach (var itemRaw in split)
+        using Stream input = (match.Groups["compression"].Success ? match.Groups["compression"].Value : string.Empty).ToLowerInvariant() switch
         {
-            var item = itemRaw.Trim();
-            input = item switch
-            {
-                BrotliEncoding => new BrotliStream(input, CompressionMode.Decompress),
-                GZipEncoding => new GZipStream(input, CompressionMode.Decompress),
-                JsonEncoding => input,
-                _ => throw new InvalidContentTypeException(encoding)
-            };
+            BrotliEncoding => new BrotliStream(new MemoryStream(data), CompressionMode.Decompress),
+            GZipEncoding => new GZipStream(new MemoryStream(data), CompressionMode.Decompress),
+            _ => new MemoryStream(data)
+        };
+
+        if (match.Groups["contenttype"].Value.Equals(JsonEncoding, StringComparison.InvariantCultureIgnoreCase))
+        {
+            TraceHelper.AddMessageDecodedEvent(encoding);
+            return JsonSerializer.Deserialize<T>(input, options);
         }
-        TraceHelper.AddMessageDecodedEvent(encoding);
-        return JsonSerializer.Deserialize<T>(input, options);
+
+        throw new InvalidContentTypeException(encoding);
     }
 
     public async ValueTask<(byte[] data, NatsHeaders headers)> EncodeAsync<TInput>(TInput? input)
     {
         var headers = new NatsHeaders();
         var data = JsonSerializer.SerializeToUtf8Bytes<TInput?>(input, options);
-        var encoding = new List<string>
-        {
-            JsonEncoding
-        };
+        var encoding = JsonEncoding;
 
         if (data.Length >= CompressionThreshold)
         {
             using var output = new MemoryStream();
             if (Equals(compressionType, CompressionTypes.Brotli))
             {
-                encoding.Add(BrotliEncoding);
+                encoding+=BrotliEncoding;
                 using var brotli = new BrotliStream(output, CompressionLevel.Optimal, leaveOpen: true);
                 await brotli.WriteAsync(data);
             }
             else
             {
-                encoding.Add(GZipEncoding);
+                encoding+=GZipEncoding;
                 using var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true);
                 await gzip.WriteAsync(data);
             }
             data=output.ToArray();
         }
-        encoding.Reverse();
-        headers.Add(ContentEncodingHeader, string.Join(';', encoding));
+        headers.Add(ContentEncodingHeader, encoding);
         return (data, headers);
     }
 

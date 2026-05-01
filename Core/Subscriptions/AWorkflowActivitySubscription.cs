@@ -1,5 +1,6 @@
 ﻿using JetFlow.Helpers;
 using JetFlow.Interfaces;
+using JetFlow.Serializers;
 using NATS.Client.JetStream;
 using System.Diagnostics;
 
@@ -11,7 +12,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
     : ASubscription(serviceConnection, consumer, cancellationToken)
 {
     protected TWorkflowActivity Instance = instance;
-    private string ActivityName = NameHelper.GetActivityName<TWorkflowActivity>();
+    private readonly string ActivityName = NameHelper.GetActivityName<TWorkflowActivity>();
     protected MessageSerializer MessageSerializer => messageSerializer;
 
     protected override async ValueTask ProcessMessageAsync(EventMessage message)

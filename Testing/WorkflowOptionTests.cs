@@ -8,7 +8,6 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace JetFlow.Testing;
 
