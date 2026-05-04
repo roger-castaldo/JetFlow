@@ -149,6 +149,7 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
 
     private class JetstreamQuery(INatsJSConsumer consumer, INatsJSContext jsContext) : IJetstreamQuery
     {
+        private const int MaxMessages = 64;
         private bool disposed = false;
 
         async ValueTask IAsyncDisposable.DisposeAsync()
@@ -177,13 +178,13 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
             while (!cancellationToken.IsCancellationRequested)
             {
                 var cnt = 0;
-                await foreach (var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs = 10, Expires = TimeSpan.FromSeconds(1) }, cancellationToken: cancellationToken))
+                await foreach (var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs = MaxMessages, Expires = TimeSpan.FromSeconds(1) }, cancellationToken: cancellationToken))
                 {
                     cnt++;
                     yield return msg;
                 }
 
-                if (cnt!=10)
+                if (cnt!=MaxMessages)
                 {
                     // No messages in this fetch, end the query.
                     yield break;

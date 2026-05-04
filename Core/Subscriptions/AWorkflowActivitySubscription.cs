@@ -52,10 +52,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
             else
                 ackMessage=false;
         }
-        catch (WorkflowSuspendedException)
-        {
-            // handle workflow suspension by doing nothing
-        }
+        catch (WorkflowSuspendedException){ /* handle workflow suspension by doing nothing */}
         catch (OperationCanceledException) when (timeoutCts?.IsCancellationRequested??false)
         {
             // timed out
