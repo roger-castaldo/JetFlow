@@ -16,6 +16,18 @@ public enum WorkflowStepStatuses
     Timeout
 }
 
+public enum RetryTypes
+{
+    Timeout,
+    Error
+}
+
+public record struct WorkflowStepRetry(
+    [property: JsonConverter(typeof(JsonStringEnumConverter))]
+    RetryTypes RetryType,
+    DateTime Timestamp
+);
+
 public record struct WorkflowStep(
     [property: JsonConverter(typeof(JsonStringEnumConverter))]
     WorkflowStepTypes Type,
@@ -23,6 +35,7 @@ public record struct WorkflowStep(
     string? Name,
     DateTime StartTime,
     DateTime EndTime,
+    WorkflowStepRetry[]? Retries,
     [property: JsonConverter(typeof(JsonStringEnumConverter))]
     WorkflowStepStatuses Status,
     string? ErrorMessage,

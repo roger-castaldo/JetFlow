@@ -5,10 +5,13 @@ using JetFlow.Messages;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
+using NATS.Client.JetStream;
+using NATS.Net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace JetFlow.Testing;
@@ -380,5 +383,179 @@ public class WorkflowExecutionTests
         Assert.AreEqual(ActivityResultStatus.Timeout, AllActivityResultsWorkflow.TimeoutActWithResult.Status);
         Assert.IsNull(AllActivityResultsWorkflow.TimeoutActWithResult.Output);
         Assert.IsTrue(AllActivityResultsWorkflow.RanWait);
+    }
+
+    [TestMethod]
+    [DataRow(WorkflowCompletionActions.Purge)]
+    [DataRow(WorkflowCompletionActions.ArchiveThenPurge)]
+    public async Task ExecuteWorkflowWithPurgeOnCompletion(WorkflowCompletionActions action)
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var runId = Guid.Empty;
+        var purgeRecieved = new TaskCompletionSource();
+        var noActWithReturn = new NoActionActivityWithReturn();
+        var errorActWithReturn = new ErrorActivityWithReturn();
+        var timeoutActWithReturn = new TimeoutActivityWithReturn();
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var jsContext = new NatsJSContext(natsConnection);
+        var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
+        {
+            CompletionAction = action
+        });
+        await connection.RegisterWorkflowActivityAsync<NoActionActivity>(new(), CancellationToken.None);
+        await connection.RegisterWorkflowActivityWithReturnAsync<NoActionActivityWithReturn, string>(noActWithReturn, CancellationToken.None);
+        await connection.RegisterWorkflowActivityAsync<ErrorActivity>(new(), CancellationToken.None);
+        await connection.RegisterWorkflowActivityWithReturnAsync<ErrorActivityWithReturn, string>(errorActWithReturn, CancellationToken.None);
+        await connection.RegisterWorkflowActivityAsync<TimeoutActivity>(new(), CancellationToken.None);
+        await connection.RegisterWorkflowActivityWithReturnAsync<TimeoutActivityWithReturn, string>(timeoutActWithReturn, CancellationToken.None);
+
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForPurge<AllActivityResultsWorkflow>(
+            natsConnection,
+            subjectMapper,
+            async () =>
+            {
+                runId = await connection.StartWorkflowAsync<AllActivityResultsWorkflow>(CancellationToken.None);
+                return runId;
+            }
+        );
+
+        // Assert
+        Assert.IsNotNull(result);
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        //Verify
+        var workflowName = NameHelper.GetWorkflowName<AllActivityResultsWorkflow>();
+        var messages = await JetStreamHelper.QueryStreamAsync(jsContext, subjectMapper.WorkflowEventsStreamsName, false,
+            subjectMapper.WorkflowConfigure(workflowName, runId.ToString()),
+            subjectMapper.WorkflowStart(workflowName, runId.ToString()),
+            subjectMapper.WorkflowEnd(workflowName, runId.ToString()),
+            subjectMapper.WorkflowArchived(workflowName, runId.ToString()),
+            subjectMapper.WorkflowPurge(workflowName, runId.ToString()),
+            subjectMapper.WorkflowDelayStart(workflowName, runId.ToString()),
+            subjectMapper.WorkflowDelayEnd(workflowName, runId.ToString()),
+            subjectMapper.WorkflowTimer(workflowName, runId.ToString()),
+            subjectMapper.WorkflowStepStart(workflowName, runId.ToString(), "*"),
+            subjectMapper.WorkflowStepEnd(workflowName, runId.ToString(), "*"),
+            subjectMapper.WorkflowStepError(workflowName, runId.ToString(), "*"),
+            subjectMapper.WorkflowStepTimeout(workflowName, runId.ToString(), "*"),
+            subjectMapper.WorkflowStepRetry(workflowName, runId.ToString(), "*")
+        );
+        Assert.IsFalse(messages.Any());
+
+        //cleanup
+        await ((IAsyncDisposable)connection).DisposeAsync();
+    }
+
+    [TestMethod]
+    [DataRow(WorkflowCompletionActions.ArchiveThenNothing)]
+    [DataRow(WorkflowCompletionActions.ArchiveThenPurge)]
+    public async Task ExecuteWorkflowWithArchiveOnCompletion(WorkflowCompletionActions action)
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var runId = Guid.Empty;
+        var purgeRecieved = new TaskCompletionSource();
+        var noActWithReturn = new NoActionActivityWithReturn();
+        var errorActWithReturn = new ErrorActivityWithReturn();
+        var timeoutActWithReturn = new TimeoutActivityWithReturn();
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var jsContext = new NatsJSContext(natsConnection);
+        var objContext = jsContext.CreateObjectStoreContext();
+        var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
+        {
+            CompletionAction = action
+        });
+        await connection.RegisterWorkflowActivityAsync<NoActionActivity>(new(), CancellationToken.None);
+        await connection.RegisterWorkflowActivityWithReturnAsync<NoActionActivityWithReturn, string>(noActWithReturn, CancellationToken.None);
+        await connection.RegisterWorkflowActivityAsync<ErrorActivity>(new(), CancellationToken.None);
+        await connection.RegisterWorkflowActivityWithReturnAsync<ErrorActivityWithReturn, string>(errorActWithReturn, CancellationToken.None);
+        await connection.RegisterWorkflowActivityAsync<TimeoutActivity>(new(), CancellationToken.None);
+        await connection.RegisterWorkflowActivityWithReturnAsync<TimeoutActivityWithReturn, string>(timeoutActWithReturn, CancellationToken.None);
+
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForArchive<AllActivityResultsWorkflow>(
+            natsConnection,
+            subjectMapper,
+            async () =>
+            {
+                runId = await connection.StartWorkflowAsync<AllActivityResultsWorkflow>(CancellationToken.None);
+                return runId;
+            }
+        );
+
+        // Assert
+        Assert.IsNotNull(result);
+
+        //Verify
+        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<AllActivityResultsWorkflow>()}/{runId}");
+        var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, JetFlow.Serializers.Constants.JsonOptions);
+        Assert.AreEqual(runId, archive.ID);
+        Assert.IsTrue(archive.IsSuccessful);
+        Assert.AreEqual(NameHelper.GetWorkflowName<AllActivityResultsWorkflow>(), archive.Name);
+        Assert.AreEqual(action, archive.Options.CompletionAction);
+        Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
+        Assert.IsTrue(archive.Steps.Any());
+        Assert.AreEqual(1, archive.Steps.Count(s =>
+            Equals(NameHelper.GetActivityName<NoActionActivity>(), s.Name) &&
+            s.Retries==null &&
+            Equals(WorkflowStepStatuses.Success, s.Status) &&
+            Equals(WorkflowStepTypes.Action, s.Type)
+        ));
+        Assert.AreEqual(1, archive.Steps.Count(s =>
+            Equals(NameHelper.GetActivityName<NoActionActivityWithReturn>(), s.Name) &&
+            s.Retries==null &&
+            Equals(WorkflowStepStatuses.Success, s.Status) &&
+            Equals(WorkflowStepTypes.Action, s.Type) &&
+            Equals(noActWithReturn.ResultMessage, s.Result.ToString())
+        ));
+        Assert.AreEqual(1, archive.Steps.Count(s =>
+            Equals(NameHelper.GetActivityName<ErrorActivity>(), s.Name) &&
+            s.Retries==null &&
+            Equals(WorkflowStepStatuses.Failure, s.Status) &&
+            Equals(WorkflowStepTypes.Action, s.Type) &&
+            Equals(new NotImplementedException().Message, s.ErrorMessage)
+        ));
+        Assert.AreEqual(1, archive.Steps.Count(s =>
+            Equals(NameHelper.GetActivityName<ErrorActivityWithReturn>(), s.Name) &&
+            s.Retries==null &&
+            Equals(WorkflowStepStatuses.Failure, s.Status) &&
+            Equals(WorkflowStepTypes.Action, s.Type) &&
+            Equals(new NotImplementedException().Message, s.ErrorMessage)
+        ));
+        Assert.AreEqual(1, archive.Steps.Count(s =>
+            Equals(NameHelper.GetActivityName<TimeoutActivity>(), s.Name) &&
+            s.Retries==null &&
+            Equals(WorkflowStepStatuses.Timeout, s.Status) &&
+            Equals(WorkflowStepTypes.Action, s.Type)
+        ));
+        Assert.AreEqual(1, archive.Steps.Count(s =>
+            Equals(NameHelper.GetActivityName<TimeoutActivityWithReturn>(), s.Name) &&
+            s.Retries==null &&
+            Equals(WorkflowStepStatuses.Timeout, s.Status) &&
+            Equals(WorkflowStepTypes.Action, s.Type)
+        ));
+        Assert.AreEqual(1, archive.Steps.Count(s =>
+            s.Name==null &&
+            s.Retries==null &&
+            Equals(WorkflowStepStatuses.Success, s.Status) &&
+            Equals(WorkflowStepTypes.Delay, s.Type)
+        ));
+        //cleanup
+        await ((IAsyncDisposable)connection).DisposeAsync();
     }
 }

@@ -1,6 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Messages;
 using JetFlow.Serializers;
+using System.Text;
 
 namespace JetFlow;
 
@@ -13,6 +14,7 @@ internal partial class ServiceConnection
         DateTime? end=null;
         WorkflowEnd? workflowEnd=null;
         EventMessage? previousMessage=null;
+        List<WorkflowStepRetry> retries = [];
         object? arguments = null;
         List<WorkflowStep> steps = [];
         await using var query = await QueryStreamAsync(
@@ -26,7 +28,8 @@ internal partial class ServiceConnection
             subjectMapper.WorkflowStepStart(message.WorkflowName, message.WorkflowId, "*"),
             subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*"),
             subjectMapper.WorkflowStepError(message.WorkflowName, message.WorkflowId, "*"),
-            subjectMapper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*")
+            subjectMapper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*"),
+            subjectMapper.WorkflowStepRetry(message.WorkflowName, message.WorkflowId, "*")
         );
         await foreach(var msg in query)
         {
@@ -48,6 +51,9 @@ internal partial class ServiceConnection
                 case WorkflowEventTypes.StepStart:
                     previousMessage = eventMessage;
                     break;
+                case WorkflowEventTypes.StepRetry:
+                    retries.Add(new(Enum.Parse<RetryTypes>(UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!)), eventMessage.Message.Metadata!.Value.Timestamp.UtcDateTime));
+                    break;
                 case WorkflowEventTypes.DelayEnd:
                     steps.Add(new(
                         WorkflowStepTypes.Delay,
@@ -55,6 +61,7 @@ internal partial class ServiceConnection
                         null,
                         previousMessage!.Message.Metadata.Value.Timestamp.UtcDateTime,
                         eventMessage.Message.Metadata.Value.Timestamp.UtcDateTime,
+                        null,
                         WorkflowStepStatuses.Success,
                         null,
                         null
@@ -69,6 +76,7 @@ internal partial class ServiceConnection
                         eventMessage.ActivityName,
                         previousMessage!.Message.Metadata.Value.Timestamp.UtcDateTime,
                         eventMessage.Message.Metadata.Value.Timestamp.UtcDateTime,
+                        (retries.Count==0 ? null : retries.ToArray()),
                         (eventMessage.WorkflowEventType) switch { 
                             WorkflowEventTypes.StepEnd => WorkflowStepStatuses.Success, 
                             WorkflowEventTypes.StepError => WorkflowStepStatuses.Failure, 
@@ -78,6 +86,7 @@ internal partial class ServiceConnection
                         eventMessage.WorkflowEventType == WorkflowEventTypes.StepError ? System.Text.UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!) : null,
                         eventMessage.WorkflowEventType == WorkflowEventTypes.StepEnd && (eventMessage.Message.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Message.Data, eventMessage.Message.Headers)  : null
                     ));
+                    retries.Clear();
                     break;
             }
         }
