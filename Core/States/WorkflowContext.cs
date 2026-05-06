@@ -14,6 +14,7 @@ internal class WorkflowContext
     private readonly EventMessage message;
     private readonly IReadOnlyCollection<INatsJSMsg<byte[]>> messages = [];
     private int index = 0;
+    private uint activityIndex = 0;
     private readonly CancellationToken cancellationToken = CancellationToken.None;
     public INatsJSMsg<byte[]> StartMessage {  get; private init; }
     public WorkflowOptions Options { get; private init; }
@@ -84,6 +85,7 @@ internal class WorkflowContext
         var result = new EventMessage(msg);
         if (!Equals(result.ActivityName, name))    
             throw new InvalidStepException(name, result.ActivityName??string.Empty);
+        activityIndex++;
         return result;
     }
 
@@ -93,9 +95,9 @@ internal class WorkflowContext
         return nextActivityMsg?.WorkflowEventType switch
         {
             null => null,
-            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Success),
-            WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
-            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Timeout),
+            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success),
+            WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
+            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
             _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, ServiceConnection.GetMessageID(nextActivityMsg.Message))
         };
     }
@@ -106,9 +108,9 @@ internal class WorkflowContext
         return nextActivityMsg?.WorkflowEventType switch
         {
             null => null,
-            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message.Data, nextActivityMsg.Message.Headers)),
-            WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
-            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??Guid.Empty, ActivityResultStatus.Timeout),
+            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message.Data, nextActivityMsg.Message.Headers)),
+            WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
+            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
             _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, ServiceConnection.GetMessageID(nextActivityMsg.Message))
         };
     }
@@ -123,10 +125,10 @@ internal class WorkflowContext
     }
 
     ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest)
-        => HandleNextActivity<TActivity>(() => serviceConnection.StartActivityAsync<TActivity>(executionRequest, message, cancellationToken));
+        => HandleNextActivity<TActivity>(() => serviceConnection.StartActivityAsync<TActivity>(activityIndex, executionRequest, message, cancellationToken));
 
     ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput>(ActivityExecutionRequest<TInput> executionRequest)
-        => HandleNextActivity<TActivity>(() => serviceConnection.StartActivityAsync<TActivity, TInput>(executionRequest, message, cancellationToken));
+        => HandleNextActivity<TActivity>(() => serviceConnection.StartActivityAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken));
 
     private async ValueTask<ActivityResult<TOutput>> HandleNextActivity<TActivity, TOutput>(Func<ValueTask> invokeCall)
     {
@@ -138,10 +140,10 @@ internal class WorkflowContext
     }
 
     ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest)
-        => HandleNextActivity<TActivity, TOutput>(() => serviceConnection.StartActivityAsync<TActivity>(executionRequest, message, cancellationToken));
+        => HandleNextActivity<TActivity, TOutput>(() => serviceConnection.StartActivityAsync<TActivity>(activityIndex, executionRequest, message, cancellationToken));
 
     ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest)
-        => HandleNextActivity<TActivity, TOutput>(() => serviceConnection.StartActivityAsync<TActivity, TInput>(executionRequest, message, cancellationToken));
+        => HandleNextActivity<TActivity, TOutput>(() => serviceConnection.StartActivityAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken));
 
     async ValueTask IWorkflowContext.WaitAsync(TimeSpan delay)
     {

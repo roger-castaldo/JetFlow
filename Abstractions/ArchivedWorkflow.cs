@@ -25,16 +25,16 @@ public enum RetryTypes
 public record struct WorkflowStepRetry(
     [property: JsonConverter(typeof(JsonStringEnumConverter))]
     RetryTypes RetryType,
-    DateTime Timestamp
+    DateTimeOffset Timestamp
 );
 
 public record struct WorkflowStep(
     [property: JsonConverter(typeof(JsonStringEnumConverter))]
     WorkflowStepTypes Type,
-    Guid? ID,
+    uint? Index,
     string? Name,
-    DateTime StartTime,
-    DateTime EndTime,
+    DateTimeOffset StartTime,
+    DateTimeOffset EndTime,
     WorkflowStepRetry[]? Retries,
     [property: JsonConverter(typeof(JsonStringEnumConverter))]
     WorkflowStepStatuses Status,
@@ -46,8 +46,8 @@ public record struct ArchivedWorkflow(
     Guid ID,
     string Name,
     WorkflowOptions Options,
-    DateTime StartedAt,
-    DateTime FinishedAt,
+    DateTimeOffset StartedAt,
+    DateTimeOffset FinishedAt,
     bool IsSuccessful,
     string? ErrorMessage,
     object? Arguments,

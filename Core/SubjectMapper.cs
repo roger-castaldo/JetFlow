@@ -52,12 +52,12 @@ internal class SubjectMapper
 
     public string ActivityQueueStream
         => $"{streamNamespace}JETFLOW_ACTIVITY_QUEUE";
-    public string ActivityStart(string activityName, string workflowName, string instance)
-        => $"{subjectNamespace}act.{activityName}.{workflowName}.{instance}.start";
-    public string ActivityTimer(string activityName, string workflowName, string instance)
-        => $"{subjectNamespace}act.{activityName}.{workflowName}.{instance}.timer";
-    public string ActivityTimeout(string activityName, string workflowName, string instance)
-        => $"{subjectNamespace}act.{activityName}.{workflowName}.{instance}.timeout";
+    public string ActivityStart(string activityName, string workflowName, string workflowInstance)
+        => $"{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.start";
+    public string ActivityTimer(string activityName, string workflowName, string workflowInstance)
+        => $"{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.timer";
+    public string ActivityTimeout(string activityName, string workflowName, string workflowInstance)
+        => $"{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.timeout";
     public string WorkflowActivityPurgeFilter(string workflowName, string instance)
         => $"{subjectNamespace}act.*.{workflowName}.{instance}.>";
 

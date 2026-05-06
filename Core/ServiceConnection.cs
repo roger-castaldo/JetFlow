@@ -18,7 +18,6 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
     private const string ScheduleTargetHeader = "Nats-Schedule-Target";
     private const string ScheduledTargetTTL = "Nats-Schedule-TTL";
     private const string MessageIdHeader = "Nats-Msg-Id";
-    private const string ActivityIdHeader = "x-jetflow-activity-id";
 
     private static string CreateTTLString(TimeSpan ttl)
     {
@@ -88,25 +87,23 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
         return sb.ToString();
     }
 
-    private static NatsHeaders AppendDefaultHeaders(NatsHeaders headers, string messageId, Guid? activityId, TimeSpan? timeout)
+    private static NatsHeaders AppendDefaultHeaders(NatsHeaders headers, string messageId, TimeSpan? timeout)
     {
         if (timeout.HasValue)
             headers.Add(TTLHeader, CreateTTLString(timeout.Value));
         headers.Add(MessageIdHeader, messageId);
-        if (activityId!=null)
-            headers.Add(ActivityIdHeader, activityId.ToString());
         return TraceHelper.InjectCurrentActivity(headers);
     }
 
-    private async ValueTask PublishMessageAsync(byte[] data, string subject, NatsHeaders headers, string messageId, Guid? activityId = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    private async ValueTask PublishMessageAsync(byte[] data, string subject, NatsHeaders headers, string messageId, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
-        await connection.PublishAsync<byte[]>(subject, data, AppendDefaultHeaders(headers, messageId, activityId, timeout), cancellationToken: cancellationToken);
+        await connection.PublishAsync<byte[]>(subject, data, AppendDefaultHeaders(headers, messageId, timeout), cancellationToken: cancellationToken);
         TraceHelper.AddPublishEvent(subject);
     }
 
-    private async ValueTask PublishDelayedMessageAsync(byte[] data, string subject, NatsHeaders headers, TimeSpan delay, string destinationSubject, string messageId, Guid? activityId = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    private async ValueTask PublishDelayedMessageAsync(byte[] data, string subject, NatsHeaders headers, TimeSpan delay, string destinationSubject, string messageId, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
     {
-        headers = AppendDefaultHeaders(headers, messageId, activityId, null);
+        headers = AppendDefaultHeaders(headers, messageId, null);
         headers.Add(ScheduleDelayHeader, DateTime.UtcNow.Add(delay).ToString("'@at 'yyyy-MM-dd'T'HH:mm:ss'Z'"));
         headers.Add(ScheduleTargetHeader, destinationSubject);
         if (timeout.HasValue)
@@ -114,9 +111,6 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
         await jsContext.PublishAsync<byte[]>(subject, data, headers: headers, cancellationToken: cancellationToken);
         TraceHelper.AddPublishEvent(subject);
     }
-
-    public static Guid GetActivityID(INatsJSMsg<byte[]> msg)
-        => (msg.Headers?.TryGetValue(ActivityIdHeader, out var id) == true && Guid.TryParse(id, out var guid)) ? guid : Guid.Empty;
 
     internal static string GetMessageID(INatsJSMsg<byte[]> msg)
         => (msg.Headers?.TryGetValue(MessageIdHeader, out var id)==true ? id.ToString() : string.Empty);

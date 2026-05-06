@@ -10,8 +10,8 @@ internal partial class ServiceConnection
     public async Task ArchiveWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
     {
         WorkflowOptions? options=null;
-        DateTime? start=null;
-        DateTime? end=null;
+        DateTimeOffset? start=null;
+        DateTimeOffset? end=null;
         WorkflowEnd? workflowEnd=null;
         EventMessage? previousMessage=null;
         List<WorkflowStepRetry> retries = [];
@@ -40,11 +40,11 @@ internal partial class ServiceConnection
                     options = InternalsSerializer.DeserializeWorkflowOptions(eventMessage.Message.Data!);
                     break;
                 case WorkflowEventTypes.Start:
-                    start = eventMessage.Message.Metadata?.Timestamp.UtcDateTime;
+                    start = eventMessage.Message.Metadata?.Timestamp;
                     arguments = await messageSerializer.DecodeAsync(eventMessage.Message.Data, eventMessage.Message.Headers);
                     break;
                 case WorkflowEventTypes.End:
-                    end = eventMessage.Message.Metadata?.Timestamp.UtcDateTime;
+                    end = eventMessage.Message.Metadata?.Timestamp;
                     workflowEnd = await messageSerializer.DecodeAsync<WorkflowEnd>(eventMessage.Message.Data, eventMessage.Message.Headers);
                     break;
                 case WorkflowEventTypes.DelayStart:
@@ -52,15 +52,15 @@ internal partial class ServiceConnection
                     previousMessage = eventMessage;
                     break;
                 case WorkflowEventTypes.StepRetry:
-                    retries.Add(new(Enum.Parse<RetryTypes>(UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!)), eventMessage.Message.Metadata!.Value.Timestamp.UtcDateTime));
+                    retries.Add(new(Enum.Parse<RetryTypes>(UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!)), eventMessage.Message.Metadata!.Value.Timestamp));
                     break;
                 case WorkflowEventTypes.DelayEnd:
                     steps.Add(new(
                         WorkflowStepTypes.Delay,
                         null,
                         null,
-                        previousMessage!.Message.Metadata.Value.Timestamp.UtcDateTime,
-                        eventMessage.Message.Metadata.Value.Timestamp.UtcDateTime,
+                        previousMessage!.Message.Metadata.Value.Timestamp,
+                        eventMessage.Message.Metadata.Value.Timestamp,
                         null,
                         WorkflowStepStatuses.Success,
                         null,
@@ -74,8 +74,8 @@ internal partial class ServiceConnection
                         WorkflowStepTypes.Action,
                         eventMessage.ActivityID,
                         eventMessage.ActivityName,
-                        previousMessage!.Message.Metadata.Value.Timestamp.UtcDateTime,
-                        eventMessage.Message.Metadata.Value.Timestamp.UtcDateTime,
+                        previousMessage!.Message.Metadata.Value.Timestamp,
+                        eventMessage.Message.Metadata.Value.Timestamp,
                         (retries.Count==0 ? null : retries.ToArray()),
                         (eventMessage.WorkflowEventType) switch { 
                             WorkflowEventTypes.StepEnd => WorkflowStepStatuses.Success, 

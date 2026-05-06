@@ -27,7 +27,7 @@ internal abstract class ASubscription
                 await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: CancellationToken))
                 {
                     var message = new EventMessage(msg);
-                    await ProcessMessageAsync(new(msg));
+                    await ProcessMessageAsync(message);
                 }
             }
             catch (NatsJSProtocolException)

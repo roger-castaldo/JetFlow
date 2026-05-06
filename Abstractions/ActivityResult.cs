@@ -7,7 +7,7 @@ public enum ActivityResultStatus
     Timeout
 }
 
-public record ActivityResult(Guid ID, ActivityResultStatus Status, string? ErrorMessage = null);
+public record ActivityResult(ulong Index, ActivityResultStatus Status, string? ErrorMessage = null);
 
-public record ActivityResult<TOutput>(Guid ID, ActivityResultStatus Status, string? ErrorMessage = null, TOutput? Output = default)
-    : ActivityResult(ID, Status, ErrorMessage);
+public record ActivityResult<TOutput>(ulong Index, ActivityResultStatus Status, string? ErrorMessage = null, TOutput? Output = default)
+    : ActivityResult(Index, Status, ErrorMessage);

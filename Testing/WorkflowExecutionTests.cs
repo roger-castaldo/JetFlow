@@ -7,12 +7,7 @@ using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Net;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace JetFlow.Testing;
 
@@ -510,52 +505,27 @@ public class WorkflowExecutionTests
         Assert.AreEqual(action, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsTrue(archive.Steps.Any());
-        Assert.AreEqual(1, archive.Steps.Count(s =>
-            Equals(NameHelper.GetActivityName<NoActionActivity>(), s.Name) &&
-            s.Retries==null &&
-            Equals(WorkflowStepStatuses.Success, s.Status) &&
-            Equals(WorkflowStepTypes.Action, s.Type)
-        ));
-        Assert.AreEqual(1, archive.Steps.Count(s =>
-            Equals(NameHelper.GetActivityName<NoActionActivityWithReturn>(), s.Name) &&
-            s.Retries==null &&
-            Equals(WorkflowStepStatuses.Success, s.Status) &&
-            Equals(WorkflowStepTypes.Action, s.Type) &&
-            Equals(noActWithReturn.ResultMessage, s.Result.ToString())
-        ));
-        Assert.AreEqual(1, archive.Steps.Count(s =>
-            Equals(NameHelper.GetActivityName<ErrorActivity>(), s.Name) &&
-            s.Retries==null &&
-            Equals(WorkflowStepStatuses.Failure, s.Status) &&
-            Equals(WorkflowStepTypes.Action, s.Type) &&
-            Equals(new NotImplementedException().Message, s.ErrorMessage)
-        ));
-        Assert.AreEqual(1, archive.Steps.Count(s =>
-            Equals(NameHelper.GetActivityName<ErrorActivityWithReturn>(), s.Name) &&
-            s.Retries==null &&
-            Equals(WorkflowStepStatuses.Failure, s.Status) &&
-            Equals(WorkflowStepTypes.Action, s.Type) &&
-            Equals(new NotImplementedException().Message, s.ErrorMessage)
-        ));
-        Assert.AreEqual(1, archive.Steps.Count(s =>
-            Equals(NameHelper.GetActivityName<TimeoutActivity>(), s.Name) &&
-            s.Retries==null &&
-            Equals(WorkflowStepStatuses.Timeout, s.Status) &&
-            Equals(WorkflowStepTypes.Action, s.Type)
-        ));
-        Assert.AreEqual(1, archive.Steps.Count(s =>
-            Equals(NameHelper.GetActivityName<TimeoutActivityWithReturn>(), s.Name) &&
-            s.Retries==null &&
-            Equals(WorkflowStepStatuses.Timeout, s.Status) &&
-            Equals(WorkflowStepTypes.Action, s.Type)
-        ));
-        Assert.AreEqual(1, archive.Steps.Count(s =>
-            s.Name==null &&
-            s.Retries==null &&
-            Equals(WorkflowStepStatuses.Success, s.Status) &&
-            Equals(WorkflowStepTypes.Delay, s.Type)
-        ));
+        AssertStepMatch(archive.Steps, 0, NameHelper.GetActivityName<NoActionActivity>(), WorkflowStepStatuses.Success, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 1, NameHelper.GetActivityName<NoActionActivityWithReturn>(), WorkflowStepStatuses.Success, WorkflowStepTypes.Action);
+        Assert.AreEqual(noActWithReturn.ResultMessage, archive.Steps[1].Result?.ToString());
+        AssertStepMatch(archive.Steps, 2, NameHelper.GetActivityName<ErrorActivity>(), WorkflowStepStatuses.Failure, WorkflowStepTypes.Action);
+        Assert.AreEqual(new NotImplementedException().Message, archive.Steps[2].ErrorMessage);
+        AssertStepMatch(archive.Steps, 3, NameHelper.GetActivityName<ErrorActivityWithReturn>(), WorkflowStepStatuses.Failure, WorkflowStepTypes.Action);
+        Assert.AreEqual(new NotImplementedException().Message, archive.Steps[3].ErrorMessage);
+        AssertStepMatch(archive.Steps, 4, NameHelper.GetActivityName<TimeoutActivity>(), WorkflowStepStatuses.Timeout, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 5, NameHelper.GetActivityName<TimeoutActivityWithReturn>(), WorkflowStepStatuses.Timeout, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 6, null, WorkflowStepStatuses.Success, WorkflowStepTypes.Delay);
+        
         //cleanup
         await ((IAsyncDisposable)connection).DisposeAsync();
+    }
+
+    private static void AssertStepMatch(WorkflowStep[] steps, int index, string? name, WorkflowStepStatuses status, WorkflowStepTypes type)
+    {
+        var step = steps[index];
+        Assert.AreEqual(name, step.Name);
+        Assert.IsNull(step.Retries);
+        Assert.AreEqual(status, step.Status);
+        Assert.AreEqual(type, step.Type);
     }
 }

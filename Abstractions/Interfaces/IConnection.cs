@@ -12,13 +12,13 @@ namespace JetFlow.Interfaces
             where TWorkflow : IWorkflow;
         ValueTask<Guid> StartWorkflowAsync<TWorkflow,TInput>(TInput input,CancellationToken cancellationToken)
             where TWorkflow : IWorkflow<TInput>;
-        ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity>(TWorkflowActivity activity, CancellationToken cancellationToken)
+        ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivity;
-        ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken)
+        ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivity<TInput>;
-        ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(TWorkflowActivity activity, CancellationToken cancellationToken)
+        ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivityWithReturn<TOutput>;
-        ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken)
+        ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivityWithReturn<TOutput, TInput>;
     }
 }

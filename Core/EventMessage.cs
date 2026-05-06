@@ -11,7 +11,7 @@ internal record EventMessage
         TraceHelper.WorkflowTraceHeaderKey,
         TraceHelper.WorkflowTraceSpanHeaderKey
     ];
-    private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?wf\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|config|stepstart|stepend|steperror|steptimeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?wf\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|config|stepstart|stepend|steperror|steptimeout|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 
     public EventMessage(INatsJSMsg<byte[]> msg)
@@ -20,7 +20,7 @@ internal record EventMessage
         if (match.Success)
         {
             WorkflowEventType = Enum.Parse<WorkflowEventTypes>(match.Groups["eventType"].Value, true);
-            ActivityName = match.Groups["stepName"].Success ? match.Groups["stepName"].Value : null;
+            ActivityName = match.Groups["stepName"].Success ? match.Groups["stepName"].Value : null;       
         }
         else
         {
@@ -29,7 +29,6 @@ internal record EventMessage
                 throw new ArgumentException($"Invalid event subject {msg.Subject}");
             ActivityName = match.Groups["activityName"].Value;
             ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
-            ActivityID = ServiceConnection.GetActivityID(msg);
             if (msg.Headers!=null)
             {
                 if (msg.Headers.TryGetValue(Constants.ActivityTimeoutHeader, out var timeoutValue) && TimeSpan.TryParse(timeoutValue, out var timeSpan))
@@ -42,10 +41,12 @@ internal record EventMessage
                         msg.Headers.TryGetValue(Constants.ActiviyRetryDelayBetweenHeader, out var delayValue) && TimeSpan.TryParse(delayValue, out var delay) ? delay : (TimeSpan?)null,
                         msg.Headers.TryGetValue(Constants.ActivityRetryOnTimeoutHeader, out var retryOnTimeoutValue) && bool.TryParse(retryOnTimeoutValue, out var retryOnTimeout) ? retryOnTimeout : true,
                         msg.Headers.TryGetValue(Constants.ActivityRetryOnErrorHeader, out var retryOnErrorValue) && bool.TryParse(retryOnErrorValue, out var retryOnError) ? retryOnError : true,
-                        msg.Headers.TryGetValue(Constants.ActivityRetryBlockedErrorsHeader, out var blockedErrorsValue) ? (string[]?)blockedErrorsValue.ToArray().Where(s => !string.IsNullOrWhiteSpace(s)) : null
+                        msg.Headers.TryGetValue(Constants.ActivityRetryBlockedErrorsHeader, out var blockedErrorsValue) ? [..blockedErrorsValue.ToArray().Where(s => !string.IsNullOrWhiteSpace(s)).OfType<string>()] : null
                     );
             }
         }
+        if (msg.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false)
+            ActivityID = uint.Parse(activityId.ToString());
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
         WorkflowName = match.Groups["workflowName"].Value;
         WorkflowId = match.Groups["instance"].Value;
@@ -58,7 +59,7 @@ internal record EventMessage
     public WorkflowEventTypes? WorkflowEventType { get; private init; } = null;
     public string? ActivityName { get; private init; }
     public ActivityEventTypes? ActivityEventType { get; private init; } = null;
-    public Guid? ActivityID { get; private init; } = null;
+    public uint? ActivityID { get; private init; } = null;
     public TimeSpan? ActivityTimeout { get; private init; } = null;
     public ushort ActivityAttempt { get; private init; } = 0;
     public ActivityRetryConfiguration? RetryConfiguration { get; private init; } = null;
