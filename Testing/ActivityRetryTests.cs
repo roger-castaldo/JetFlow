@@ -229,7 +229,7 @@ public class ActivityRetryTests
         var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsTrue(endMessage.IsSuccess);
-        Assert.AreEqual(4, unimplementedActivityWithTimers.TimeStamps.Count);
+        Assert.HasCount(4, unimplementedActivityWithTimers.TimeStamps);
         for(var x = unimplementedActivityWithTimers.TimeStamps.Count-1; x>0; x--)
         {
             var diff = Math.Floor(Stopwatch.GetElapsedTime(unimplementedActivityWithTimers.TimeStamps[x-1])
@@ -315,12 +315,12 @@ public class ActivityRetryTests
         Assert.AreEqual(NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>(), archive.Name);
         Assert.AreEqual(action, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
-        Assert.AreEqual(1, archive.Steps.Length);
+        Assert.HasCount(1, archive.Steps);
         var step = archive.Steps[0];
         Assert.AreEqual(NameHelper.GetActivityName<MultiRetryActivity>(), step.Name);
         Assert.AreEqual(WorkflowStepStatuses.Success, step.Status);
         Assert.IsNotNull(step.Retries);
-        Assert.AreEqual(3, step.Retries.Count());
+        Assert.HasCount(3, step.Retries);
         Assert.AreEqual(RetryTypes.Error, step.Retries[0].RetryType);
         Assert.AreEqual(RetryTypes.Timeout, step.Retries[1].RetryType);
         Assert.AreEqual(RetryTypes.Error, step.Retries[2].RetryType);

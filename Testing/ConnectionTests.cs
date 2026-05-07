@@ -282,19 +282,19 @@ public class ConnectionTests
     private class StartableWorkflowWithNoInput : IWorkflow
     {
         public static bool Started = false;
-        ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
+        async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
+            await Task.Delay(TimeSpan.FromSeconds(1));
             Started=true;
-            return ValueTask.CompletedTask;
         }
     }
     private class StartableWorkflowWithInput : IWorkflow<string>
     {
         public static string Input = string.Empty;
-        ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string? input)
+        async ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string? input)
         {
+            await Task.Delay(TimeSpan.FromSeconds(1));
             Input = input ?? string.Empty;
-            return ValueTask.CompletedTask;
         }
     }
 
@@ -317,10 +317,8 @@ public class ConnectionTests
         });
         await connection.RegisterWorkflowAsync<StartableWorkflowWithNoInput>(null, CancellationToken.None);
         await connection.RegisterWorkflowAsync<StartableWorkflowWithInput, string>(null, CancellationToken.None);
-        await Task.WhenAll(
-            WorkflowsHelper.StartWorkflowAndWaitForCompletion<StartableWorkflowWithNoInput>(natsConnection, subjectMapper, () => connection.StartWorkflowAsync<StartableWorkflowWithNoInput>(CancellationToken.None)),
-            WorkflowsHelper.StartWorkflowAndWaitForCompletion<StartableWorkflowWithInput>(natsConnection, subjectMapper, () => connection.StartWorkflowAsync<StartableWorkflowWithInput, string>("test input", CancellationToken.None))
-        );
+        await WorkflowsHelper.StartWorkflowAndWaitForCompletion<StartableWorkflowWithNoInput>(natsConnection, subjectMapper, () => connection.StartWorkflowAsync<StartableWorkflowWithNoInput>(CancellationToken.None));
+        await WorkflowsHelper.StartWorkflowAndWaitForCompletion<StartableWorkflowWithInput>(natsConnection, subjectMapper, () => connection.StartWorkflowAsync<StartableWorkflowWithInput, string>("test input", CancellationToken.None));
 
         // Assert
         await ((IAsyncDisposable)connection).DisposeAsync();

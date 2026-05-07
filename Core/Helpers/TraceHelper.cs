@@ -10,31 +10,31 @@ internal static class TraceHelper
     private const string WorkflowStepTraceParentHeaderKey = "x-jetflow-workflowstep-traceParentId";
     private const string WorkflowStepTraceParentSpanHeaderKey = "x-jetflow-workflowstep-traceParentSpanId";
 
-    private const string WorkflowStepStartActivityName = "WorkflowStepStart";
-    private const string WorkflowStartName = "WorkflowStart";
-
     private static readonly ActivitySource activitySource = new(Connection.TraceProviderName);
 
     public static void AddActivityTimeout(TimeSpan timeout)
-        => Activity.Current?.AddTag($"{TraceConstants.BaseActivityTag}.timeout", timeout);
+        => Activity.Current?.AddTag(TraceConstants.ActivityTimeoutIdTag, timeout);
 
     public static Activity? StartWorkflow(string name, string id)
-        => activitySource.StartActivity(WorkflowStartName, ActivityKind.Internal, default(ActivityContext), new[] { new KeyValuePair<string, object?>(TraceConstants.WorkflowNameTag, name), new KeyValuePair<string, object?>(TraceConstants.WorkflowIdTag, id) }, null);
+        => activitySource.StartActivity(TraceConstants.WorkflowStart, ActivityKind.Internal, default(ActivityContext), new[] { new KeyValuePair<string, object?>(TraceConstants.WorkflowNameTag, name), new KeyValuePair<string, object?>(TraceConstants.WorkflowIdTag, id) }, null);
     public static Activity? StartWorkflowStep(EventMessage message, string activityName, string id)
-        => activitySource.StartActivity(WorkflowStepStartActivityName, ActivityKind.Producer, default(ActivityContext), ExtractWorkflowTags(message), ExtractWorkflowLink(message));
+        => activitySource.StartActivity(TraceConstants.WorkflowStepStart, ActivityKind.Producer, default(ActivityContext), ExtractWorkflowTags(message).Concat([
+                new(TraceConstants.ActivityNameTag, activityName),
+                new(TraceConstants.ActivityIdTag, id)
+            ]), ExtractWorkflowLink(message));
     public static Activity? StartDelay(EventMessage message)
-        => activitySource.StartActivity("WorkflowDelayStart", ActivityKind.Producer, default(ActivityContext), ExtractWorkflowTags(message), ExtractWorkflowLink(message));
+        => activitySource.StartActivity(TraceConstants.WorkflowDelayStart, ActivityKind.Producer, default(ActivityContext), ExtractWorkflowTags(message), ExtractWorkflowLink(message));
     public static Activity? StartActivity(EventMessage message)
-        => activitySource.StartActivity("WorkflowActivityStart", ActivityKind.Consumer, default(ActivityContext), ExtractWorkflowActivityTags(message), ExtractWorkflowActivityLink(message));
+        => activitySource.StartActivity(TraceConstants.WorkflowActivityStart, ActivityKind.Consumer, default(ActivityContext), ExtractWorkflowActivityTags(message), ExtractWorkflowActivityLink(message));
 
     public static NatsHeaders InjectCurrentActivity(NatsHeaders headers)
         => (Activity.Current?.OperationName) switch
         {
-            WorkflowStartName => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>([
+            TraceConstants.WorkflowStart => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>([
                 new(WorkflowTraceHeaderKey,Activity.Current.TraceId.ToString()), 
                 new(WorkflowTraceSpanHeaderKey, Activity.Current.SpanId.ToString()),
                 ..headers??[]])),
-            WorkflowStepStartActivityName => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>([
+            TraceConstants.WorkflowStepStart => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>([
                 new(WorkflowStepTraceParentHeaderKey,Activity.Current.TraceId.ToString()),
                 new(WorkflowStepTraceParentSpanHeaderKey, Activity.Current.SpanId.ToString()),
                 ..headers??[]])),
@@ -42,10 +42,10 @@ internal static class TraceHelper
         };
 
     public static void AddPublishEvent(string subject)
-        => Activity.Current?.AddEvent(new("MessagePublished", tags: new([new($"{TraceConstants.MessageBaseTag}.subject", subject)])));
+        => Activity.Current?.AddEvent(new(TraceConstants.MessagePublished, tags: new([new(TraceConstants.MessageSubjectTag, subject)])));
 
     public static void AddMessageDecodedEvent(string contentHeader)
-        => Activity.Current?.AddEvent(new("MessageDecoded", tags: new([new($"{TraceConstants.MessageBaseTag}.contentheader", contentHeader)])));
+        => Activity.Current?.AddEvent(new(TraceConstants.MessageDecoded, tags: new([new(TraceConstants.MessageContentHeaderTag, contentHeader)])));
 
     private static IEnumerable<ActivityLink>? ExtractWorkflowLink(EventMessage message)
     {

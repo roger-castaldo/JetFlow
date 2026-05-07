@@ -16,6 +16,7 @@ internal record EventMessage
 
     public EventMessage(INatsJSMsg<byte[]> msg)
     {
+        RecievedTimestamp = DateTimeOffset.Now;
         var match = workflowSubjectRegex.Match(msg.Subject);
         if (match.Success)
         {
@@ -53,6 +54,7 @@ internal record EventMessage
         Message=msg;
     }
 
+    public DateTimeOffset RecievedTimestamp { get; private init; }
     public string? Namespace { get; private init; }
     public string WorkflowName { get; private init; }
     public string WorkflowId { get; private init; }

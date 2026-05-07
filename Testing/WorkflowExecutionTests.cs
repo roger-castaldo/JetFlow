@@ -443,7 +443,7 @@ public class WorkflowExecutionTests
             subjectMapper.WorkflowStepTimeout(workflowName, runId.ToString(), "*"),
             subjectMapper.WorkflowStepRetry(workflowName, runId.ToString(), "*")
         );
-        Assert.IsFalse(messages.Any());
+        Assert.IsEmpty(messages);
 
         //cleanup
         await ((IAsyncDisposable)connection).DisposeAsync();
@@ -504,7 +504,7 @@ public class WorkflowExecutionTests
         Assert.AreEqual(NameHelper.GetWorkflowName<AllActivityResultsWorkflow>(), archive.Name);
         Assert.AreEqual(action, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
-        Assert.IsTrue(archive.Steps.Any());
+        Assert.IsNotEmpty(archive.Steps);
         AssertStepMatch(archive.Steps, 0, NameHelper.GetActivityName<NoActionActivity>(), WorkflowStepStatuses.Success, WorkflowStepTypes.Action);
         AssertStepMatch(archive.Steps, 1, NameHelper.GetActivityName<NoActionActivityWithReturn>(), WorkflowStepStatuses.Success, WorkflowStepTypes.Action);
         Assert.AreEqual(noActWithReturn.ResultMessage, archive.Steps[1].Result?.ToString());

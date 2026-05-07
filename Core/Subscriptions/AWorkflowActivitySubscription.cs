@@ -23,6 +23,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
             CancellationToken,
             timeoutCts?.Token??CancellationToken.None);
         var ackMessage = true;
+        Activity? activity = null;
         try
         {
             if (Equals(message.ActivityName, ActivityName))
@@ -33,7 +34,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
                 if (canRun)
                 {
                     var start = MetricsHelper.StartActivity(message);
-                    using var acitvity = TraceHelper.StartActivity(message);
+                    activity = TraceHelper.StartActivity(message);
                     Task.Run(async () =>
                     {
                         ulong currentRevision = 1;
@@ -56,6 +57,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
         catch (OperationCanceledException) when (timeoutCts?.IsCancellationRequested??false)
         {
             // timed out
+            TraceHelper.AddActivityTimeout(message.ActivityTimeout!.Value);
             Activity.Current?.SetStatus(ActivityStatusCode.Error, "Activity execution timed out");
             await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Timeout, message, ServiceConnection, CancellationToken);
         }
@@ -76,6 +78,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
                 await activityKeepaliveCTS.CancelAsync();
             }
             catch { }
+            activity?.Dispose();
             if (ackMessage)
                 await message.Message.AckAsync();
             else
