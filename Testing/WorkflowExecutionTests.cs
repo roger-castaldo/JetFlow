@@ -27,13 +27,13 @@ public class WorkflowExecutionTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
-    private class EmptyActivity : IActivity
+    private sealed class EmptyActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
-    private class EmptyActivityWorkflow : IWorkflow
+    private sealed class EmptyActivityWorkflow : IWorkflow
     {
         public static readonly TaskCompletionSource DelayStartTask = new();
 
@@ -88,7 +88,7 @@ public class WorkflowExecutionTests
         Assert.AreEqual("You are unable to execute an activity inside a completed workflow", endMessage.ErrorMessage);
     }
 
-    private class DelayedWorkflow : IWorkflow
+    private sealed class DelayedWorkflow : IWorkflow
     {
         public static readonly TaskCompletionSource DelayStartTask = new();
 
@@ -141,15 +141,15 @@ public class WorkflowExecutionTests
         Assert.AreEqual("You are unable to execute an activity inside a completed workflow", endMessage.ErrorMessage);
     }
 
-    private class OtherEmptyActivity : IActivity
+    private sealed class OtherEmptyActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
 
-    private class InvokeMismatchedActivityWorkflow : IWorkflow
+    private sealed class InvokeMismatchedActivityWorkflow : IWorkflow
     {
-        private static bool firstRun = true;
+        private bool firstRun = true;
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
             if (firstRun)
@@ -193,7 +193,7 @@ public class WorkflowExecutionTests
         Assert.AreEqual($"Expected step name {NameHelper.GetActivityName<OtherEmptyActivity>()} but got {NameHelper.GetActivityName<EmptyActivity>()}", endMessage.ErrorMessage);
     }
 
-    private class InvalidDelayStepWorkflow : IWorkflow
+    private sealed class InvalidDelayStepWorkflow : IWorkflow
     {
         public static readonly TaskCompletionSource DelayStartTask = new();
 
@@ -245,12 +245,12 @@ public class WorkflowExecutionTests
         Assert.AreEqual($"Expected delay finished event but recieved {subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), id.ToString(), NameHelper.GetActivityName<EmptyActivity>())}", endMessage.ErrorMessage);
     }
 
-    private class NoActionActivity : IActivity
+    private sealed class NoActionActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
-    private class NoActionActivityWithReturn : IActivityWithReturn<string>
+    private sealed class NoActionActivityWithReturn : IActivityWithReturn<string>
     {
         public string? ResultMessage { get; private set; } = string.Empty;
         Task<string> IActivityWithReturn<string>.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -259,14 +259,14 @@ public class WorkflowExecutionTests
             return Task.FromResult(ResultMessage);
         }
     }
-    private class ErrorActivity : IActivity
+    private sealed class ErrorActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
     }
-    private class ErrorActivityWithReturn : IActivityWithReturn<string>
+    private sealed class ErrorActivityWithReturn : IActivityWithReturn<string>
     {
         public string? ResultMessage { get; private set; } = string.Empty;
         Task<string> IActivityWithReturn<string>.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -275,14 +275,14 @@ public class WorkflowExecutionTests
             throw new NotImplementedException();
         }
     }
-    private class TimeoutActivity : IActivity
+    private sealed class TimeoutActivity : IActivity
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
         }
     }
-    private class TimeoutActivityWithReturn : IActivityWithReturn<string>
+    private sealed class TimeoutActivityWithReturn : IActivityWithReturn<string>
     {
         public string? ResultMessage { get; private set; } = string.Empty;
         async Task<string> IActivityWithReturn<string>.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -293,7 +293,7 @@ public class WorkflowExecutionTests
         }
     }
 
-    private class AllActivityResultsWorkflow : IWorkflow
+    private sealed class AllActivityResultsWorkflow : IWorkflow
     {
         public static ActivityResult? NoActResult { get; private set; }
         public static ActivityResult<string>? NoActReturnResult { get; private set; }
@@ -388,7 +388,6 @@ public class WorkflowExecutionTests
         Assert.IsNotNull(natsTestHarness);
         //Arrange
         var runId = Guid.Empty;
-        var purgeRecieved = new TaskCompletionSource();
         var noActWithReturn = new NoActionActivityWithReturn();
         var errorActWithReturn = new ErrorActivityWithReturn();
         var timeoutActWithReturn = new TimeoutActivityWithReturn();
@@ -397,7 +396,6 @@ public class WorkflowExecutionTests
         var natsConnection = new NatsConnection(options);
         var jsContext = new NatsJSContext(natsConnection);
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
         {
@@ -457,7 +455,6 @@ public class WorkflowExecutionTests
         Assert.IsNotNull(natsTestHarness);
         //Arrange
         var runId = Guid.Empty;
-        var purgeRecieved = new TaskCompletionSource();
         var noActWithReturn = new NoActionActivityWithReturn();
         var errorActWithReturn = new ErrorActivityWithReturn();
         var timeoutActWithReturn = new TimeoutActivityWithReturn();
@@ -467,7 +464,6 @@ public class WorkflowExecutionTests
         var jsContext = new NatsJSContext(natsConnection);
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
         {

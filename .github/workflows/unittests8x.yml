@@ -20,7 +20,7 @@ jobs:
           8.0.x
           10.0.x
     - name: Restore
-      run: dotnet restore Jetflow.slnx --force
+      run: dotnet restore JetFlow.slnx --force
     - name: Build-8.0 testing 
       run: dotnet build -p:BlockMD=true --no-restore Testing
     - name: Test-8.0 core

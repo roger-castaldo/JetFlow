@@ -124,22 +124,22 @@ public class ConnectionTests
         await Assert.ThrowsAsync<UnableToConnectException>(async () => await Connection.CreateInstanceAsync(new(options)));
     }
 
-    private class WorkflowActivityNoInputNoReturn : IActivity
+    private sealed class WorkflowActivityNoInputNoReturn : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
-    private class WorkflowActivityWithInputNoReturn : IActivity<string>
+    private sealed class WorkflowActivityWithInputNoReturn : IActivity<string>
     {
         Task IActivity<string>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
-    private class WorkflowActivityNoInputWithReturn : IActivityWithReturn<string>
+    private sealed class WorkflowActivityNoInputWithReturn : IActivityWithReturn<string>
     {
         Task<string> IActivityWithReturn<string>.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
             => Task.FromResult(string.Empty);
     }
-    private class WorkflowActivityWithInputWithReturn : IActivityWithReturn<string, string>
+    private sealed class WorkflowActivityWithInputWithReturn : IActivityWithReturn<string, string>
     {
         Task<string> IActivityWithReturn<string, string>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
             => Task.FromResult(string.Empty);
@@ -196,12 +196,12 @@ public class ConnectionTests
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityWithInputWithReturnConsumer.Info.Config.AckPolicy);
     }
 
-    private class WorkflowWithNoInput : IWorkflow
+    private sealed class WorkflowWithNoInput : IWorkflow
     {
         ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
             => ValueTask.CompletedTask;
     }
-    private class WorkflowWithInput : IWorkflow<string>
+    private sealed class WorkflowWithInput : IWorkflow<string>
     {
         ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string? input)
             => ValueTask.CompletedTask;
@@ -277,24 +277,5 @@ public class ConnectionTests
         var inputConfig = await configStorage.TryGetEntryAsync<WorkflowOptions>(NameHelper.GetWorkflowName<WorkflowWithInput>(), serializer: new WorkflowOptionsSerializer());
         Assert.IsTrue(inputConfig.Success);
         Assert.AreEqual(withInputConfig, inputConfig.Value.Value);
-    }
-
-    private class StartableWorkflowWithNoInput : IWorkflow
-    {
-        public static bool Started = false;
-        async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
-        {
-            Started=true;
-            await context.ExecuteActivityAsync<WorkflowActivityNoInputNoReturn>(new());
-        }
-    }
-    private class StartableWorkflowWithInput : IWorkflow<string>
-    {
-        public static string Input = string.Empty;
-        async ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string? input)
-        {
-            Input = input ?? string.Empty;
-            await context.ExecuteActivityAsync<WorkflowActivityNoInputNoReturn>(new());
-        }
     }
 }

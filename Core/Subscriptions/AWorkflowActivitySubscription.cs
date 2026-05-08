@@ -77,7 +77,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
             {
                 await activityKeepaliveCTS.CancelAsync();
             }
-            catch { }
+            catch { /* burying error in case cancellation fails*/ }
             activity?.Dispose();
             if (ackMessage)
                 await message.Message.AckAsync();

@@ -95,21 +95,23 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
         return TraceHelper.InjectCurrentActivity(headers);
     }
 
-    private async ValueTask PublishMessageAsync(byte[] data, string subject, NatsHeaders headers, string messageId, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    private record struct PublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, TimeSpan? Timeout = null);
+
+    private async ValueTask PublishMessageAsync(PublishMessage message, CancellationToken cancellationToken = default)
     {
-        await connection.PublishAsync<byte[]>(subject, data, AppendDefaultHeaders(headers, messageId, timeout), cancellationToken: cancellationToken);
-        TraceHelper.AddPublishEvent(subject);
+        await connection.PublishAsync<byte[]>(message.Subject, message.Data, AppendDefaultHeaders(message.Headers, message.Id, message.Timeout), cancellationToken: cancellationToken);
+        TraceHelper.AddPublishEvent(message.Subject);
     }
 
-    private async ValueTask PublishDelayedMessageAsync(byte[] data, string subject, NatsHeaders headers, TimeSpan delay, string destinationSubject, string messageId, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    private async ValueTask PublishDelayedMessageAsync(PublishMessage message, TimeSpan delay, string destinationSubject, CancellationToken cancellationToken = default)
     {
-        headers = AppendDefaultHeaders(headers, messageId, null);
+        var headers = AppendDefaultHeaders(message.Headers, message.Id, null);
         headers.Add(ScheduleDelayHeader, DateTime.UtcNow.Add(delay).ToString("'@at 'yyyy-MM-dd'T'HH:mm:ss'Z'"));
         headers.Add(ScheduleTargetHeader, destinationSubject);
-        if (timeout.HasValue)
-            headers.Add(ScheduledTargetTTL, CreateTTLString(timeout.Value));
-        await jsContext.PublishAsync<byte[]>(subject, data, headers: headers, cancellationToken: cancellationToken);
-        TraceHelper.AddPublishEvent(subject);
+        if (message.Timeout.HasValue)
+            headers.Add(ScheduledTargetTTL, CreateTTLString(message.Timeout.Value));
+        await jsContext.PublishAsync<byte[]>(message.Subject, message.Data, headers: headers, cancellationToken: cancellationToken);
+        TraceHelper.AddPublishEvent(message.Subject);
     }
 
     internal static string GetMessageID(INatsJSMsg<byte[]> msg)
@@ -141,7 +143,7 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
         await jsContext.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
     }
 
-    private class JetstreamQuery(INatsJSConsumer consumer, INatsJSContext jsContext) : IJetstreamQuery
+    private sealed class JetstreamQuery(INatsJSConsumer consumer, INatsJSContext jsContext) : IJetstreamQuery
     {
         private const int MaxMessages = 64;
         private bool disposed = false;

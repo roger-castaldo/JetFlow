@@ -1,4 +1,5 @@
 ﻿using JetFlow.Helpers;
+using JetFlow.Interfaces;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
@@ -36,9 +37,8 @@ internal static class WorkflowsHelper
         );
     }
 
-    public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForCompletion<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid>> startCall)
+    private static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWait(INatsJSConsumer consumer, Func<ValueTask> close, Func<ValueTask<Guid>> startCall, Func<Guid, string> getSubject)
     {
-        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
         var completion = new TaskCompletionSource<INatsJSMsg<byte[]>?>();
         var runId = Guid.Empty;
         _ = Task.Run(async () =>
@@ -51,7 +51,7 @@ internal static class WorkflowsHelper
                     await consumer.RefreshAsync(); // or try to recreate consumer
                     await foreach (var msg in consumer.ConsumeAsync<byte[]>())
                     {
-                        if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), runId.ToString())))
+                        if (Equals(msg.Subject, getSubject(runId)))
                         {
                             completion.TrySetResult(msg);
                             exit=true;
@@ -75,93 +75,25 @@ internal static class WorkflowsHelper
             }
             await close();
         });
-        runId = await startCall();
+        runId= await startCall();
         return await completion.Task;
+    }
+
+    public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForCompletion<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid>> startCall)
+    {
+        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
+        return await StartWorkflowAndWait(consumer, close, startCall, (runId) => subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), runId.ToString()));
     }
 
     public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForPurge<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid>> startCall)
     {
         var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
-        var completion = new TaskCompletionSource<INatsJSMsg<byte[]>?>();
-        var runId = Guid.Empty;
-        _ = Task.Run(async () =>
-        {
-            var exit = false;
-            while (!exit)
-            {
-                try
-                {
-                    await consumer.RefreshAsync(); // or try to recreate consumer
-                    await foreach (var msg in consumer.ConsumeAsync<byte[]>())
-                    {
-                        if (Equals(msg.Subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), runId.ToString())))
-                        {
-                            completion.TrySetResult(msg);
-                            exit=true;
-                            break;
-                        }
-                    }
-                }
-                catch (NatsJSProtocolException)
-                {
-                    //bury error
-                }
-                catch (NatsJSException)
-                {
-                    // log exception
-                    await Task.Delay(1000); // backoff
-                }
-                catch (OperationCanceledException)
-                {
-                    // expected on cancellation, ignore
-                }
-            }
-            await close();
-        });
-        runId = await startCall();
-        return await completion.Task;
+        return await StartWorkflowAndWait(consumer, close, startCall, (runId) => subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), runId.ToString()));
     }
 
     public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForArchive<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid>> startCall)
     {
         var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
-        var completion = new TaskCompletionSource<INatsJSMsg<byte[]>?>();
-        var runId = Guid.Empty;
-        _ = Task.Run(async () =>
-        {
-            var exit = false;
-            while (!exit)
-            {
-                try
-                {
-                    await consumer.RefreshAsync(); // or try to recreate consumer
-                    await foreach (var msg in consumer.ConsumeAsync<byte[]>())
-                    {
-                        if (Equals(msg.Subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>(), runId.ToString())))
-                        {
-                            completion.TrySetResult(msg);
-                            exit=true;
-                            break;
-                        }
-                    }
-                }
-                catch (NatsJSProtocolException)
-                {
-                    //bury error
-                }
-                catch (NatsJSException)
-                {
-                    // log exception
-                    await Task.Delay(1000); // backoff
-                }
-                catch (OperationCanceledException)
-                {
-                    // expected on cancellation, ignore
-                }
-            }
-            await close();
-        });
-        runId = await startCall();
-        return await completion.Task;
+        return await StartWorkflowAndWait(consumer, close, startCall, (runId) => subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>(), runId.ToString()));
     }
 }

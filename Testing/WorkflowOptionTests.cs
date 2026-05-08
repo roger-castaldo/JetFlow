@@ -27,7 +27,7 @@ public class WorkflowOptionTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
-    private class UnregisteredActivity : IActivity
+    private sealed class UnregisteredActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
@@ -35,7 +35,7 @@ public class WorkflowOptionTests
         }
     }
 
-    private class WorkflowWithUnregisteredActivity : IWorkflow
+    private sealed class WorkflowWithUnregisteredActivity : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
@@ -72,7 +72,7 @@ public class WorkflowOptionTests
         Assert.AreEqual($"Activity {NameHelper.GetActivityName<UnregisteredActivity>()} has timed out", endResult.ErrorMessage);
     }
 
-    private class SlowActivity : IActivity
+    private sealed class SlowActivity : IActivity
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
@@ -80,7 +80,7 @@ public class WorkflowOptionTests
         }
     }
 
-    private class WorkflowWithSlowActivity : IWorkflow
+    private sealed class WorkflowWithSlowActivity : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
@@ -118,7 +118,7 @@ public class WorkflowOptionTests
         Assert.AreEqual($"Activity {NameHelper.GetActivityName<SlowActivity>()} has timed out", endResult.ErrorMessage);
     }
 
-    private class ActivityThatThrowsException : IActivity
+    private sealed class ActivityThatThrowsAnError : IActivity
     {
         public Task ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
@@ -126,11 +126,11 @@ public class WorkflowOptionTests
         }
     }
 
-    private class WorkflowWithActivityError : IWorkflow
+    private sealed class WorkflowWithActivityError : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
-            _ = await context.ExecuteActivityAsync<ActivityThatThrowsException>(new());
+            _ = await context.ExecuteActivityAsync<ActivityThatThrowsAnError>(new());
         }
     }
 
@@ -146,7 +146,7 @@ public class WorkflowOptionTests
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithActivityError>(new() { ErrorOnActivityFailure=true }, CancellationToken.None);
-        await connection.RegisterWorkflowActivityAsync<ActivityThatThrowsException>(new(), CancellationToken.None);
+        await connection.RegisterWorkflowActivityAsync<ActivityThatThrowsAnError>(new(), CancellationToken.None);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithActivityError>(natsConnection, subjectMapper,
@@ -161,10 +161,10 @@ public class WorkflowOptionTests
         //Verify
         Assert.IsNotNull(endResult);
         Assert.IsFalse(endResult.IsSuccess);
-        Assert.AreEqual($"Activity {NameHelper.GetActivityName<ActivityThatThrowsException>()} has failed with error: {new NotImplementedException().Message}", endResult.ErrorMessage);
+        Assert.AreEqual($"Activity {NameHelper.GetActivityName<ActivityThatThrowsAnError>()} has failed with error: {new NotImplementedException().Message}", endResult.ErrorMessage);
     }
 
-    private class WorkflowWithNoSteps : IWorkflow
+    private sealed class WorkflowWithNoSteps : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
@@ -178,12 +178,11 @@ public class WorkflowOptionTests
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
-        var cancellationTokenSource = new CancellationTokenSource();
+        using var cancellationTokenSource = new CancellationTokenSource();
         var subjectMapper = new SubjectMapper(null);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithNoSteps>(new() { CompletionAction = completionAction, PurgeDelay= purgeDelay }, CancellationToken.None);
 
@@ -205,7 +204,7 @@ public class WorkflowOptionTests
                     }
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { /*buried to handle cancelling*/}
         });
         _ = Task.Run(async () =>
         {
@@ -220,7 +219,7 @@ public class WorkflowOptionTests
                     }
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) {/*buried to handle cancelling*/ }
         });
         _ = Task.Run(async () =>
         {
@@ -260,7 +259,7 @@ public class WorkflowOptionTests
                     }
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { /*buried to handle cancelling*/}
         });
 
         //Act
@@ -349,7 +348,7 @@ public class WorkflowOptionTests
         //Assert
         Assert.IsNotNull(results.completion);
         Assert.IsNotNull(results.purge);
-        double mid = double.MaxValue;
+        var mid = double.MaxValue;
         if (completionAction== WorkflowCompletionActions.ArchiveThenPurge)
         {
             Assert.IsNotNull(results.archive);

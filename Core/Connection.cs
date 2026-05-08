@@ -20,6 +20,9 @@ public static class Connection
     public static ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 
+    private record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore,
+            INatsJSConsumer ActivityTimeoutsConsumer);
+
     internal class ConnectionInstance : IConnection, IAsyncDisposable
     {
         private readonly MessageSerializer messageSerializer;
@@ -29,13 +32,12 @@ public static class Connection
         private readonly ConcurrentBag<ASubscription> subscriptions = new();
 
         private ConnectionInstance(INatsConnection connection, INatsJSContext natsJSContext, MessageSerializer messageSerializer, 
-            SubjectMapper subjectMapper, INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore,
-            INatsJSConsumer activityTimeoutsConsumer)
+            SubjectMapper subjectMapper, ConnectionStores stores)
         {
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
-            serviceConnection = new(connection, natsJSContext, timerStore, configurationStore, archiveStore, subjectMapper, messageSerializer);
-            subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, activityTimeoutsConsumer, cancellationTokenSource.Token));
+            serviceConnection = new(connection, natsJSContext, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, subjectMapper, messageSerializer);
+            subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
         }
 
         public static async ValueTask<IConnection> CreateAsync(ConnectionOptions options)
@@ -112,7 +114,9 @@ public static class Connection
                     },
                     CancellationToken.None
                 );
-            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, timerStore, configurationStore, archiveStore, activityTimeoutsConsumer);
+            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, 
+                new(timerStore, configurationStore, archiveStore, activityTimeoutsConsumer)
+            );
         }
 
         private ValueTask<INatsJSConsumer> CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(CancellationToken cancellationToken)

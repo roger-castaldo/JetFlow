@@ -24,14 +24,14 @@ public class MetricsTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
-    private class MetricsDelayedActivity : IActivity
+    private sealed class MetricsDelayedActivity : IActivity
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
         }
     }
-    private class MetricsWorkflow : IWorkflow
+    private sealed class MetricsWorkflow : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {

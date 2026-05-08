@@ -24,21 +24,21 @@ public class TelemetryTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
-    private class TimeoutActivity : IActivity<string>
+    private sealed class TimeoutActivity : IActivity<string>
     {
         async Task IActivity<string>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
         }
     }
-    private class NotImplementedActivity : IActivity
+    private sealed class NotImplementedActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
     }
-    private class WorkflowForTelemetry : IWorkflow
+    private sealed class WorkflowForTelemetry : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
@@ -78,7 +78,6 @@ public class TelemetryTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowForTelemetry>();
         await connection.RegisterWorkflowActivityAsync<TimeoutActivity,string>(new(), CancellationToken.None);

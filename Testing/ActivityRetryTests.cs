@@ -28,7 +28,7 @@ public class ActivityRetryTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
-    private class TimeoutActivity : IActivity
+    private sealed class TimeoutActivity : IActivity
     {
         public int CallAttempts { get; private set; } = 0;
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -36,10 +36,9 @@ public class ActivityRetryTests
             CallAttempts++;
             if (state.ActivityAttempt<2)
                 await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
-            return;
         }
     }
-    private class WorkflowWithActivityTimeout : IWorkflow
+    private sealed class WorkflowWithActivityTimeout : IWorkflow
     {
         public static ActivityResult? RunResult { get; private set; } = null;
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
@@ -92,7 +91,7 @@ public class ActivityRetryTests
         Assert.AreEqual(ActivityResultStatus.Success, WorkflowWithActivityTimeout.RunResult.Status);
     }
 
-    private class UnimplementedActivity : IActivity
+    private sealed class UnimplementedActivity : IActivity
     {
         public int CallAttempts { get; private set; } = 0;
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -172,7 +171,7 @@ public class ActivityRetryTests
         Assert.AreEqual(new NotImplementedException().Message, WorkflowWithUnimplmentedActivity.SecondCallResult.ErrorMessage);
     }
 
-    private class UnimplementedActivityWithTimers : IActivity
+    private sealed class UnimplementedActivityWithTimers : IActivity
     {
         public List<long> TimeStamps { get; private set; } = [];
 
@@ -239,7 +238,7 @@ public class ActivityRetryTests
         }
     }
 
-    private class MultiRetryActivity : IActivity
+    private sealed class MultiRetryActivity : IActivity
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
@@ -252,7 +251,7 @@ public class ActivityRetryTests
             }
         }
     }
-    private class WorkflowWithRetryForArchiving : IWorkflow
+    private sealed class WorkflowWithRetryForArchiving : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
@@ -283,7 +282,6 @@ public class ActivityRetryTests
         var jsContext = new NatsJSContext(natsConnection);
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithRetryForArchiving>(options: new()
         {

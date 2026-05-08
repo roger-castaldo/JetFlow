@@ -23,7 +23,7 @@ public class ActivityExecutionTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
-    private class BasicActivity : IActivity
+    private sealed class BasicActivity : IActivity
     {
         public int InvokeCount { get; private set; } = 0;
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -32,7 +32,7 @@ public class ActivityExecutionTests
             return Task.CompletedTask;
         }
     }
-    private class BasicActivityWithInput : IActivity<string>
+    private sealed class BasicActivityWithInput : IActivity<string>
     {
         public string? InvokedMessage { get; private set; } = string.Empty;
 
@@ -42,7 +42,7 @@ public class ActivityExecutionTests
             return Task.CompletedTask;
         }
     }
-    private class BasicActivityWithReturn : IActivityWithReturn<string>
+    private sealed class BasicActivityWithReturn : IActivityWithReturn<string>
     {
         public string ReturnedMessage { get; private set; } = string.Empty;
 
@@ -52,7 +52,7 @@ public class ActivityExecutionTests
             return Task.FromResult(ReturnedMessage);
         }
     }
-    private class BasicActivityWithInputAndReturn : IActivityWithReturn<string, string>
+    private sealed class BasicActivityWithInputAndReturn : IActivityWithReturn<string, string>
     {
         public string? InvokedMessage { get; private set; } = string.Empty;
         public string ReturnedMessage { get; private set; } = string.Empty;
@@ -63,7 +63,7 @@ public class ActivityExecutionTests
             return Task.FromResult(ReturnedMessage);
         }
     }
-    private class BasicWorkflow : IWorkflow<string>
+    private sealed class BasicWorkflow : IWorkflow<string>
     {
         public static string? FinalResult { get; private set; } = string.Empty;
 
@@ -119,7 +119,7 @@ public class ActivityExecutionTests
         Assert.AreEqual(BasicWorkflow.FinalResult, basicActivityWithInputAndReturn.ReturnedMessage);
     }
 
-    private class GenerateRandomString : IActivityWithReturn<string>
+    private sealed class GenerateRandomString : IActivityWithReturn<string>
     {
         public string GeneratedString { get; private set; } = string.Empty;
 
@@ -129,7 +129,7 @@ public class ActivityExecutionTests
             return Task.FromResult(GeneratedString);
         }
     }
-    private class RecieveRandomStringFromContextByClass : IActivity
+    private sealed class RecieveRandomStringFromContextByClass : IActivity
     {
         public string? RecievedString { get; private set; } = string.Empty;
 
@@ -139,7 +139,7 @@ public class ActivityExecutionTests
 
         }
     }
-    private class RecieveRandomStringFromContextByName : IActivity
+    private sealed class RecieveRandomStringFromContextByName : IActivity
     {
         public string? RecievedString { get; private set; } = string.Empty;
 
@@ -148,7 +148,7 @@ public class ActivityExecutionTests
             RecievedString = await state.GetActivityResultValueAsync<string>("GenerateRandomString");
         }
     }
-    private class ActivityContextWorkflow : IWorkflow
+    private sealed class ActivityContextWorkflow : IWorkflow
     {
         public static string? GeneratedString { get; private set; } = string.Empty;
 
