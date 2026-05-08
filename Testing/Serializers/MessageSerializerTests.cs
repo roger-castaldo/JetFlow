@@ -12,7 +12,7 @@ public class MessageSerializerTests
     private const string ContentHeaderKey = "x-jetflow-content-encoding";
     private const string JsonContentHeader = "application/json";
 
-    private record User(string FirstName, string LastName, string UserName);
+    private sealed record User(string FirstName, string LastName, string UserName);
 
     [TestMethod]
     public async Task EnsureBaseSerializationCallsOperateProperly()

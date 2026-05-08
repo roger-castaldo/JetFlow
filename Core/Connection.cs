@@ -20,7 +20,7 @@ public static class Connection
     public static ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 
-    private record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore,
+    private sealed record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore,
             INatsJSConsumer ActivityTimeoutsConsumer);
 
     internal class ConnectionInstance : IConnection, IAsyncDisposable

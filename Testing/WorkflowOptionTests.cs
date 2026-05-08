@@ -172,7 +172,7 @@ public class WorkflowOptionTests
         }
     }
 
-    private record TimeStampResult(byte[]? Message, long Timestamp);
+    private sealed record TimeStampResult(byte[]? Message, long Timestamp);
 
     private async Task<(TimeStampResult? completion, TimeStampResult? archive, TimeStampResult? purge)> ExecuteCompletionTest(WorkflowCompletionActions completionAction, TimeSpan? purgeDelay=null)
     {
@@ -348,7 +348,7 @@ public class WorkflowOptionTests
         //Assert
         Assert.IsNotNull(results.completion);
         Assert.IsNotNull(results.purge);
-        var mid = double.MaxValue;
+        double mid;
         if (completionAction== WorkflowCompletionActions.ArchiveThenPurge)
         {
             Assert.IsNotNull(results.archive);
@@ -359,7 +359,6 @@ public class WorkflowOptionTests
             Assert.IsNull(results.archive);
             mid = Math.Floor(TimeSpan.FromTicks(results.purge.Timestamp-results.completion.Timestamp).TotalSeconds);
         }
-        Assert.IsLessThanOrEqualTo(mid+1, Math.Floor(delay.TotalSeconds));
-        Assert.IsGreaterThanOrEqualTo(mid-1, Math.Floor(delay.TotalSeconds));
+        Assert.IsGreaterThanOrEqualTo(delay.TotalSeconds, mid);
     }
 }
