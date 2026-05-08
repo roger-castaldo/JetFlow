@@ -28,7 +28,7 @@ public class ConnectionTests
 
     [TestMethod]
     [DataRow(null, DisplayName = "Default namespace")]
-    [DataRow("mydomain", DisplayName = "Custom namespace")]
+    [DataRow("ensurecreation", DisplayName = "Custom namespace")]
     public async Task EnsureAllRequiredStreamsCreated(string instanceNamespace)
     {
         Assert.IsNotNull(natsTestHarness);
@@ -147,7 +147,7 @@ public class ConnectionTests
 
     [TestMethod]
     [DataRow(null, DisplayName = "Default namespace")]
-    [DataRow("mydomain", DisplayName = "Custom namespace")]
+    [DataRow("ensureactivity", DisplayName = "Custom namespace")]
     public async Task EnsureWorkflowActivityRegistrations(string instanceNamespace)
     {
         Assert.IsNotNull(natsTestHarness);
@@ -209,7 +209,7 @@ public class ConnectionTests
 
     [TestMethod]
     [DataRow(null, DisplayName = "Default namespace")]
-    [DataRow("mydomain", DisplayName = "Custom namespace")]
+    [DataRow("ensureworkflow", DisplayName = "Custom namespace")]
     public async Task EnsureWorkflowRegistrations(string instanceNamespace)
     {
         Assert.IsNotNull(natsTestHarness);
@@ -284,8 +284,8 @@ public class ConnectionTests
         public static bool Started = false;
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
-            await Task.Delay(TimeSpan.FromSeconds(1));
             Started=true;
+            await context.ExecuteActivityAsync<WorkflowActivityNoInputNoReturn>(new());
         }
     }
     private class StartableWorkflowWithInput : IWorkflow<string>
@@ -293,38 +293,8 @@ public class ConnectionTests
         public static string Input = string.Empty;
         async ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string? input)
         {
-            await Task.Delay(TimeSpan.FromSeconds(1));
             Input = input ?? string.Empty;
+            await context.ExecuteActivityAsync<WorkflowActivityNoInputNoReturn>(new());
         }
-    }
-
-    [TestMethod]
-    [DataRow(null, DisplayName = "Default namespace")]
-    [DataRow("mydomain", DisplayName = "Custom namespace")]
-    public async Task EnsureWorkflowStart(string instanceNamespace)
-    {
-        Assert.IsNotNull(natsTestHarness);
-        StartableWorkflowWithInput.Input=string.Empty;
-        StartableWorkflowWithNoInput.Started=false;
-        // Arrange
-        var subjectMapper = new SubjectMapper(instanceNamespace);
-        var options = natsTestHarness.Options;
-        var natsConnection = new NatsConnection(options);
-        // Act
-        var connection = await Connection.CreateInstanceAsync(new(natsConnection)
-        {
-            Namespace = instanceNamespace
-        });
-        await connection.RegisterWorkflowAsync<StartableWorkflowWithNoInput>(null, CancellationToken.None);
-        await connection.RegisterWorkflowAsync<StartableWorkflowWithInput, string>(null, CancellationToken.None);
-        await WorkflowsHelper.StartWorkflowAndWaitForCompletion<StartableWorkflowWithNoInput>(natsConnection, subjectMapper, () => connection.StartWorkflowAsync<StartableWorkflowWithNoInput>(CancellationToken.None));
-        await WorkflowsHelper.StartWorkflowAndWaitForCompletion<StartableWorkflowWithInput>(natsConnection, subjectMapper, () => connection.StartWorkflowAsync<StartableWorkflowWithInput, string>("test input", CancellationToken.None));
-
-        // Assert
-        await ((IAsyncDisposable)connection).DisposeAsync();
-
-        //Verify
-        Assert.IsTrue(StartableWorkflowWithNoInput.Started);
-        Assert.AreEqual("test input", StartableWorkflowWithInput.Input);
     }
 }

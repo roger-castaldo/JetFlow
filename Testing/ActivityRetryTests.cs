@@ -83,8 +83,8 @@ public class ActivityRetryTests
         await ((IAsyncDisposable)connection).DisposeAsync();
 
         //Verify
-        Assert.IsTrue(result.HasValue);
-        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
+        Assert.IsNotNull(result);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsTrue(endMessage.IsSuccess);
         Assert.AreEqual(3, timeoutActivity.CallAttempts);
@@ -160,8 +160,8 @@ public class ActivityRetryTests
         await ((IAsyncDisposable)connection).DisposeAsync();
 
         //Verify
-        Assert.IsTrue(result.HasValue);
-        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
+        Assert.IsNotNull(result);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsTrue(endMessage.IsSuccess);
         Assert.AreEqual(4, unimplementedActivity.CallAttempts);
@@ -225,8 +225,8 @@ public class ActivityRetryTests
         await ((IAsyncDisposable)connection).DisposeAsync();
 
         //Verify
-        Assert.IsTrue(result.HasValue);
-        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
+        Assert.IsNotNull(result);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsTrue(endMessage.IsSuccess);
         Assert.HasCount(4, unimplementedActivityWithTimers.TimeStamps);

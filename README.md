@@ -11,6 +11,7 @@ Eventually this service will include:
 * ~~Support for custom archive and cleanup configurations~~
 * Examples of how to use this
 * Full documentation
-* Unit Testing
+* ~~Unit Testing~~
 * ~~Built in Retry/Circuit Break policies~~
 * ~~Workflow Activity execution timeouts~~
+* Scheduled Workflows (Delayed start/Repeate Scheduling)

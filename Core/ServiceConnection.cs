@@ -155,17 +155,14 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
                 {
                     await jsContext.DeleteConsumerAsync(consumer.Info.StreamName, consumer.Info.Name);
                 }
-                catch
-                {
-                    //bury error
-                }
+                catch { /*bury error*/ }
             }
         }
 
         IAsyncEnumerator<INatsJSMsg<byte[]>> IAsyncEnumerable<INatsJSMsg<byte[]>>.GetAsyncEnumerator(CancellationToken cancellationToken)
             => GetAllMessagesAsync(cancellationToken);
 
-        private async IAsyncEnumerator<INatsJSMsg<byte[]>> GetAllMessagesAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        private async IAsyncEnumerator<INatsJSMsg<byte[]>> GetAllMessagesAsync(CancellationToken cancellationToken)
         {
             // Fetch batches from the consumer and yield all available messages.
             // If a fetch returns no messages, treat the query as complete and exit the enumerator.

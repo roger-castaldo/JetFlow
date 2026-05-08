@@ -106,8 +106,8 @@ public class ActivityExecutionTests
 
         // Assert
         await ((IAsyncDisposable)connection).DisposeAsync();
-        Assert.IsTrue(result.HasValue);
-        var endResult = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
+        Assert.IsNotNull(result);
+        var endResult = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
 
         //Verify
         Assert.IsNotNull(endResult);
@@ -186,8 +186,8 @@ public class ActivityExecutionTests
 
         // Assert
         await ((IAsyncDisposable)connection).DisposeAsync();
-        Assert.IsTrue(result.HasValue);
-        var endResult = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
+        Assert.IsNotNull(result);
+        var endResult = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
 
         //Verify
         Assert.IsNotNull(endResult);

@@ -187,7 +187,7 @@ public class WorkflowExecutionTests
         // Assert
         await ((IAsyncDisposable)connection).DisposeAsync();
         Assert.IsNotNull(result);
-        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsFalse(endMessage.IsSuccess);
         Assert.AreEqual($"Expected step name {NameHelper.GetActivityName<OtherEmptyActivity>()} but got {NameHelper.GetActivityName<EmptyActivity>()}", endMessage.ErrorMessage);
@@ -352,7 +352,7 @@ public class WorkflowExecutionTests
         // Assert
         await ((IAsyncDisposable)connection).DisposeAsync();
         Assert.IsNotNull(result);
-        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsTrue(endMessage.IsSuccess);
 
