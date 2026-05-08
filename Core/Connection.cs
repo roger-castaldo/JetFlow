@@ -9,6 +9,7 @@ using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using NATS.Client.ObjectStore;
 using NATS.Net;
+using System.Collections.Concurrent;
 
 namespace JetFlow;
 
@@ -19,28 +20,38 @@ public static class Connection
     public static ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 
-    internal class ConnectionInstance : IConnection
+    private sealed record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore,
+            INatsJSConsumer ActivityTimeoutsConsumer);
+
+    internal class ConnectionInstance : IConnection, IAsyncDisposable
     {
         private readonly MessageSerializer messageSerializer;
         private readonly ServiceConnection serviceConnection;
         private readonly SubjectMapper subjectMapper;
         private readonly CancellationTokenSource cancellationTokenSource = new();
-        private Task? timeoutRunner;
+        private readonly ConcurrentBag<ASubscription> subscriptions = new();
 
         private ConnectionInstance(INatsConnection connection, INatsJSContext natsJSContext, MessageSerializer messageSerializer, 
-            SubjectMapper subjectMapper, INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore)
+            SubjectMapper subjectMapper, ConnectionStores stores)
         {
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
-            serviceConnection = new(connection, natsJSContext, timerStore, configurationStore, archiveStore, subjectMapper, messageSerializer);
-            timeoutRunner = StartActivityTimeoutRunner();
+            serviceConnection = new(connection, natsJSContext, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, subjectMapper, messageSerializer);
+            subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
         }
 
         public static async ValueTask<IConnection> CreateAsync(ConnectionOptions options)
         {
             var connection = options.Connection;
             var jsContext = options.NatsJSContext;
-            await connection.ConnectAsync();
+            try
+            {
+                await connection.ConnectAsync();
+            }
+            catch
+            {
+                //burying connection errors
+            }
             if (connection.ConnectionState != NatsConnectionState.Open)
                 throw new UnableToConnectException();
             var subjectMapper = new SubjectMapper(options.Namespace);
@@ -93,12 +104,7 @@ public static class Connection
             await configurationStore.PutAsync<WorkflowOptions>(ServiceConnection.DefaultConfigKey, options.DefaultWorkflowOptions, serializer: new WorkflowOptionsSerializer());
             var objContext = jsContext.CreateObjectStoreContext();
             var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
-            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, timerStore, configurationStore, archiveStore);
-        }
-
-        private async Task StartActivityTimeoutRunner()
-        {
-            var consumer = await serviceConnection.CreateOrUpdateConsumerAsync(
+            var activityTimeoutsConsumer = await jsContext.CreateOrUpdateConsumerAsync(
                     subjectMapper.ActivityQueueStream,
                     new($"jetflow_activity_timeouts")
                     {
@@ -106,41 +112,11 @@ public static class Connection
                         FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*"),
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     },
-                    cancellationTokenSource.Token
+                    CancellationToken.None
                 );
-            while (!cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                try
-                {
-                    await consumer.RefreshAsync(cancellationTokenSource.Token); // or try to recreate consumer
-
-                    await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
-                    {
-                        var message = new EventMessage(msg);
-                        if (Equals(message.ActivityEventType, ActivityEventTypes.Timeout))
-                        {
-                            var (canRun, _) = await serviceConnection.CanActivityRun(message, cancellationTokenSource.Token);
-                            if (canRun)
-                            {
-                                await serviceConnection.MarkActivityDoneInStore(message, cancellationTokenSource.Token);
-                                await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Timeout, message, serviceConnection, cancellationTokenSource.Token);
-                                await message.Message.AckAsync(cancellationToken: cancellationTokenSource.Token);
-                            }
-                        }
-                        else
-                            await message.Message.NakAsync(cancellationToken: cancellationTokenSource.Token);
-                    }
-                }
-                catch (NatsJSProtocolException e)
-                {
-                    //bury error
-                }
-                catch (NatsJSException e)
-                {
-                    // log exception
-                    await Task.Delay(1000, cancellationTokenSource.Token); // backoff
-                }
-            }
+            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, 
+                new(timerStore, configurationStore, archiveStore, activityTimeoutsConsumer)
+            );
         }
 
         private ValueTask<INatsJSConsumer> CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(CancellationToken cancellationToken)
@@ -156,28 +132,16 @@ public static class Connection
                 );
 
         async ValueTask IConnection.RegisterWorkflowActivityAsync<TWorkflowActivity>(TWorkflowActivity activity, CancellationToken cancellationToken)
-        {
-            var sub = new WorkflowActivitySubscription<TWorkflowActivity>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationToken);
-            sub.Start();
-        }
+            => subscriptions.Add(new WorkflowActivitySubscription<TWorkflowActivity>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
 
         async ValueTask IConnection.RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken)
-        {
-            var sub = new WorkflowActivitySubscription<TWorkflowActivity, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationToken);
-            sub.Start();
-        }
+            => subscriptions.Add(new WorkflowActivitySubscription<TWorkflowActivity, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
 
         async ValueTask IConnection.RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(TWorkflowActivity activity, CancellationToken cancellationToken)
-        {
-            var sub = new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationToken);
-            sub.Start();
-        }
+            => subscriptions.Add(new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
 
         async ValueTask IConnection.RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken)
-        {
-            var sub = new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationToken);
-            sub.Start();
-        }
+            => subscriptions.Add(new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
 
         private ValueTask<INatsJSConsumer> CreateWorkflowConsumerAsync<TWorkflow>(CancellationToken cancellationToken)
             => serviceConnection.CreateOrUpdateConsumerAsync(
@@ -203,21 +167,30 @@ public static class Connection
         async ValueTask IConnection.RegisterWorkflowAsync<TWorkflow>(WorkflowOptions? options, CancellationToken cancellationToken)
         {
             await serviceConnection.RegisterWorkflowConfigAsync<TWorkflow>(options);
-            var sub = new WorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), cancellationTokenSource.Token);
-            sub.Start();
+            subscriptions.Add(new WorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), cancellationTokenSource.Token));
         }
 
         async ValueTask IConnection.RegisterWorkflowAsync<TWorkflow, TInput>(WorkflowOptions? options, CancellationToken cancellationToken)
         {
             await serviceConnection.RegisterWorkflowConfigAsync<TWorkflow>(options);
-            var sub = new WorkflowSubscription<TWorkflow, TInput>(serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), cancellationTokenSource.Token);
-            sub.Start();
+            subscriptions.Add(new WorkflowSubscription<TWorkflow, TInput>(serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), cancellationTokenSource.Token));
         }
-        ValueTask IConnection.StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
+        ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
             => serviceConnection.StartWorkflowAsync<TWorkflow>(cancellationToken);
 
-        ValueTask IConnection.StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
+        ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
             => serviceConnection.StartWorkflowAsync<TWorkflow, TInput>(input, cancellationToken);
 
+        async ValueTask IAsyncDisposable.DisposeAsync()
+        {
+            if (!cancellationTokenSource.IsCancellationRequested)
+            {
+                await cancellationTokenSource.CancelAsync();
+                await Task.WhenAll(
+                    subscriptions.Select(s => s.AwaitClose())
+                );
+                subscriptions.Clear();
+            }
+        }
     }
 }

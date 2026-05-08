@@ -11,6 +11,7 @@ internal enum WorkflowEventTypes
     StepEnd,
     StepError,
     StepTimeout,
+    StepRetry,
     Archived,
     Purge,
     Config
@@ -21,10 +22,4 @@ internal enum ActivityEventTypes
     Start,
     Timer,
     Timeout
-}
-
-internal enum RetryTypes
-{
-    Timeout,
-    Error
 }

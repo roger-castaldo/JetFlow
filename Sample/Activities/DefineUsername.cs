@@ -4,7 +4,7 @@ namespace Sample.Activities
 {
     internal class DefineUsername : IActivityWithReturn<string, User>
     {
-        async Task<string> IActivityWithReturn<string, User>.ExecuteAsync(IWorkflowState state, User? user, CancellationToken cancellationToken)
+        async Task<string> IActivityWithReturn<string, User>.ExecuteAsync(User? user, IWorkflowState state, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(user, nameof(user));
             return $"{user.FirstName}_{user.LastName}";

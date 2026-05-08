@@ -1,5 +1,6 @@
 ﻿using JetFlow.Helpers;
 using JetFlow.Interfaces;
+using JetFlow.Serializers;
 using NATS.Client.JetStream;
 
 namespace JetFlow;
@@ -8,11 +9,13 @@ internal class WorkflowState : IWorkflowState
 {
     private readonly Dictionary<string, INatsJSMsg<byte[]>> messages;
     private readonly MessageSerializer messageSerializer;
+    private readonly ushort activityAttempt;
 
-    private WorkflowState(Dictionary<string, INatsJSMsg<byte[]>> messages, MessageSerializer messageSerializer)
+    private WorkflowState(Dictionary<string, INatsJSMsg<byte[]>> messages, MessageSerializer messageSerializer, ushort activityAttempt)
     {
         this.messages = messages;
         this.messageSerializer = messageSerializer;
+        this.activityAttempt = activityAttempt;
     }
 
     public static async ValueTask<IWorkflowState> CreateAsync(ServiceConnection serviceConnection, MessageSerializer messageSerializer, SubjectMapper subjectMapper, EventMessage message) 
@@ -35,8 +38,10 @@ internal class WorkflowState : IWorkflowState
             if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepEnd))
                 messages.Add(eventMessage.ActivityName!, msg);
         }
-        return new WorkflowState(messages, messageSerializer);
+        return new WorkflowState(messages, messageSerializer, message.ActivityAttempt);
     }
+
+    ushort IWorkflowState.ActivityAttempt => activityAttempt;
 
     ValueTask<TValue?> IWorkflowState.GetActivityResultValueAsync<TWorkflowActivity, TValue>() 
         where TValue : default
@@ -45,7 +50,7 @@ internal class WorkflowState : IWorkflowState
     async ValueTask<TValue?> IWorkflowState.GetActivityResultValueAsync<TValue>(string activityName) where TValue : default
     {
         if (messages.TryGetValue(activityName, out var msg))
-            return await messageSerializer.DecodeAsync<TValue>(msg);
+            return await messageSerializer.DecodeAsync<TValue>(msg.Data, msg.Headers);
         return default;
     }
 }

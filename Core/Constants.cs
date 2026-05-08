@@ -10,4 +10,5 @@ internal static class Constants
     public const string ActivityRetryOnTimeoutHeader = "x-jetflow-activity-retry-on-timeout";
     public const string ActivityRetryOnErrorHeader = "x-jetflow-activity-retry-on-error";
     public const string ActivityRetryBlockedErrorsHeader = "x-jetflow-activity-retry-blocked-errors";
+    public const string ActivityIDHeader = "x-jetflow-activity-id";
 }

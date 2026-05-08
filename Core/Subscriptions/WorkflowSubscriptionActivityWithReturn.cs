@@ -1,4 +1,5 @@
 ﻿using JetFlow.Interfaces;
+using JetFlow.Serializers;
 using NATS.Client.JetStream;
 
 namespace JetFlow.Subscriptions;
@@ -21,5 +22,5 @@ internal class WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput
      where TWorkflowActivity : IActivityWithReturn<TOutput, TInput>
 {
     protected async override Task<TOutput> HandleActivityRunWithReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
-        => await Instance.ExecuteAsync(workflowState, (await MessageSerializer.DecodeAsync<TInput>(message.Message)), cancellationToken);
+        => await Instance.ExecuteAsync((await MessageSerializer.DecodeAsync<TInput>(message.Message.Data, message.Message.Headers)), workflowState, cancellationToken);
 }

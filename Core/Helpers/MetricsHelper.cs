@@ -5,15 +5,12 @@ namespace JetFlow.Helpers;
 
 internal static class MetricsHelper
 {
-    private const string TagBase = "jetflow";
-    private const string WorkflowTagBase = "jetflow.workflow";
-
     private static readonly Meter Meter = new Meter(Connection.MetricsMeterName, "1.0.0");
-    private static readonly Histogram<double> ActivityDuration = Meter.CreateHistogram<double>($"{TraceConstants.BaseActivityTag}.duration", unit: "ms", description: "Activity execution duration");
-    private static readonly Histogram<double> ActivityQueueLatency = Meter.CreateHistogram<double>($"{TraceConstants.BaseActivityTag}.queue.latency", unit: "ms", description: "Time spend waiting before execution");
-    private static readonly Histogram<double> WorkflowQueueLatency = Meter.CreateHistogram<double>($"{TraceConstants.BaseWorkflowTag}.queue.latency", unit: "ms", description: "Time spend waiting before execution");
-    private static readonly Counter<long> WorkflowStarted = Meter.CreateCounter<long>($"{TraceConstants.BaseWorkflowTag}.started");
-    private static readonly Counter<long> WorkflowCompleted = Meter.CreateCounter<long>($"{TraceConstants.BaseWorkflowTag}.completed");
+    private static readonly Histogram<double> ActivityDuration = Meter.CreateHistogram<double>(TraceConstants.ActivityDuration, unit: "ms", description: "Activity execution duration");
+    private static readonly Histogram<double> ActivityQueueLatency = Meter.CreateHistogram<double>(TraceConstants.ActivityQueueLatency, unit: "ms", description: "Time spend waiting before execution");
+    private static readonly Histogram<double> WorkflowQueueLatency = Meter.CreateHistogram<double>(TraceConstants.WorkflowQueueLatency, unit: "ms", description: "Time spend waiting before execution");
+    private static readonly Counter<long> WorkflowStarted = Meter.CreateCounter<long>(TraceConstants.WorkflowsStarted);
+    private static readonly Counter<long> WorkflowCompleted = Meter.CreateCounter<long>(TraceConstants.WorkflowsCompleted);
 
     public static void CompleteActivity(EventMessage message, long stopwatchStart)
         => ActivityDuration.Record(
@@ -25,7 +22,7 @@ internal static class MetricsHelper
     {
         if (message.Message.Metadata!=null)
             ActivityQueueLatency.Record(
-                DateTime.UtcNow.Subtract(message.Message.Metadata.Value.Timestamp.UtcDateTime).TotalMilliseconds,
+                message.RecievedTimestamp.Subtract(message.Message.Metadata.Value.Timestamp).TotalMilliseconds,
                 new(TraceConstants.WorkflowNameTag, message.WorkflowName),
                 new(TraceConstants.ActivityNameTag, message.ActivityName)
             );
@@ -36,7 +33,7 @@ internal static class MetricsHelper
     {
         if (message.Message.Metadata!=null)
             WorkflowQueueLatency.Record(
-                DateTime.UtcNow.Subtract(message.Message.Metadata.Value.Timestamp.UtcDateTime).TotalMilliseconds,
+                message.RecievedTimestamp.Subtract(message.Message.Metadata.Value.Timestamp).TotalMilliseconds,
                 new(TraceConstants.WorkflowNameTag, message.WorkflowName),
                 new(TraceConstants.ActivityNameTag, message.ActivityName)
             );

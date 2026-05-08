@@ -1,4 +1,5 @@
 ﻿using JetFlow.Interfaces;
+using JetFlow.Serializers;
 using NATS.Client.JetStream;
 
 namespace JetFlow.Subscriptions;
@@ -20,5 +21,5 @@ internal class WorkflowSubscription<TWorkflow, TInput>
      where TWorkflow : class, IWorkflow<TInput>
 {
     protected override async ValueTask HandleWorkflowEventAsync(WorkflowContext context)
-        => await Workflow.ExecuteAsync(context, (await MessageSerializer.DecodeAsync<TInput>(context.StartMessage)));
+        => await Workflow.ExecuteAsync(context, (await MessageSerializer.DecodeAsync<TInput>(context.StartMessage.Data, context.StartMessage.Headers)));
 }

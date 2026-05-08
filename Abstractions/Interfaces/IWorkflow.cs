@@ -5,7 +5,7 @@ public interface IWorkflow
     ValueTask ExecuteAsync(IWorkflowContext context);
 }
 
-public interface IWorkflow<TInput>
+public interface IWorkflow<in TInput>
 {
     ValueTask ExecuteAsync(IWorkflowContext context, TInput? input);
 }
