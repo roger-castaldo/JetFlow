@@ -7,14 +7,14 @@ namespace JetFlow;
 
 internal partial class ServiceConnection
 {
-    private async ValueTask<Guid> StartWorkflowAsync<TWorkflow>(byte[] data, NatsHeaders? headers, CancellationToken cancellationToken)
+    public async ValueTask<Guid> StartWorkflowAsync(string name, byte[] data, NatsHeaders? headers, byte[]? configData, CancellationToken cancellationToken)
     {
         var id = Guid.NewGuid();
-        var name = NameHelper.GetWorkflowName<TWorkflow>();
         headers ??= new();
         using var activity = TraceHelper.StartWorkflow(name, id.ToString());
+        configData ??= InternalsSerializer.SerializeWorkflowOptions(await GetWorkflowOptions(name));
         await PublishMessageAsync(new(
-                InternalsSerializer.SerializeWorkflowOptions(await GetWorkflowOptions(name)),
+                configData,
                 subjectMapper.WorkflowConfigure(name, id.ToString()),
                 new(headers.ToDictionary()),
                 $"{name}-{id}-configure"
@@ -26,6 +26,12 @@ internal partial class ServiceConnection
                 $"{name}-{id}-start"
             ), cancellationToken: cancellationToken);
         return id;
+    }
+    private async ValueTask<Guid> StartWorkflowAsync<TWorkflow>(byte[] data, NatsHeaders? headers, CancellationToken cancellationToken)
+    {
+        var name = NameHelper.GetWorkflowName<TWorkflow>();
+        var configData = InternalsSerializer.SerializeWorkflowOptions(await GetWorkflowOptions(name));
+        return await StartWorkflowAsync(name, data, headers, configData, cancellationToken);
     }
     public ValueTask<Guid> StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
         where TWorkflow : IWorkflow

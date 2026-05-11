@@ -55,19 +55,7 @@ public class ConnectionTests
         Assert.IsNotNull(workFlowStream);
         Assert.IsNotNull(workFlowStream.Info.Config.Subjects);
         Assert.IsTrue(CollectionsHelper.CollectionsMatchIgnoreOrder<string>(workFlowStream.Info.Config.Subjects, new string[]{
-            subjectMapper.WorkflowConfigure("*", "*"),
-            subjectMapper.WorkflowStart("*", "*"),
-            subjectMapper.WorkflowEnd("*", "*"),
-            subjectMapper.WorkflowArchived("*", "*"),
-            subjectMapper.WorkflowPurge("*", "*"),
-            subjectMapper.WorkflowDelayStart("*", "*"),
-            subjectMapper.WorkflowDelayEnd("*", "*"),
-            subjectMapper.WorkflowTimer("*", "*"),
-            subjectMapper.WorkflowStepStart("*", "*", "*"),
-            subjectMapper.WorkflowStepEnd("*", "*", "*"),
-            subjectMapper.WorkflowStepError("*", "*", "*"),
-            subjectMapper.WorkflowStepTimeout("*", "*", "*"),
-            subjectMapper.WorkflowStepRetry("*", "*", "*")
+            subjectMapper.WorkflowEventsFilter
         }));
         Assert.IsTrue(workFlowStream.Info.Config.AllowDirect);
         Assert.IsTrue(workFlowStream.Info.Config.AllowMsgSchedules);
@@ -77,9 +65,7 @@ public class ConnectionTests
         Assert.IsNotNull(activityStream);
         Assert.IsNotNull(activityStream.Info.Config.Subjects);
         Assert.IsTrue(CollectionsHelper.CollectionsMatchIgnoreOrder<string>(activityStream.Info.Config.Subjects, new string[]{
-            subjectMapper.ActivityStart("*","*", "*"),
-            subjectMapper.ActivityTimeout("*", "*", "*"),
-            subjectMapper.ActivityTimer("*", "*", "*")
+            subjectMapper.ActivityEventsFilter
         }));
         Assert.IsTrue(activityStream.Info.Config.AllowDirect);
         Assert.IsTrue(activityStream.Info.Config.AllowMsgSchedules);
@@ -110,6 +96,16 @@ public class ConnectionTests
         Assert.AreEqual(subjectMapper.ActivityTimeout("*", "*", "*"), activityTimeoutConsumer.Info.Config.FilterSubject);
         Assert.AreEqual("jetflow_activity_timeouts", activityTimeoutConsumer.Info.Config.DurableName);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityTimeoutConsumer.Info.Config.AckPolicy);
+        var scheduledWorkFlowStream = await jsContext.GetStreamAsync(subjectMapper.ScheduledWorkflowStreamsName);
+        Assert.IsNotNull(scheduledWorkFlowStream);
+        Assert.IsNotNull(scheduledWorkFlowStream.Info.Config.Subjects);
+        Assert.IsTrue(CollectionsHelper.CollectionsMatchIgnoreOrder<string>(scheduledWorkFlowStream.Info.Config.Subjects, new string[]{
+            subjectMapper.ScheduledWorkflowsFilter
+        }));
+        Assert.IsTrue(scheduledWorkFlowStream.Info.Config.AllowDirect);
+        Assert.IsTrue(scheduledWorkFlowStream.Info.Config.AllowMsgSchedules);
+        Assert.IsTrue(scheduledWorkFlowStream.Info.Config.AllowMsgTTL);
+        Assert.AreEqual(TimeSpan.FromMinutes(10), scheduledWorkFlowStream.Info.Config.DuplicateWindow);
     }
 
     [TestMethod()]

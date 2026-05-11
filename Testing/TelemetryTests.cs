@@ -1,7 +1,6 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
-using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
 using System.Diagnostics;

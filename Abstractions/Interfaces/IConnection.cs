@@ -8,9 +8,9 @@ namespace JetFlow.Interfaces
             where TWorkflow : class,IWorkflow;
         ValueTask RegisterWorkflowAsync<TWorkflow,TInput>(WorkflowOptions? options = default, CancellationToken cancellationToken = default)
             where TWorkflow : class, IWorkflow<TInput>;
-        ValueTask<Guid> StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
+        ValueTask<Guid> StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow;
-        ValueTask<Guid> StartWorkflowAsync<TWorkflow,TInput>(TInput input,CancellationToken cancellationToken)
+        ValueTask<Guid> StartWorkflowAsync<TWorkflow,TInput>(TInput input,CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow<TInput>;
         ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivity;
@@ -20,5 +20,13 @@ namespace JetFlow.Interfaces
             where TWorkflowActivity : class, IActivityWithReturn<TOutput>;
         ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivityWithReturn<TOutput, TInput>;
+        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow>(WorkflowSchedule schedule, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
+           where TWorkflow : IWorkflow;
+        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, WorkflowSchedule schedule, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
+            where TWorkflow : IWorkflow<TInput>;
+        ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
+           where TWorkflow : IWorkflow;
+        ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow, TInput>(TInput input, TimeSpan delay, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
+            where TWorkflow : IWorkflow<TInput>;
     }
 }
