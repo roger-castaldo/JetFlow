@@ -1,4 +1,5 @@
-﻿using NATS.Client.JetStream;
+﻿using NATS.Client.Core;
+using NATS.Client.JetStream;
 
 namespace JetFlow.Subscriptions
 {
@@ -12,7 +13,15 @@ namespace JetFlow.Subscriptions
             await foreach (var msg in query) { 
                 configMessage = msg;
             }
-            _ = await ServiceConnection.StartWorkflowAsync(message.WorkflowName, message.Message.Data?? [], message.Message.Headers, configMessage?.Data, CancellationToken);
+            var headers = new NatsHeaders(message.Message.Headers?.Where(pair => pair.Key.StartsWith(Constants.HeaderBase)).ToDictionary() ?? []);
+            headers.Add(Constants.SchedulerSourceID, message.WorkflowId);
+            _ = await ServiceConnection.StartWorkflowAsync(
+                message.WorkflowName, 
+                message.Message.Data?? [],
+                headers, 
+                configMessage?.Data, 
+                CancellationToken);
+            await message.Message.AckAsync();
         }
     }
 }

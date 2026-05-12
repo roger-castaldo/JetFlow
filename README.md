@@ -14,4 +14,4 @@ Eventually this service will include:
 * ~~Unit Testing~~
 * ~~Built in Retry/Circuit Break policies~~
 * ~~Workflow Activity execution timeouts~~
-* Scheduled Workflows (Delayed start/Repeate Scheduling)
+* ~~Scheduled Workflows (Delayed start/Repeate Scheduling)~~

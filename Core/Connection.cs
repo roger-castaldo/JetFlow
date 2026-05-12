@@ -27,6 +27,7 @@ public static class Connection
     {
         private readonly MessageSerializer messageSerializer;
         private readonly ServiceConnection serviceConnection;
+        private readonly Version? serverVersion;
         private readonly SubjectMapper subjectMapper;
         private readonly CancellationTokenSource cancellationTokenSource = new();
         private readonly ConcurrentBag<ASubscription> subscriptions = new();
@@ -36,6 +37,7 @@ public static class Connection
         {
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
+            serverVersion = (connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version));
             serviceConnection = new(connection, natsJSContext, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, subjectMapper, messageSerializer);
             subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
             subscriptions.Add(new ScheduledWorkflowsSubscription(subjectMapper, serviceConnection, stores.ScheduledWorkflowConsumer, cancellationTokenSource.Token));
@@ -181,11 +183,21 @@ public static class Connection
         ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
             => serviceConnection.StartWorkflowAsync<TWorkflow, TInput>(input, cancellationToken);
 
+        private static readonly Version minScheduleVersionRequired = new("2.14");
+
         ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow>(WorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
-            => serviceConnection.ScheduleWorkflowAsync<TWorkflow>(schedule, options, cancellationToken);
+        {
+            if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
+                throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
+            return serviceConnection.ScheduleWorkflowAsync<TWorkflow>(schedule, options, cancellationToken);
+        }
 
         ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, WorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
-            => serviceConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(input, schedule, options, cancellationToken);
+        {
+            if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
+                throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
+            return serviceConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(input, schedule, options, cancellationToken);
+        }
 
         ValueTask<Guid> IConnection.DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowOptions? options, CancellationToken cancellationToken)
             => serviceConnection.DelayStartWorkflowAsync<TWorkflow>(delay, options, cancellationToken);

@@ -359,6 +359,7 @@ public class WorkflowOptionTests
             Assert.IsNull(results.archive);
             mid = Math.Floor(Stopwatch.GetElapsedTime(results.completion.Timestamp).Subtract(Stopwatch.GetElapsedTime(results.purge.Timestamp)).TotalSeconds);
         }
-        Assert.IsGreaterThanOrEqualTo(delay.TotalSeconds, mid);
+        Assert.IsGreaterThanOrEqualTo(delay.TotalSeconds-1, mid);
+        Assert.IsLessThanOrEqualTo(delay.TotalSeconds+1, mid);
     }
 }

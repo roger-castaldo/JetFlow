@@ -44,6 +44,7 @@ public record struct WorkflowStep(
 
 public record struct ArchivedWorkflow(
     Guid ID,
+    Guid? SchedulerId,
     string Name,
     WorkflowOptions Options,
     DateTimeOffset StartedAt,
