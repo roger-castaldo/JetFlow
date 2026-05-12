@@ -7,7 +7,7 @@ public readonly record struct WorkflowSchedule
     public string CronString { get; private init; }
 
     public WorkflowSchedule()
-        : this(null, null, null, null, null, null) { }
+        : this(second:null, minute:null, hour:null, dayOfMonth:null, month:null, dayOfTheWeek:null) { }
 
     public WorkflowSchedule(
         byte[]? second = null,
@@ -17,22 +17,22 @@ public readonly record struct WorkflowSchedule
         byte[]? month = null,
         byte[]? dayOfTheWeek = null)
     {
-        if (second !=null && second.Any(s=> s<0 || s>59))
-            throw new ArgumentException("Invalid second value specified, values must be between 0 and 59", nameof(second));
-        if (minute!=null && minute.Any(m => m<0||m>59))
-            throw new ArgumentException("Invalid minute value specified, values must be between 0 and 59", nameof(minute));
-        if (hour!=null && hour.Any(h => h<0||h>23))
-            throw new ArgumentException("Invalid hour value specified, values must be between 0 and 23", nameof(hour));
-        if (dayOfMonth!=null && dayOfMonth.Any(d=>d<1||d>31))
-            throw new ArgumentException("Invalid dayOfMonth value specified, values must be between 1 and 31", nameof(dayOfMonth));
-        if (month!=null && month.Any(m => m<1||m>12))
-            throw new ArgumentException("Invalid month value specified, values must be between 1 and 12", nameof(month));
-        if (dayOfTheWeek!=null && dayOfTheWeek.Any(d => d<1||d>12))
-            throw new ArgumentException("Invalid dayOfTheWeek value specified, values must be between 1 and 7", nameof(dayOfTheWeek));
+        ValidateCronValue(second, 0, 59, nameof(second));
+        ValidateCronValue(minute, 0, 59, nameof(minute));
+        ValidateCronValue(hour, 0, 23, nameof(hour));
+        ValidateCronValue(dayOfMonth, 1, 31, nameof(dayOfMonth));
+        ValidateCronValue(month, 1, 12, nameof(month));
+        ValidateCronValue(dayOfTheWeek, 1, 7, nameof(dayOfTheWeek));
         CronString = $"{ToCronValue(second)} {ToCronValue(minute)} {ToCronValue(hour)} {ToCronValue(dayOfMonth)} {ToCronValue(month)} {ToCronValue(dayOfTheWeek)}";
     }
 
-    private static readonly Regex cronRegex = new Regex(@"^\s*(?<second>(?:(?:\*|(?:[0-5]?\d)(?:-(?:[0-5]?\d))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[0-5]?\d)(?:-(?:[0-5]?\d))?)(?:/\d+)?)*))\s+(?<minute>(?:(?:\*|(?:[0-5]?\d)(?:-(?:[0-5]?\d))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[0-5]?\d)(?:-(?:[0-5]?\d))?)(?:/\d+)?)*))\s+(?<hour>(?:(?:\*|(?:[01]?\d|2[0-3])(?:-(?:[01]?\d|2[0-3]))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[01]?\d|2[0-3])(?:-(?:[01]?\d|2[0-3]))?)(?:/\d+)?)*))\s+(?<dayOfMonth>(?:(?:\*|(?:[1-9]|[12]\d|3[01])(?:-(?:[1-9]|[12]\d|3[01]))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[1-9]|[12]\d|3[01])(?:-(?:[1-9]|[12]\d|3[01]))?)(?:/\d+)?)*))\s+(?<month>(?:(?:\*|(?:[1-9]|1[0-2]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))(?:-(?:[1-9]|1[0-2]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[1-9]|1[0-2]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))(?:-(?:[1-9]|1[0-2]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)))?)(?:/\d+)?)*))\s+(?<dayOfWeek>(?:(?:\*|(?:[0-7]|(?:sun|mon|tue|wed|thu|fri|sat))(?:-(?:[0-7]|(?:sun|mon|tue|wed|thu|fri|sat)))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[0-7]|(?:sun|mon|tue|wed|thu|fri|sat))(?:-(?:[0-7]|(?:sun|mon|tue|wed|thu|fri|sat)))?)(?:/\d+)?)*))\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private void ValidateCronValue(byte[]? value, int min, int max, string name)
+    {
+        if (value !=null && value.Any(s => s<0 || s>59))
+            throw new ArgumentException($"Invalid {name} value specified, values must be between {min} and {max}", name);
+    }
+
+    private static readonly Regex cronRegex = new Regex(@"^\s*(?<second>(?:(?:\*|(?:[0-5]?\d)(?:-(?:[0-5]?\d))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[0-5]?\d)(?:-(?:[0-5]?\d))?)(?:/\d+)?)*))\s+(?<minute>(?:(?:\*|(?:[0-5]?\d)(?:-(?:[0-5]?\d))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[0-5]?\d)(?:-(?:[0-5]?\d))?)(?:/\d+)?)*))\s+(?<hour>(?:(?:\*|(?:[01]?\d|2[0-3])(?:-(?:[01]?\d|2[0-3]))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[01]?\d|2[0-3])(?:-(?:[01]?\d|2[0-3]))?)(?:/\d+)?)*))\s+(?<dayOfMonth>(?:(?:\*|(?:[1-9]|[12]\d|3[01])(?:-(?:[1-9]|[12]\d|3[01]))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[1-9]|[12]\d|3[01])(?:-(?:[1-9]|[12]\d|3[01]))?)(?:/\d+)?)*))\s+(?<month>(?:(?:\*|(?:[1-9]|1[0-2]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))(?:-(?:[1-9]|1[0-2]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[1-9]|1[0-2]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))(?:-(?:[1-9]|1[0-2]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)))?)(?:/\d+)?)*))\s+(?<dayOfWeek>(?:(?:\*|(?:[0-7]|(?:sun|mon|tue|wed|thu|fri|sat))(?:-(?:[0-7]|(?:sun|mon|tue|wed|thu|fri|sat)))?)(?:/\d+)?)(?:\s*,\s*(?:\*|(?:[0-7]|(?:sun|mon|tue|wed|thu|fri|sat))(?:-(?:[0-7]|(?:sun|mon|tue|wed|thu|fri|sat)))?)(?:/\d+)?)*))\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(500));
     public static WorkflowSchedule Parse(string cronString)
     {
         var match = cronRegex.Match(cronString);

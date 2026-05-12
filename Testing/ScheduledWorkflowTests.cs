@@ -257,7 +257,6 @@ public class ScheduledWorkflowTests
         var jsContext = new NatsJSContext(natsConnection);
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<DelayedWorkflowWithInput, string>(options: new() { CompletionAction = WorkflowCompletionActions.None});
 
