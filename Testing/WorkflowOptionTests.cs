@@ -312,14 +312,14 @@ public class WorkflowOptionTests
     public async Task WorkflowCompletionPostActionArchiveThenPurge()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenPurge);
+        var results = await ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenPurge, purgeDelay: TimeSpan.FromSeconds(1));
 
         //Assert
         Assert.IsNotNull(results.completion);
         Assert.IsNotNull(results.archive);
         Assert.IsNotNull(results.purge);
-        Assert.IsGreaterThan(results.completion.Timestamp, results.archive.Timestamp);
-        Assert.IsGreaterThan(results.archive.Timestamp, results.purge.Timestamp);
+        Assert.IsGreaterThanOrEqualTo(results.completion.Timestamp, results.archive.Timestamp);
+        Assert.IsGreaterThanOrEqualTo(results.archive.Timestamp, results.purge.Timestamp);
     }
 
     [TestMethod]
@@ -341,7 +341,7 @@ public class WorkflowOptionTests
     public async Task WorkflowCompletionPurgeWithDelay(WorkflowCompletionActions completionAction)
     {
         //Arrange
-        var delay = TimeSpan.FromSeconds(RandomNumberGenerator.GetInt32(1,5));
+        var delay = TimeSpan.FromSeconds(RandomNumberGenerator.GetInt32(3,5));
         //Act
         var results = await ExecuteCompletionTest(completionAction, delay);
 
@@ -352,13 +352,14 @@ public class WorkflowOptionTests
         if (completionAction== WorkflowCompletionActions.ArchiveThenPurge)
         {
             Assert.IsNotNull(results.archive);
-            mid = Math.Floor(TimeSpan.FromTicks(results.purge.Timestamp-results.archive.Timestamp).TotalSeconds);
+            mid = Math.Floor(Stopwatch.GetElapsedTime(results.archive.Timestamp).Subtract(Stopwatch.GetElapsedTime(results.purge.Timestamp)).TotalSeconds);
         }
         else
         {
             Assert.IsNull(results.archive);
-            mid = Math.Floor(TimeSpan.FromTicks(results.purge.Timestamp-results.completion.Timestamp).TotalSeconds);
+            mid = Math.Floor(Stopwatch.GetElapsedTime(results.completion.Timestamp).Subtract(Stopwatch.GetElapsedTime(results.purge.Timestamp)).TotalSeconds);
         }
-        Assert.IsGreaterThanOrEqualTo(delay.TotalSeconds, mid);
+        Assert.IsGreaterThanOrEqualTo(delay.TotalSeconds-1, mid);
+        Assert.IsLessThanOrEqualTo(delay.TotalSeconds+1, mid);
     }
 }

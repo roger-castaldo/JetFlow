@@ -494,8 +494,9 @@ public class WorkflowExecutionTests
         //Verify
         var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
         var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<AllActivityResultsWorkflow>()}/{runId}");
-        var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, JetFlow.Serializers.Constants.JsonOptions);
+        var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(runId, archive.ID);
+        Assert.IsNull(archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<AllActivityResultsWorkflow>(), archive.Name);
         Assert.AreEqual(action, archive.Options.CompletionAction);

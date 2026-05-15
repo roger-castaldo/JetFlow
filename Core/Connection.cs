@@ -21,12 +21,13 @@ public static class Connection
         => ConnectionInstance.CreateAsync(options);
 
     private sealed record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore,
-            INatsJSConsumer ActivityTimeoutsConsumer);
+            INatsJSConsumer ActivityTimeoutsConsumer, INatsJSConsumer ScheduledWorkflowConsumer);
 
     internal class ConnectionInstance : IConnection, IAsyncDisposable
     {
         private readonly MessageSerializer messageSerializer;
         private readonly ServiceConnection serviceConnection;
+        private readonly Version? serverVersion;
         private readonly SubjectMapper subjectMapper;
         private readonly CancellationTokenSource cancellationTokenSource = new();
         private readonly ConcurrentBag<ASubscription> subscriptions = new();
@@ -36,8 +37,10 @@ public static class Connection
         {
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
+            serverVersion = (connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version));
             serviceConnection = new(connection, natsJSContext, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, subjectMapper, messageSerializer);
             subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
+            subscriptions.Add(new ScheduledWorkflowsSubscription(subjectMapper, serviceConnection, stores.ScheduledWorkflowConsumer, cancellationTokenSource.Token));
         }
 
         public static async ValueTask<IConnection> CreateAsync(ConnectionOptions options)
@@ -55,38 +58,27 @@ public static class Connection
             if (connection.ConnectionState != NatsConnectionState.Open)
                 throw new UnableToConnectException();
             var subjectMapper = new SubjectMapper(options.Namespace);
-            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.WorkflowEventsStreamsName, [
-                subjectMapper.WorkflowConfigure("*", "*"),
-                subjectMapper.WorkflowStart("*", "*"),
-                subjectMapper.WorkflowEnd("*", "*"),
-                subjectMapper.WorkflowArchived("*", "*"),
-                subjectMapper.WorkflowPurge("*", "*"),
-                subjectMapper.WorkflowDelayStart("*", "*"),
-                subjectMapper.WorkflowDelayEnd("*", "*"),
-                subjectMapper.WorkflowTimer("*", "*"),
-                subjectMapper.WorkflowStepStart("*", "*", "*"),
-                subjectMapper.WorkflowStepEnd("*", "*", "*"),
-                subjectMapper.WorkflowStepError("*", "*", "*"),
-                subjectMapper.WorkflowStepTimeout("*", "*", "*"),
-                subjectMapper.WorkflowStepRetry("*", "*", "*")
-            ])
+            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.WorkflowEventsStreamsName, [subjectMapper.WorkflowEventsFilter])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
                 AllowDirect = true,
                 AllowMsgSchedules = true,
                 AllowMsgTTL=true
             });
-            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ActivityQueueStream, [
-                subjectMapper.ActivityStart("*","*", "*"),
-                subjectMapper.ActivityTimeout("*", "*", "*"),
-                subjectMapper.ActivityTimer("*", "*", "*")
-            ])
+            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ActivityQueueStream, [subjectMapper.ActivityEventsFilter])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
                 AllowDirect = true,
                 AllowMsgSchedules = true,
                 AllowMsgTTL=true,
                 Retention = StreamConfigRetention.Workqueue
+            });
+            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ScheduledWorkflowStreamsName, [subjectMapper.ScheduledWorkflowsFilter])
+            {
+                DuplicateWindow = TimeSpan.FromMinutes(10),
+                AllowDirect = true,
+                AllowMsgSchedules = true,
+                AllowMsgTTL=true
             });
             var kc = jsContext.CreateKeyValueStoreContext();
             var timerStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.ActivityLocksKeystore)
@@ -114,8 +106,18 @@ public static class Connection
                     },
                     CancellationToken.None
                 );
+            var scheduledWorkflowConsumer = await jsContext.CreateOrUpdateConsumerAsync(
+                    subjectMapper.ScheduledWorkflowStreamsName,
+                    new($"jetflow_scheduled_workflows")
+                    {
+                        DurableName = $"jetflow_scheduled_workflows",
+                        FilterSubject= subjectMapper.ScheduledWorkflowStart("*", "*"),
+                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
+                    },
+                    CancellationToken.None
+                );
             return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, 
-                new(timerStore, configurationStore, archiveStore, activityTimeoutsConsumer)
+                new(timerStore, configurationStore, archiveStore, activityTimeoutsConsumer, scheduledWorkflowConsumer)
             );
         }
 
@@ -180,6 +182,28 @@ public static class Connection
 
         ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
             => serviceConnection.StartWorkflowAsync<TWorkflow, TInput>(input, cancellationToken);
+
+        private static readonly Version minScheduleVersionRequired = new("2.14");
+
+        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
+        {
+            if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
+                throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
+            return serviceConnection.ScheduleWorkflowAsync<TWorkflow>(schedule, options, cancellationToken);
+        }
+
+        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, IWorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
+        {
+            if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
+                throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
+            return serviceConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(input, schedule, options, cancellationToken);
+        }
+
+        ValueTask<Guid> IConnection.DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowOptions? options, CancellationToken cancellationToken)
+            => serviceConnection.DelayStartWorkflowAsync<TWorkflow>(delay, options, cancellationToken);
+
+        ValueTask<Guid> IConnection.DelayStartWorkflowAsync<TWorkflow, TInput>(TInput input, TimeSpan delay, WorkflowOptions? options, CancellationToken cancellationToken)
+            => serviceConnection.DelayStartWorkflowAsync<TWorkflow, TInput>(input, delay, options, cancellationToken);
 
         async ValueTask IAsyncDisposable.DisposeAsync()
         {

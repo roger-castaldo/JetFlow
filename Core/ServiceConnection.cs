@@ -87,6 +87,9 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
         return sb.ToString();
     }
 
+    private static string CreateScheduledString(TimeSpan delay)
+        => DateTime.UtcNow.Add(delay).ToString("'@at 'yyyy-MM-dd'T'HH:mm:ss'Z'");
+
     private static NatsHeaders AppendDefaultHeaders(NatsHeaders headers, string messageId, TimeSpan? timeout)
     {
         if (timeout.HasValue)
@@ -103,10 +106,13 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
         TraceHelper.AddPublishEvent(message.Subject);
     }
 
-    private async ValueTask PublishDelayedMessageAsync(PublishMessage message, TimeSpan delay, string destinationSubject, CancellationToken cancellationToken = default)
+    private ValueTask PublishDelayedMessageAsync(PublishMessage message, TimeSpan delay, string destinationSubject, CancellationToken cancellationToken = default)
+        => PublishScheduledMessageAsync(message, CreateScheduledString(delay), destinationSubject, cancellationToken);
+
+    private async ValueTask PublishScheduledMessageAsync(PublishMessage message, string cronString, string destinationSubject, CancellationToken cancellationToken = default)
     {
         var headers = AppendDefaultHeaders(message.Headers, message.Id, null);
-        headers.Add(ScheduleDelayHeader, DateTime.UtcNow.Add(delay).ToString("'@at 'yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        headers.Add(ScheduleDelayHeader, cronString);
         headers.Add(ScheduleTargetHeader, destinationSubject);
         if (message.Timeout.HasValue)
             headers.Add(ScheduledTargetTTL, CreateTTLString(message.Timeout.Value));

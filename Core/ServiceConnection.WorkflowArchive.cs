@@ -9,6 +9,7 @@ internal partial class ServiceConnection
 {
     public async Task ArchiveWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
     {
+        Guid? schedulerId = null;
         WorkflowOptions? options=null;
         DateTimeOffset? start=null;
         DateTimeOffset? end=null;
@@ -42,6 +43,8 @@ internal partial class ServiceConnection
                 case WorkflowEventTypes.Start:
                     start = eventMessage.Message.Metadata?.Timestamp;
                     arguments = await messageSerializer.DecodeAsync(eventMessage.Message.Data, eventMessage.Message.Headers);
+                    if ((eventMessage.Message.Headers?.TryGetValue(Constants.SchedulerSourceID, out var scheduleIdString)??false) && Guid.TryParse(scheduleIdString.ToString(), out var schedId))
+                        schedulerId = schedId;
                     break;
                 case WorkflowEventTypes.End:
                     end = eventMessage.Message.Metadata?.Timestamp;
@@ -79,6 +82,7 @@ internal partial class ServiceConnection
             $"{message.WorkflowName}/{message.WorkflowId}",
             InternalsSerializer.SerializeWorkflowArchive(new(
                 Guid.Parse(message.WorkflowId),
+                schedulerId,
                 message.WorkflowName,
                 options!,
                 start!.Value,

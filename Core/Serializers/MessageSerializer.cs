@@ -10,7 +10,6 @@ namespace JetFlow.Serializers;
 internal class MessageSerializer
 {
     private const int CompressionThreshold = 32 * 1024; // 32 KB
-    private const string ContentEncodingHeader = "x-jetflow-content-encoding";
     private const string JsonEncoding = "application/json";
     private const string BrotliEncoding = "/brotli";
     private const string GZipEncoding = "/gzip";
@@ -40,7 +39,7 @@ internal class MessageSerializer
 
         // Ensure encoding is always assigned to avoid CS8887.
         string encoding = JsonEncoding;
-        if (headers != null && headers.TryGetValue(ContentEncodingHeader, out var headerVal))
+        if (headers != null && headers.TryGetValue(Constants.ContentEncodingHeader, out var headerVal))
             encoding = headerVal.ToString() ?? JsonEncoding;
         var match = regContentEncoding.Match(encoding);
         if (!match.Success)
@@ -85,7 +84,7 @@ internal class MessageSerializer
             }
             data=output.ToArray();
         }
-        headers.Add(ContentEncodingHeader, encoding);
+        headers.Add(Constants.ContentEncodingHeader, encoding);
         return (data, headers);
     }
 
