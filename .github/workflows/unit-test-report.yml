@@ -28,7 +28,7 @@ jobs:
     - name: Test-8.0
       run: dotnet test -p:BlockMD=true --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"Code Coverage" Testing
     - name: report results
-      uses: bibipkins/dotnet-test-reporter@v1.6.4
+      uses: bibipkins/dotnet-test-reporter@4703a89e083a246ec41e06d933390c239f60046b
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         comment-title: 'Unit Test Results'
