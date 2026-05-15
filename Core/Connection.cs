@@ -185,14 +185,14 @@ public static class Connection
 
         private static readonly Version minScheduleVersionRequired = new("2.14");
 
-        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow>(WorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
+        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
         {
             if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
                 throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
             return serviceConnection.ScheduleWorkflowAsync<TWorkflow>(schedule, options, cancellationToken);
         }
 
-        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, WorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
+        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, IWorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
         {
             if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
                 throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");

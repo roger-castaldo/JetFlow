@@ -20,9 +20,9 @@ namespace JetFlow.Interfaces
             where TWorkflowActivity : class, IActivityWithReturn<TOutput>;
         ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivityWithReturn<TOutput, TInput>;
-        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow>(WorkflowSchedule schedule, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
+        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
            where TWorkflow : IWorkflow;
-        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, WorkflowSchedule schedule, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
+        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, IWorkflowSchedule schedule, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow<TInput>;
         ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowOptions? options = default, CancellationToken cancellationToken = default)
            where TWorkflow : IWorkflow;

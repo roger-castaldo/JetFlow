@@ -32,14 +32,14 @@ namespace JetFlow
             return id;
         }
 
-        public ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow>(WorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
+        public ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
-            => ScheduleWorkflowAsync<TWorkflow>(schedule.CronString, options, [], null, cancellationToken);
-        public async ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, WorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
+            => ScheduleWorkflowAsync<TWorkflow>(schedule.AsString, options, [], null, cancellationToken);
+        public async ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, IWorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
             where TWorkflow : IWorkflow<TInput>
         {
             var (data, headers) = await messageSerializer.EncodeAsync<TInput>(input);
-            return await ScheduleWorkflowAsync<TWorkflow>(schedule.CronString, options, data, headers, cancellationToken);
+            return await ScheduleWorkflowAsync<TWorkflow>(schedule.AsString, options, data, headers, cancellationToken);
         }
 
         public ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowOptions? options, CancellationToken cancellationToken)

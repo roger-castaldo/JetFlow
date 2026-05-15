@@ -68,7 +68,7 @@ public class ScheduledWorkflowTests
                     completion.TrySetResult(msg);
             }
         });
-        await connection.ScheduleWorkflowAsync<CronWorkflowNoInput>(new(second: [0]));
+        await connection.ScheduleWorkflowAsync<CronWorkflowNoInput>(new WorkflowScheduleBuilder().Build());
         var result = await completion.Task;
 
         // Assert
@@ -120,7 +120,7 @@ public class ScheduledWorkflowTests
                     completion.TrySetResult(msg);
             }
         });
-        await connection.ScheduleWorkflowAsync<CronWorkflowWithInput, string>(input, new(second: [0]));
+        await connection.ScheduleWorkflowAsync<CronWorkflowWithInput, string>(input, new WorkflowScheduleBuilder().Build());
         var result = await completion.Task;
 
         // Assert
