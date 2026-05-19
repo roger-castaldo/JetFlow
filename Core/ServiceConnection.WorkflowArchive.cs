@@ -62,10 +62,10 @@ internal partial class ServiceConnection
                         WorkflowStepTypes.Delay,
                         null,
                         null,
-                        previousMessage!.Message.Metadata.Value.Timestamp,
-                        eventMessage.Message.Metadata.Value.Timestamp,
+                        previousMessage!.Message.Metadata!.Value.Timestamp,
+                        eventMessage!.Message.Metadata!.Value.Timestamp,
                         null,
-                        WorkflowStepStatuses.Success,
+                        null,
                         null,
                         null
                     ));
@@ -100,17 +100,17 @@ internal partial class ServiceConnection
     {
         var stepType = (eventMessage.WorkflowEventType) switch
         {
-            WorkflowEventTypes.StepEnd => WorkflowStepStatuses.Success,
-            WorkflowEventTypes.StepError => WorkflowStepStatuses.Failure,
-            WorkflowEventTypes.StepTimeout => WorkflowStepStatuses.Timeout,
+            WorkflowEventTypes.StepEnd => ActivityResultStatus.Success,
+            WorkflowEventTypes.StepError => ActivityResultStatus.Failure,
+            WorkflowEventTypes.StepTimeout => ActivityResultStatus.Timeout,
             _ => throw new InvalidOperationException()
         };
         return new(
             WorkflowStepTypes.Action,
             eventMessage.ActivityID,
             eventMessage.ActivityName,
-            previousMessage!.Message.Metadata.Value.Timestamp,
-            eventMessage.Message.Metadata.Value.Timestamp,
+            previousMessage!.Message.Metadata!.Value.Timestamp,
+            eventMessage!.Message.Metadata!.Value.Timestamp,
             (retries.Count==0 ? null : retries.ToArray()),
             stepType,
             eventMessage.WorkflowEventType == WorkflowEventTypes.StepError ? System.Text.UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!) : null,

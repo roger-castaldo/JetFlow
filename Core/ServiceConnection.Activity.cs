@@ -10,7 +10,7 @@ internal partial class ServiceConnection
     {
         var activityName = NameHelper.GetActivityName<TActivity>();
         using var activity = TraceHelper.StartWorkflowStep(message, NameHelper.GetActivityName<TActivity>(), stepIndex.ToString());
-        headers??=new();
+        headers??=[];
         headers.Add(Constants.ActivityIDHeader, stepIndex.ToString());
         if (options.Retries!=null)
         {
@@ -20,7 +20,7 @@ internal partial class ServiceConnection
             headers.Add(Constants.ActivityRetryOnErrorHeader, options.Retries.RetryOnError.ToString());
             if (options.Retries.DelayBetween.HasValue)
                 headers.Add(Constants.ActiviyRetryDelayBetweenHeader, options.Retries.DelayBetween.ToString());
-            if (options.Retries.BlockedErrors!=null && options.Retries.BlockedErrors.Any())
+            if (options.Retries.BlockedErrors!=null && options.Retries.BlockedErrors.Length!=0)
                 headers.Add(Constants.ActivityRetryBlockedErrorsHeader, options.Retries.BlockedErrors);
         }
         if (options.Timeouts?.AttemptTimeout!=null)
@@ -68,7 +68,7 @@ internal partial class ServiceConnection
             .Where(pair => !Equals(Constants.ActivityAttemptHeader, pair.Key)
             && pair.Key.Contains("-jetflow-"))
             .Append(new(Constants.ActivityAttemptHeader, (message.ActivityAttempt + 1).ToString()));
-        var timeout = message.Message.Headers.TryGetValue(Constants.ActivityOverallTimeoutHeader, out var timeoutStr) && TimeSpan.TryParse(timeoutStr, out var timeoutVal) ? timeoutVal : (TimeSpan?)null;
+        var timeout = (message.Message.Headers?.TryGetValue(Constants.ActivityOverallTimeoutHeader, out var timeoutStr)??false) && TimeSpan.TryParse(timeoutStr, out var timeoutVal) ? timeoutVal : (TimeSpan?)null;
         if(message.RetryConfiguration?.DelayBetween!=null)
             await PublishDelayedMessageAsync(new(
                         message.Message.Data?? [],

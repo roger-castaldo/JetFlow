@@ -502,22 +502,22 @@ public class WorkflowExecutionTests
         Assert.AreEqual(action, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotEmpty(archive.Steps);
-        AssertStepMatch(archive.Steps, 0, NameHelper.GetActivityName<NoActionActivity>(), WorkflowStepStatuses.Success, WorkflowStepTypes.Action);
-        AssertStepMatch(archive.Steps, 1, NameHelper.GetActivityName<NoActionActivityWithReturn>(), WorkflowStepStatuses.Success, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 0, NameHelper.GetActivityName<NoActionActivity>(), ActivityResultStatus.Success, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 1, NameHelper.GetActivityName<NoActionActivityWithReturn>(), ActivityResultStatus.Success, WorkflowStepTypes.Action);
         Assert.AreEqual(noActWithReturn.ResultMessage, archive.Steps[1].Result?.ToString());
-        AssertStepMatch(archive.Steps, 2, NameHelper.GetActivityName<ErrorActivity>(), WorkflowStepStatuses.Failure, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 2, NameHelper.GetActivityName<ErrorActivity>(), ActivityResultStatus.Failure, WorkflowStepTypes.Action);
         Assert.AreEqual(new NotImplementedException().Message, archive.Steps[2].ErrorMessage);
-        AssertStepMatch(archive.Steps, 3, NameHelper.GetActivityName<ErrorActivityWithReturn>(), WorkflowStepStatuses.Failure, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 3, NameHelper.GetActivityName<ErrorActivityWithReturn>(), ActivityResultStatus.Failure, WorkflowStepTypes.Action);
         Assert.AreEqual(new NotImplementedException().Message, archive.Steps[3].ErrorMessage);
-        AssertStepMatch(archive.Steps, 4, NameHelper.GetActivityName<TimeoutActivity>(), WorkflowStepStatuses.Timeout, WorkflowStepTypes.Action);
-        AssertStepMatch(archive.Steps, 5, NameHelper.GetActivityName<TimeoutActivityWithReturn>(), WorkflowStepStatuses.Timeout, WorkflowStepTypes.Action);
-        AssertStepMatch(archive.Steps, 6, null, WorkflowStepStatuses.Success, WorkflowStepTypes.Delay);
+        AssertStepMatch(archive.Steps, 4, NameHelper.GetActivityName<TimeoutActivity>(), ActivityResultStatus.Timeout, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 5, NameHelper.GetActivityName<TimeoutActivityWithReturn>(), ActivityResultStatus.Timeout, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 6, null, null, WorkflowStepTypes.Delay);
         
         //cleanup
         await ((IAsyncDisposable)connection).DisposeAsync();
     }
 
-    private static void AssertStepMatch(WorkflowStep[] steps, int index, string? name, WorkflowStepStatuses status, WorkflowStepTypes type)
+    private static void AssertStepMatch(WorkflowStep[] steps, int index, string? name, ActivityResultStatus? status, WorkflowStepTypes type)
     {
         var step = steps[index];
         Assert.AreEqual(name, step.Name);

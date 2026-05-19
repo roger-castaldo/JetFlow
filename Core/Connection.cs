@@ -13,10 +13,24 @@ using System.Collections.Concurrent;
 
 namespace JetFlow;
 
+/// <summary>
+/// Used to create a connection to the JetFlow runtime, and register workflows and activities. It also manages the lifecycle of the connection and all subscriptions created through it, so disposing it will close all connections and subscriptions created through it. You can have multiple instances of this class connected to the same NATS server, but it's recommended to reuse the same instance as much as possible to avoid unnecessary connections and subscriptions.
+/// </summary>
 public static class Connection 
 {
+    /// <summary>
+    /// The name of the trace provider and metrics meter used by JetFlow, you can use it to correlate traces and metrics with the JetFlow runtime. It's recommended to use the same name for both traces and metrics to make it easier to correlate them.
+    /// </summary>
     public const string TraceProviderName = "JetFlow";
+    /// <summary>
+    /// The name of the metrics meter used by JetFlow, you can use it to correlate metrics with the JetFlow runtime. It's recommended to use the same name for both traces and metrics to make it easier to correlate them.
+    /// </summary>
     public const string MetricsMeterName = "JetFlow.Runtime";
+    /// <summary>
+    /// Called to create a new instance of the connection, which will be used to register workflows and activities, and manage the lifecycle of the connection and all subscriptions created through it. It's recommended to reuse the same instance as much as possible to avoid unnecessary connections and subscriptions. This method will attempt to connect to the NATS server, and if it fails, it will throw an exception. If the connection is successful, it will create the necessary streams, key value stores, object stores and consumers required for the JetFlow runtime to function properly. The connection will be left open until the instance is disposed, so you can use it to register workflows and activities at any time after it's created.
+    /// </summary>
+    /// <param name="options">The ConnectionOptions object containing the configuration options for the connection.</param>
+    /// <returns>A ValueTask representing the asynchronous operation, with a result of type IConnection.</returns>
     public static ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 

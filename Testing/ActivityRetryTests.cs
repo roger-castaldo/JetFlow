@@ -316,7 +316,7 @@ public class ActivityRetryTests
         Assert.HasCount(1, archive.Steps);
         var step = archive.Steps[0];
         Assert.AreEqual(NameHelper.GetActivityName<MultiRetryActivity>(), step.Name);
-        Assert.AreEqual(WorkflowStepStatuses.Success, step.Status);
+        Assert.AreEqual(ActivityResultStatus.Success, step.Status);
         Assert.IsNotNull(step.Retries);
         Assert.HasCount(3, step.Retries);
         Assert.AreEqual(RetryTypes.Error, step.Retries[0].RetryType);

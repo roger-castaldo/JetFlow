@@ -35,7 +35,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
                 {
                     var start = MetricsHelper.StartActivity(message);
                     activity = TraceHelper.StartActivity(message);
-                    Task.Run(async () =>
+                    _ = Task.Run(async () =>
                     {
                         ulong currentRevision = 1;
                         while (!activityKeepaliveCTS.IsCancellationRequested)
