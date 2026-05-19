@@ -98,7 +98,7 @@ internal class WorkflowContext
             WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success),
             WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
             WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
-            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, ServiceConnection.GetMessageID(nextActivityMsg.Message))
+            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Message))
         };
     }
 
@@ -111,7 +111,7 @@ internal class WorkflowContext
             WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message.Data, nextActivityMsg.Message.Headers)),
             WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
             WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
-            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, ServiceConnection.GetMessageID(nextActivityMsg.Message))
+            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Message))
         };
     }
 

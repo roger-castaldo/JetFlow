@@ -1,7 +1,5 @@
-﻿using JetFlow.Helpers;
-using JetFlow.Interfaces;
+﻿using JetFlow.Interfaces;
 using JetFlow.Serializers;
-using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
@@ -9,128 +7,12 @@ using NATS.Client.ObjectStore;
 
 namespace JetFlow;
 
-internal partial class ServiceConnection(INatsConnection connection, INatsJSContext jsContext, 
+internal partial class ServiceConnection(InternalNatsConnection connection, 
     INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore,
     SubjectMapper subjectMapper, MessageSerializer messageSerializer)
 {
-    private const string TTLHeader = "Nats-TTL";
-    private const string ScheduleDelayHeader = "Nats-Schedule";
-    private const string ScheduleTargetHeader = "Nats-Schedule-Target";
-    private const string ScheduledTargetTTL = "Nats-Schedule-TTL";
-    private const string MessageIdHeader = "Nats-Msg-Id";
-
-    private static string CreateTTLString(TimeSpan ttl)
-    {
-        if (ttl == TimeSpan.Zero)
-        {
-            return "0s";
-        }
-
-        // Determine sign and work with absolute value
-        var negative = ttl < TimeSpan.Zero;
-
-        // Safely get absolute ticks (avoid overflow with long.MinValue)
-        long ticks = ttl.Ticks;
-        ulong absTicks;
-        if (ticks < 0)
-        {
-            // -(long.MinValue) would overflow; compute via unsigned arithmetic
-            absTicks = (ulong)(-(ticks + 1)) + 1UL;
-        }
-        else
-        {
-            absTicks = (ulong)ticks;
-        }
-
-        // 1 tick = 100 nanoseconds
-        ulong ns = absTicks * 100UL;
-
-        const ulong NsPerSecond = 1_000_000_000UL;
-        const ulong NsPerMinute = NsPerSecond * 60UL;
-        const ulong NsPerHour = NsPerMinute * 60UL;
-
-        var sb = new System.Text.StringBuilder();
-
-        if (negative) sb.Append('-');
-
-        var hours = ns / NsPerHour;
-        ns %= NsPerHour;
-        if (hours > 0)
-        {
-            sb.Append(hours).Append('h');
-        }
-
-        var minutes = ns / NsPerMinute;
-        ns %= NsPerMinute;
-        if (minutes > 0)
-        {
-            sb.Append(minutes).Append('m');
-        }
-
-        var seconds = ns / NsPerSecond;
-        var remainderNs = ns % NsPerSecond;
-
-        if (seconds > 0 || remainderNs > 0)
-        {
-            if (remainderNs > 0)
-            {
-                // fractional seconds with up to 9 digits (nanoseconds)
-                var frac = remainderNs.ToString("D9").TrimEnd('0');
-                sb.Append(seconds).Append('.').Append(frac).Append('s');
-            }
-            else
-            {
-                sb.Append(seconds).Append('s');
-            }
-        }
-
-        return sb.ToString();
-    }
-
-    private static string CreateScheduledString(TimeSpan delay)
-        => DateTime.UtcNow.Add(delay).ToString("'@at 'yyyy-MM-dd'T'HH:mm:ss'Z'");
-
-    private static NatsHeaders AppendDefaultHeaders(NatsHeaders headers, string messageId, TimeSpan? timeout)
-    {
-        if (timeout.HasValue)
-            headers.Add(TTLHeader, CreateTTLString(timeout.Value));
-        headers.Add(MessageIdHeader, messageId);
-        return TraceHelper.InjectCurrentActivity(headers);
-    }
-
-    private record struct PublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, TimeSpan? Timeout = null);
-
-    private async ValueTask PublishMessageAsync(PublishMessage message, CancellationToken cancellationToken = default)
-    {
-        await connection.PublishAsync<byte[]>(message.Subject, message.Data, AppendDefaultHeaders(message.Headers, message.Id, message.Timeout), cancellationToken: cancellationToken);
-        TraceHelper.AddPublishEvent(message.Subject);
-    }
-
-    private ValueTask PublishDelayedMessageAsync(PublishMessage message, TimeSpan delay, string destinationSubject, CancellationToken cancellationToken = default)
-        => PublishScheduledMessageAsync(message, CreateScheduledString(delay), destinationSubject, cancellationToken);
-
-    private async ValueTask PublishScheduledMessageAsync(PublishMessage message, string cronString, string destinationSubject, CancellationToken cancellationToken = default)
-    {
-        var headers = AppendDefaultHeaders(message.Headers, message.Id, null);
-        headers.Add(ScheduleDelayHeader, cronString);
-        headers.Add(ScheduleTargetHeader, destinationSubject);
-        if (message.Timeout.HasValue)
-            headers.Add(ScheduledTargetTTL, CreateTTLString(message.Timeout.Value));
-        await jsContext.PublishAsync<byte[]>(message.Subject, message.Data, headers: headers, cancellationToken: cancellationToken);
-        TraceHelper.AddPublishEvent(message.Subject);
-    }
-
-    internal static string GetMessageID(INatsJSMsg<byte[]> msg)
-        => (msg.Headers?.TryGetValue(MessageIdHeader, out var id)==true ? id.ToString() : string.Empty);
-
-    public ValueTask<INatsJSConsumer> CreateOrUpdateConsumerAsync(
-        string stream,
-        ConsumerConfig config,
-        CancellationToken cancellationToken = default)
-        => jsContext.CreateOrUpdateConsumerAsync(stream, config, cancellationToken);
-
     public async ValueTask<IJetstreamQuery> QueryStreamAsync(string streamName, bool headersOnly, params string[] filterSubjects)
-        => new JetstreamQuery(await jsContext.CreateOrUpdateConsumerAsync(
+        => new JetstreamQuery(await connection.CreateOrUpdateConsumerAsync(
                 streamName,
                 new ConsumerConfig
                 {
@@ -141,15 +23,15 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
                     HeadersOnly = headersOnly,
                     InactiveThreshold = TimeSpan.FromSeconds(10)
                 }
-            ), jsContext);
+            ), connection);
 
     public async ValueTask PurgeWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
     {
-        await jsContext.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
-        await jsContext.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
+        await connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
+        await connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
     }
 
-    private sealed class JetstreamQuery(INatsJSConsumer consumer, INatsJSContext jsContext) : IJetstreamQuery
+    private sealed class JetstreamQuery(INatsJSConsumer consumer, InternalNatsConnection connection) : IJetstreamQuery
     {
         private const int MaxMessages = 64;
         private bool disposed = false;
@@ -161,7 +43,7 @@ internal partial class ServiceConnection(INatsConnection connection, INatsJSCont
                 disposed=true;
                 try
                 {
-                    await jsContext.DeleteConsumerAsync(consumer.Info.StreamName, consumer.Info.Name);
+                    await connection.DeleteConsumerAsync(consumer.Info.StreamName, consumer.Info.Name);
                 }
                 catch { /*bury error*/ }
             }

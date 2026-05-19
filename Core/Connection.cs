@@ -40,6 +40,7 @@ public static class Connection
     internal class ConnectionInstance : IConnection, IAsyncDisposable
     {
         private readonly MessageSerializer messageSerializer;
+        private readonly InternalNatsConnection internalConnection;
         private readonly ServiceConnection serviceConnection;
         private readonly Version? serverVersion;
         private readonly SubjectMapper subjectMapper;
@@ -52,7 +53,8 @@ public static class Connection
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
             serverVersion = (connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version));
-            serviceConnection = new(connection, natsJSContext, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, subjectMapper, messageSerializer);
+            internalConnection = new(connection, natsJSContext, serverVersion);
+            serviceConnection = new(internalConnection, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, subjectMapper, messageSerializer);
             subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
             subscriptions.Add(new ScheduledWorkflowsSubscription(subjectMapper, serviceConnection, stores.ScheduledWorkflowConsumer, cancellationTokenSource.Token));
         }
@@ -136,7 +138,7 @@ public static class Connection
         }
 
         private ValueTask<INatsJSConsumer> CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(CancellationToken cancellationToken)
-            => serviceConnection.CreateOrUpdateConsumerAsync(
+            => internalConnection.CreateOrUpdateConsumerAsync(
                     subjectMapper.ActivityQueueStream,
                     new($"act_{NameHelper.GetActivityName<TWorkflowActivity>()}")
                     {
@@ -160,7 +162,7 @@ public static class Connection
             => subscriptions.Add(new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
 
         private ValueTask<INatsJSConsumer> CreateWorkflowConsumerAsync<TWorkflow>(CancellationToken cancellationToken)
-            => serviceConnection.CreateOrUpdateConsumerAsync(
+            => internalConnection.CreateOrUpdateConsumerAsync(
                     subjectMapper.WorkflowEventsStreamsName,
                     new($"wfr_{NameHelper.GetWorkflowName<TWorkflow>()}")
                     {

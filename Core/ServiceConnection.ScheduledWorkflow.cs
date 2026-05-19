@@ -14,13 +14,13 @@ namespace JetFlow
             var id = Guid.NewGuid();
             headers ??= new();
             if (options!=null)
-                await PublishMessageAsync(new(
+                await connection.PublishMessageAsync(new(
                     InternalsSerializer.SerializeWorkflowOptions(options),
                     subjectMapper.ScheduledWorkflowConfigure(name, id.ToString()),
                     new(headers.ToDictionary()),
                     $"{name}-{id}-configure"
                 ), cancellationToken: cancellationToken);
-            await PublishScheduledMessageAsync(new(
+            await connection.PublishScheduledMessageAsync(new(
                     data,
                     subjectMapper.ScheduledWorkflowTimer(name, id.ToString()),
                     new(headers.ToDictionary()),
@@ -44,12 +44,12 @@ namespace JetFlow
 
         public ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowOptions? options, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
-            => ScheduleWorkflowAsync<TWorkflow>(CreateScheduledString(delay), options, [], null, cancellationToken);
+            => ScheduleWorkflowAsync<TWorkflow>(InternalNatsConnection.CreateScheduledString(delay), options, [], null, cancellationToken);
         public async ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow, TInput>(TInput input, TimeSpan delay, WorkflowOptions? options, CancellationToken cancellationToken)
             where TWorkflow : IWorkflow<TInput>
         {
             var (data, headers) = await messageSerializer.EncodeAsync<TInput>(input);
-            return await ScheduleWorkflowAsync<TWorkflow>(CreateScheduledString(delay), options, data, headers, cancellationToken);
+            return await ScheduleWorkflowAsync<TWorkflow>(InternalNatsConnection.CreateScheduledString(delay), options, data, headers, cancellationToken);
         }
     }
 }
