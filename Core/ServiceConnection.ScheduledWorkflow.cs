@@ -13,22 +13,22 @@ namespace JetFlow
             var name = NameHelper.GetWorkflowName<TWorkflow>();
             var id = Guid.NewGuid();
             headers ??= new();
+            var messages = new List<InternalNatsConnection.PublishMessage>();
             if (options!=null)
-                await connection.PublishMessageAsync(new(
+                messages.Add(new(
                     InternalsSerializer.SerializeWorkflowOptions(options),
                     subjectMapper.ScheduledWorkflowConfigure(name, id.ToString()),
                     new(headers.ToDictionary()),
                     $"{name}-{id}-configure"
-                ), cancellationToken: cancellationToken);
-            await connection.PublishScheduledMessageAsync(new(
+                ));
+            messages.Add(new InternalNatsConnection.ScheduledPublishMessage(
                     data,
                     subjectMapper.ScheduledWorkflowTimer(name, id.ToString()),
                     new(headers.ToDictionary()),
-                    $"{name}-{id}-start"
-                ), 
-                delayString, 
-                subjectMapper.ScheduledWorkflowStart(name, id.ToString()),
-                cancellationToken: cancellationToken);
+                    $"{name}-{id}-start", 
+                    delayString, 
+                    subjectMapper.ScheduledWorkflowStart(name, id.ToString())));
+            await connection.PublishMessagesAsync(messages, cancellationToken);
             return id;
         }
 

@@ -60,6 +60,7 @@ public class ConnectionTests
         Assert.IsTrue(workFlowStream.Info.Config.AllowDirect);
         Assert.IsTrue(workFlowStream.Info.Config.AllowMsgSchedules);
         Assert.IsTrue(workFlowStream.Info.Config.AllowMsgTTL);
+        Assert.IsTrue(workFlowStream.Info.Config.AllowAtomicPublish);
         Assert.AreEqual(TimeSpan.FromMinutes(10), workFlowStream.Info.Config.DuplicateWindow);
         var activityStream = await jsContext.GetStreamAsync(subjectMapper.ActivityQueueStream);
         Assert.IsNotNull(activityStream);
@@ -70,6 +71,7 @@ public class ConnectionTests
         Assert.IsTrue(activityStream.Info.Config.AllowDirect);
         Assert.IsTrue(activityStream.Info.Config.AllowMsgSchedules);
         Assert.IsTrue(activityStream.Info.Config.AllowMsgTTL);
+        Assert.IsTrue(activityStream.Info.Config.AllowAtomicPublish);
         Assert.AreEqual(TimeSpan.FromMinutes(10), activityStream.Info.Config.DuplicateWindow);
         Assert.AreEqual(StreamConfigRetention.Workqueue, activityStream.Info.Config.Retention);
         var activityLocksStore = await jsContext.GetStreamAsync($"KV_{subjectMapper.ActivityLocksKeystore}");
@@ -104,6 +106,7 @@ public class ConnectionTests
         }));
         Assert.IsTrue(scheduledWorkFlowStream.Info.Config.AllowDirect);
         Assert.IsTrue(scheduledWorkFlowStream.Info.Config.AllowMsgSchedules);
+        Assert.IsTrue(scheduledWorkFlowStream.Info.Config.AllowAtomicPublish);
         Assert.IsTrue(scheduledWorkFlowStream.Info.Config.AllowMsgTTL);
         Assert.AreEqual(TimeSpan.FromMinutes(10), scheduledWorkFlowStream.Info.Config.DuplicateWindow);
     }

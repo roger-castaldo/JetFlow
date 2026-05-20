@@ -1,16 +1,17 @@
 ﻿using JetFlow.Helpers;
 using NATS.Client.Core;
 using System.Text;
+using static JetFlow.InternalNatsConnection;
 
 namespace JetFlow;
 
 internal partial class ServiceConnection
 {
-    private async ValueTask TransmitStartActivityMessages<TActivity>(uint stepIndex, ActivityExecutionRequest options,byte[] data, NatsHeaders? headers, EventMessage message, TimeSpan? timeout, CancellationToken cancellationToken)
+    private async ValueTask TransmitStartActivityMessages<TActivity>(uint stepIndex, ActivityExecutionRequest options, byte[] data, NatsHeaders? headers, EventMessage message, TimeSpan? timeout, CancellationToken cancellationToken)
     {
         var activityName = NameHelper.GetActivityName<TActivity>();
         using var activity = TraceHelper.StartWorkflowStep(message, NameHelper.GetActivityName<TActivity>(), stepIndex.ToString());
-        headers??=[];
+        headers??= [];
         headers.Add(Constants.ActivityIDHeader, stepIndex.ToString());
         if (options.Retries!=null)
         {
@@ -33,22 +34,24 @@ internal partial class ServiceConnection
                 message.InjectHeaders(headers),
                 $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-start"
             ), cancellationToken: cancellationToken);
-        await connection.PublishMessageAsync(new(
+        IEnumerable<PublishMessage> messages = [new InternalNatsConnection.PublishMessage(
                 data,
                 subjectMapper.ActivityStart(activityName, message.WorkflowName, message.WorkflowId),
                 message.InjectHeaders(headers),
                 $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-start"
-            ), cancellationToken);
+            )
+        ];
         if (timeout.HasValue)
-            await connection.PublishDelayedMessageAsync(new(
+            messages = messages.Append(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                     data,
                     subjectMapper.ActivityTimer(activityName, message.WorkflowName, message.WorkflowId),
                     message.InjectHeaders(headers),
                     $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-timer",
                     timeout.Value,
-                    subjectMapper.ActivityTimeout(activityName, message.WorkflowName, message.WorkflowId)
-                ),
-                cancellationToken: cancellationToken);
+                    subjectMapper.ActivityTimeout(activityName, message.WorkflowName, message.WorkflowId),
+                    timeout.Value.Add(options.Timeouts?.AttemptTimeout ?? TimeSpan.Zero)
+                ));
+        await connection.PublishMessagesAsync(messages, cancellationToken);
     }
 
     public async ValueTask RetryActivityAsync(RetryTypes retryType, EventMessage message, CancellationToken cancellationToken)
@@ -70,8 +73,9 @@ internal partial class ServiceConnection
             && pair.Key.Contains("-jetflow-"))
             .Append(new(Constants.ActivityAttemptHeader, (message.ActivityAttempt + 1).ToString()));
         var timeout = (message.Message.Headers?.TryGetValue(Constants.ActivityOverallTimeoutHeader, out var timeoutStr)??false) && TimeSpan.TryParse(timeoutStr, out var timeoutVal) ? timeoutVal : (TimeSpan?)null;
-        if(message.RetryConfiguration?.DelayBetween!=null)
-            await connection.PublishDelayedMessageAsync(new(
+        List<PublishMessage> messages = [];
+        if (message.RetryConfiguration?.DelayBetween!=null)
+            messages.Add(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                         message.Message.Data?? [],
                         subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId),
                         new(headers.ToDictionary()),
@@ -79,26 +83,25 @@ internal partial class ServiceConnection
                         message.RetryConfiguration.DelayBetween.Value,
                         subjectMapper.ActivityStart(message.ActivityName!, message.WorkflowName, message.WorkflowId),
                         message.RetryConfiguration.DelayBetween.Value.Add(timeout??TimeSpan.Zero)
-                    ),
-                    cancellationToken: cancellationToken);
+                    ));
         else
-            await connection.PublishMessageAsync(new(
+            messages.Add(new InternalNatsConnection.PublishMessage(
                     message.Message.Data?? [],
                     subjectMapper.ActivityStart(message.ActivityName!, message.WorkflowName, message.WorkflowId),
                     new(headers.ToDictionary()),
                     $"{message.ActivityName}-{message.WorkflowId}-start-attempt{message.ActivityAttempt}",
                     timeout
-                ), cancellationToken: cancellationToken);
+                ));
         if (timeout.HasValue)
-            await connection.PublishDelayedMessageAsync(new(
+            messages.Add(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                         message.Message.Data?? [],
                         subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId),
                         new(headers.ToDictionary()),
                         $"{message.ActivityName}-{message.WorkflowId}-timer-attempt{message.ActivityAttempt}",
                         timeout.Value.Add(message.RetryConfiguration?.DelayBetween.HasValue==true ? message.RetryConfiguration.DelayBetween.Value : TimeSpan.Zero),
                         subjectMapper.ActivityTimeout(message.ActivityName!, message.WorkflowName, message.WorkflowId)
-                    ),
-                    cancellationToken: cancellationToken);
+                    ));
+        await connection.PublishMessagesAsync(messages, cancellationToken);
     }
     public ValueTask StartActivityAsync<TActivity>(uint stepIndex, ActivityExecutionRequest executionRequest, EventMessage message, CancellationToken cancellationToken)
         => TransmitStartActivityMessages<TActivity>(stepIndex, executionRequest, Array.Empty<byte>(), null, message, executionRequest.Timeouts?.OverallTimeout, cancellationToken);

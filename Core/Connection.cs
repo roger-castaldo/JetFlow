@@ -73,13 +73,15 @@ public static class Connection
             }
             if (connection.ConnectionState != NatsConnectionState.Open)
                 throw new UnableToConnectException();
+            var serverVersion = (connection.ServerInfo==null ? new Version("0.0.0.0") : new Version(connection.ServerInfo.Version));
             var subjectMapper = new SubjectMapper(options.Namespace);
             await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.WorkflowEventsStreamsName, [subjectMapper.WorkflowEventsFilter])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
                 AllowDirect = true,
                 AllowMsgSchedules = true,
-                AllowMsgTTL=true
+                AllowMsgTTL=true,
+                AllowAtomicPublish = serverVersion>=new Version("2.12")
             });
             await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ActivityQueueStream, [subjectMapper.ActivityEventsFilter])
             {
@@ -87,14 +89,16 @@ public static class Connection
                 AllowDirect = true,
                 AllowMsgSchedules = true,
                 AllowMsgTTL=true,
-                Retention = StreamConfigRetention.Workqueue
+                Retention = StreamConfigRetention.Workqueue,
+                AllowAtomicPublish = serverVersion>=new Version("2.12")
             });
             await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ScheduledWorkflowStreamsName, [subjectMapper.ScheduledWorkflowsFilter])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
                 AllowDirect = true,
                 AllowMsgSchedules = true,
-                AllowMsgTTL=true
+                AllowMsgTTL=true,
+                AllowAtomicPublish = serverVersion>=new Version("2.12")
             });
             var kc = jsContext.CreateKeyValueStoreContext();
             var timerStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.ActivityLocksKeystore)

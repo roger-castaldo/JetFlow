@@ -8,8 +8,12 @@ namespace JetFlow;
 internal class InternalNatsConnection(INatsConnection connection, INatsJSContext jsContext, Version? serverVersion)
 {
     public record PublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, TimeSpan? Timeout = null);
-    public record DelayedPublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, TimeSpan Delay, string DestinationSubject, TimeSpan? Timeout = null)
-        : PublishMessage(Data, Subject, Headers, Id, Timeout);
+    public record ScheduledPublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, string DelayString, string DestinationSubject, TimeSpan? Timeout = null)
+        : PublishMessage(Data, Subject, Headers, Id, Timeout)
+    {
+        public static ScheduledPublishMessage CreateDelayedMessage(byte[] data, string subject, NatsHeaders headers, string id, TimeSpan delay, string destinationSubject, TimeSpan? timeout = null)
+            => new(data, subject, headers, id, CreateScheduledString(delay), destinationSubject, timeout);
+    }
 
     private const string TTLHeader = "Nats-TTL";
     private const string ScheduleDelayHeader = "Nats-Schedule";
@@ -19,6 +23,8 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
     private const string BatchIdHeader = "Nats-Batch-Id";
     private const string BatchSequenceHeader = "Nats-Batch-Sequence";
     private const string BatchCommitHeader = "Nats-Batch-Commit";
+
+    private readonly bool allowsBatching = (serverVersion??new Version("0.0.0.0"))>=new Version("2.12");
 
     private static string CreateTTLString(TimeSpan ttl)
     {
@@ -87,7 +93,6 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
 
         return sb.ToString();
     }
-
     public static string CreateScheduledString(TimeSpan delay)
         => DateTime.UtcNow.Add(delay).ToString("'@at 'yyyy-MM-dd'T'HH:mm:ss'Z'");
 
@@ -98,22 +103,51 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
         headers.Add(MessageIdHeader, messageId);
         return TraceHelper.InjectCurrentActivity(headers);
     }
-    public ValueTask PublishMessageAsync(PublishMessage message, CancellationToken cancellationToken = default)
-        => PublishMessageAsync(message.Subject, message.Data, AppendDefaultHeaders(message.Headers, message.Id, message.Timeout), cancellationToken);
-    public ValueTask PublishDelayedMessageAsync(DelayedPublishMessage message, CancellationToken cancellationToken = default)
-        => PublishScheduledMessageAsync(message, CreateScheduledString(message.Delay), message.DestinationSubject, cancellationToken);
-    public async ValueTask PublishScheduledMessageAsync(PublishMessage message, string cronString, string destinationSubject, CancellationToken cancellationToken = default)
+    private static NatsHeaders AppendScheduleHeaders(NatsHeaders headers, string cronString, string destinationSubject, TimeSpan? timeout)
     {
-        var headers = AppendDefaultHeaders(message.Headers, message.Id, null);
         headers.Add(ScheduleDelayHeader, cronString);
         headers.Add(ScheduleTargetHeader, destinationSubject);
-        if (message.Timeout.HasValue)
-            headers.Add(ScheduledTargetTTL, CreateTTLString(message.Timeout.Value));
-        await PublishMessageAsync(message.Subject, message.Data, headers, cancellationToken);
+        if (timeout.HasValue)
+            headers.Add(ScheduledTargetTTL, CreateTTLString(timeout.Value));
+        return headers;
     }
-    private async ValueTask PublishMessageAsync(string subject, byte[] data, NatsHeaders headers, CancellationToken cancellationToken)
+    public ValueTask PublishMessageAsync(PublishMessage message, CancellationToken cancellationToken = default)
+        => PublishMessageAsync(message.Subject, message.Data, AppendDefaultHeaders(message.Headers, message.Id, message.Timeout), cancellationToken);
+    public ValueTask PublishScheduledMessageAsync(ScheduledPublishMessage message, CancellationToken cancellationToken = default)
+        => PublishMessageAsync(message.Subject,
+            message.Data,
+            AppendScheduleHeaders(AppendDefaultHeaders(message.Headers, message.Id, message.Timeout), message.DelayString, message.DestinationSubject, message.Timeout),
+            cancellationToken);
+    public async ValueTask PublishMessagesAsync(IEnumerable<PublishMessage> messages, CancellationToken cancellationToken = default)
     {
-        await jsContext.PublishAsync<byte[]>(subject, data, headers: headers, cancellationToken: cancellationToken);
+        var index = 1;
+        var total = messages.Count();
+        var batchId = (total>1 ? Guid.NewGuid() : Guid.Empty);
+        foreach (var m in messages)
+        {
+            var headers = AppendDefaultHeaders(m.Headers, m.Id, m.Timeout);
+            if (m is ScheduledPublishMessage sm)
+                headers = AppendScheduleHeaders(headers, sm.DelayString, sm.DestinationSubject, sm.Timeout);
+            if (allowsBatching && total>1)
+            {
+                headers.Add(BatchIdHeader, batchId.ToString());
+                headers.Add(BatchSequenceHeader, index.ToString());
+                if (index == total)
+                    headers.Add(BatchCommitHeader, "1");
+            }
+            await PublishMessageAsync(m.Subject, m.Data, headers, cancellationToken, total==1 || !allowsBatching || (allowsBatching && index==total));
+            index++;
+        }
+    }
+
+    private async ValueTask PublishMessageAsync(string subject, byte[] data, NatsHeaders headers, CancellationToken cancellationToken, bool ensureSuccess=true)
+    {
+        if (ensureSuccess)
+        {
+            var result = await jsContext.PublishAsync<byte[]>(subject, data, headers: headers, cancellationToken: cancellationToken);
+            result.EnsureSuccess();
+        }else
+            await connection.PublishAsync<byte[]>(subject, data, headers:headers, cancellationToken: cancellationToken);
         TraceHelper.AddPublishEvent(subject);
     }
     public static string GetMessageID(INatsJSMsg<byte[]> msg)
