@@ -9,8 +9,6 @@ internal enum WorkflowEventTypes
     Timer,
     StepStart,
     StepEnd,
-    StepError,
-    StepTimeout,
     StepRetry,
     Archived,
     Purge,

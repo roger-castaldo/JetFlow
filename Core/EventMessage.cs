@@ -11,7 +11,7 @@ internal record EventMessage
         TraceHelper.WorkflowTraceHeaderKey,
         TraceHelper.WorkflowTraceSpanHeaderKey
     ];
-    private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|config|stepstart|stepend|steperror|steptimeout|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|config|stepstart|stepend|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 
     public EventMessage(INatsJSMsg<byte[]> msg)
@@ -48,6 +48,8 @@ internal record EventMessage
         }
         if (msg.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false)
             ActivityID = uint.Parse(activityId.ToString());
+        if (msg.Headers?.TryGetValue(Constants.ActivityResultHeader, out var resultValue)??false)
+            WorkflowStepResultStatus = Enum.Parse<ActivityResultStatus>(resultValue.ToString(), true);
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
         WorkflowName = match.Groups["workflowName"].Value;
         WorkflowId = match.Groups["instance"].Value;
@@ -59,6 +61,7 @@ internal record EventMessage
     public string WorkflowName { get; private init; }
     public string WorkflowId { get; private init; }
     public WorkflowEventTypes? WorkflowEventType { get; private init; } = null;
+    public ActivityResultStatus? WorkflowStepResultStatus { get; private init; } = null;
     public string? ActivityName { get; private init; }
     public ActivityEventTypes? ActivityEventType { get; private init; } = null;
     public uint? ActivityID { get; private init; } = null;

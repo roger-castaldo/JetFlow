@@ -437,8 +437,6 @@ public class WorkflowExecutionTests
             subjectMapper.WorkflowTimer(workflowName, runId.ToString()),
             subjectMapper.WorkflowStepStart(workflowName, runId.ToString(), "*"),
             subjectMapper.WorkflowStepEnd(workflowName, runId.ToString(), "*"),
-            subjectMapper.WorkflowStepError(workflowName, runId.ToString(), "*"),
-            subjectMapper.WorkflowStepTimeout(workflowName, runId.ToString(), "*"),
             subjectMapper.WorkflowStepRetry(workflowName, runId.ToString(), "*")
         );
         Assert.IsEmpty(messages);

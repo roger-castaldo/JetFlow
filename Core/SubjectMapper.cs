@@ -43,10 +43,6 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepstart";
     public string WorkflowStepEnd(string workflowName, string instance, string stepName)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepend";
-    public string WorkflowStepError(string workflowName, string instance, string stepName)
-        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.steperror";
-    public string WorkflowStepTimeout(string workflowName, string instance, string stepName)
-        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.steptimeout";
     public string WorkflowStepRetry(string workflowName, string instance, string stepName)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepretry";
     public string WorkflowPurgeFilter(string workflowName, string instance)

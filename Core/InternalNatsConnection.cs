@@ -15,6 +15,7 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
             => new(data, subject, headers, id, CreateScheduledString(delay), destinationSubject, timeout);
     }
 
+    private const int maxChunkSize = 1000;
     private const string TTLHeader = "Nats-TTL";
     private const string ScheduleDelayHeader = "Nats-Schedule";
     private const string ScheduleTargetHeader = "Nats-Schedule-Target";
@@ -120,8 +121,19 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
             cancellationToken);
     public async ValueTask PublishMessagesAsync(IEnumerable<PublishMessage> messages, CancellationToken cancellationToken = default)
     {
-        var index = 1;
+        var index = 0;
         var total = messages.Count();
+        while(index<total)
+        {
+            var chunk = messages.Skip(index).Take(maxChunkSize);
+            await PublishMessagesChunkAsync(chunk, chunk.Count(), cancellationToken);
+            index += maxChunkSize;
+        }
+    }
+
+    private async ValueTask PublishMessagesChunkAsync(IEnumerable<PublishMessage> messages, int total, CancellationToken cancellationToken)
+    {
+        var index = 1;
         var batchId = (total>1 ? Guid.NewGuid() : Guid.Empty);
         foreach (var m in messages)
         {

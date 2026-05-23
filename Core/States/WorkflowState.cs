@@ -25,9 +25,7 @@ internal class WorkflowState : IWorkflowState
             subjectMapper.WorkflowEventsStreamsName,
             false,
             subjectMapper.WorkflowStepStart(message.WorkflowName, message.WorkflowId, "*"),
-            subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*"),
-            subjectMapper.WorkflowStepError(message.WorkflowName, message.WorkflowId, "*"),
-            subjectMapper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*")
+            subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*")
         );
         await foreach (var msg in query)
         {

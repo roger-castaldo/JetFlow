@@ -82,7 +82,7 @@ internal partial class ServiceConnection
                         $"{message.ActivityName}-{message.WorkflowId}-start-attempt{message.ActivityAttempt}", 
                         message.RetryConfiguration.DelayBetween.Value,
                         subjectMapper.ActivityStart(message.ActivityName!, message.WorkflowName, message.WorkflowId),
-                        message.RetryConfiguration.DelayBetween.Value.Add(timeout??TimeSpan.Zero)
+                        (timeout.HasValue ? timeout.Value.Add(message.RetryConfiguration.DelayBetween.Value) : null)
                     ));
         else
             messages.Add(new InternalNatsConnection.PublishMessage(
@@ -118,51 +118,46 @@ internal partial class ServiceConnection
         return headers;
     }
 
-    private async ValueTask PublishActivityEndingAsync(EventMessage message, Func<ValueTask> publishCall, CancellationToken cancellationToken)
+    private async ValueTask PublishActivityEndingAsync(EventMessage message, ActivityResultStatus status, byte[] data, NatsHeaders headers, CancellationToken cancellationToken)
     {
+        headers.Add(Constants.ActivityResultHeader, status.ToString());
         await connection.PurgeStreamAsync(
             subjectMapper.ActivityQueueStream,
             new()
             {
                 Filter=subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId),
             }, cancellationToken: cancellationToken);
-        await publishCall();
+        await connection.PublishMessageAsync(new(
+                data,
+                subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, message.ActivityName!),
+                headers,
+                $"{message.WorkflowName}-{message.WorkflowId}-{message.ActivityName}-{message.ActivityID}-end"
+            ), cancellationToken);
     }
 
     public ValueTask TimeoutActivityAsync(EventMessage message, CancellationToken cancellationToken)
         => PublishActivityEndingAsync(
             message,
-            ()=>connection.PublishMessageAsync(new(
-                    [],
-                    subjectMapper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, message.ActivityName!),
-                    message.InjectHeaders(AppendActivityId(null, message)),
-                    $"{message.WorkflowName}-{message.WorkflowId}-{message.ActivityName}-{message.ActivityID}-timeout"
-                ), 
-                cancellationToken: cancellationToken),
+            ActivityResultStatus.Timeout,
+            [],
+            message.InjectHeaders(AppendActivityId(null, message)),
             cancellationToken
         );
     public ValueTask ErrorActivityAsync(EventMessage message, Exception error, CancellationToken cancellationToken)
         => PublishActivityEndingAsync(
             message,
-            ()=>connection.PublishMessageAsync(new(
-                    UTF8Encoding.UTF8.GetBytes(error.Message),
-                    subjectMapper.WorkflowStepError(message.WorkflowName, message.WorkflowId, message.ActivityName!),
-                    message.InjectHeaders(AppendActivityId(null, message)),
-                    $"{message.WorkflowName}-{message.WorkflowId}-{message.ActivityName}-{message.ActivityID}-error"
-                ), 
-                cancellationToken: cancellationToken),
+            ActivityResultStatus.Failure,
+            UTF8Encoding.UTF8.GetBytes(error.Message),
+            message.InjectHeaders(AppendActivityId(null, message)),
             cancellationToken
         );
+            
     private ValueTask EndActivityAsync(EventMessage message, byte[] data, NatsHeaders? headers, CancellationToken cancellationToken)
     => PublishActivityEndingAsync(
             message,
-            () => connection.PublishMessageAsync(new(
-                    data,
-                    subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, message.ActivityName!),
-                    message.InjectHeaders(AppendActivityId(headers, message)),
-                    $"{message.WorkflowName}-{message.WorkflowId}-{message.ActivityName}-{message.ActivityID}-end"
-                ), 
-                cancellationToken: cancellationToken),
+            ActivityResultStatus.Success,
+            data,
+            message.InjectHeaders(AppendActivityId(headers, message)),
             cancellationToken
         );
 
@@ -196,9 +191,7 @@ internal partial class ServiceConnection
             await using var query = await QueryStreamAsync(
                 subjectMapper.WorkflowEventsStreamsName,
                 true,
-                subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, message.ActivityName!),
-                subjectMapper.WorkflowStepError(message.WorkflowName, message.WorkflowId, message.ActivityName!),
-                subjectMapper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, message.ActivityName!)
+                subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, message.ActivityName!)
             );
             var isDone = false;
             var hasAny = true;

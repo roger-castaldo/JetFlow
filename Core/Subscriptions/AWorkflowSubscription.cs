@@ -15,8 +15,6 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
     private static readonly WorkflowEventTypes[] ValidOperations = [
         WorkflowEventTypes.Start,
         WorkflowEventTypes.StepEnd,
-        WorkflowEventTypes.StepError,
-        WorkflowEventTypes.StepTimeout,
         WorkflowEventTypes.DelayEnd
     ];
     private static readonly WorkflowEventTypes[] EndOperations = [
@@ -42,9 +40,9 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                 var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, message);
                 if (!string.IsNullOrEmpty(message.ActivityName))
                 {
-                    if (Equals(message.WorkflowEventType, WorkflowEventTypes.StepTimeout) && context.Options.ErrorOnActivityTimeout)
+                    if (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Timeout) && context.Options.ErrorOnActivityTimeout)
                         throw new ActivityTimeoutException(message.ActivityName);
-                    if (Equals(message.WorkflowEventType, WorkflowEventTypes.StepError) && context.Options.ErrorOnActivityFailure)
+                    if (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && context.Options.ErrorOnActivityFailure)
                         throw new ActivityFailedException(message.ActivityName, message.Message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Message.Data) : string.Empty);
                 }
                 await HandleWorkflowEventAsync(context);

@@ -40,9 +40,7 @@ internal class WorkflowContext
                 subjectMapper.WorkflowStart(message.WorkflowName, message.WorkflowId),
                 subjectMapper.WorkflowEnd(message.WorkflowName, message.WorkflowId),
                 subjectMapper.WorkflowDelayEnd(message.WorkflowName, message.WorkflowId),
-                subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*"),
-                subjectMapper.WorkflowStepError(message.WorkflowName, message.WorkflowId, "*"),
-                subjectMapper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*")
+                subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*")
             );
         var msgs = new List<INatsJSMsg<byte[]>>();
         INatsJSMsg<byte[]>? startMessage = null;
@@ -92,12 +90,12 @@ internal class WorkflowContext
     private ActivityResult? GetNextActivity<TActivity>()
     {
         var nextActivityMsg = GetNextActivityMessage<TActivity>();
-        return nextActivityMsg?.WorkflowEventType switch
+        return nextActivityMsg?.WorkflowStepResultStatus switch
         {
             null => null,
-            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success),
-            WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
-            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
+            ActivityResultStatus.Success => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success),
+            ActivityResultStatus.Failure => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
+            ActivityResultStatus.Timeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
             _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Message))
         };
     }
@@ -105,12 +103,12 @@ internal class WorkflowContext
     private async ValueTask<ActivityResult<TOutput>?> GetNextActivityAsync<TActivity, TOutput>()
     {
         var nextActivityMsg = GetNextActivityMessage<TActivity>();
-        return nextActivityMsg?.WorkflowEventType switch
+        return nextActivityMsg?.WorkflowStepResultStatus switch
         {
             null => null,
-            WorkflowEventTypes.StepEnd => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message.Data, nextActivityMsg.Message.Headers)),
-            WorkflowEventTypes.StepError => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
-            WorkflowEventTypes.StepTimeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
+            ActivityResultStatus.Success => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message.Data, nextActivityMsg.Message.Headers)),
+            ActivityResultStatus.Failure => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
+            ActivityResultStatus.Timeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
             _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Message))
         };
     }

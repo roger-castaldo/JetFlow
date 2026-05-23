@@ -17,6 +17,7 @@ internal static class Constants
     public const string ActivityRetryBlockedErrorsHeader = $"{HeaderBase}activity-retry-blocked-errors";
     public const string ActivityIDHeader = $"{HeaderBase}activity-id";
     public const string SchedulerSourceID = $"{HeaderBase}scheduler-id";
+    public const string ActivityResultHeader = $"{HeaderBase}activity-result";
 
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {

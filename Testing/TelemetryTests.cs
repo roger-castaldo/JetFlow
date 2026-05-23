@@ -152,7 +152,7 @@ public class TelemetryTests
         Assert.IsNotNull(activityStart.GetTagItem(TraceConstants.ActivityTimeoutIdTag));
         Assert.HasCount(2, activityStart.Events);
         Assert.IsTrue(activityStart.Events.All(e =>
-            (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepTimeout(name, runId.ToString(), timeoutActivityName))))
+            (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepEnd(name, runId.ToString(), timeoutActivityName))))
             || (Equals(e.Name, TraceConstants.MessageDecoded) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageContentHeaderTag) && Equals(t.Value, "application/json")))
         ));
         Assert.HasCount(1, activityStart.Links);
@@ -194,7 +194,7 @@ public class TelemetryTests
         Assert.IsNotNull(activityStart.GetTagItem(TraceConstants.ActivityIdTag));
         Assert.HasCount(1, activityStart.Events);
         Assert.IsTrue(activityStart.Events.All(e =>
-            Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepError(name, runId.ToString(), notImplementedName)))
+            Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepEnd(name, runId.ToString(), notImplementedName)))
         ));
         Assert.HasCount(1, activityStart.Links);
         lnk = activityStart.Links.First();

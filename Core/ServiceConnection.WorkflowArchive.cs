@@ -28,8 +28,6 @@ internal partial class ServiceConnection
             subjectMapper.WorkflowDelayEnd(message.WorkflowName, message.WorkflowId),
             subjectMapper.WorkflowStepStart(message.WorkflowName, message.WorkflowId, "*"),
             subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*"),
-            subjectMapper.WorkflowStepError(message.WorkflowName, message.WorkflowId, "*"),
-            subjectMapper.WorkflowStepTimeout(message.WorkflowName, message.WorkflowId, "*"),
             subjectMapper.WorkflowStepRetry(message.WorkflowName, message.WorkflowId, "*")
         );
         await foreach(var msg in query)
@@ -71,8 +69,6 @@ internal partial class ServiceConnection
                     ));
                     break;
                 case WorkflowEventTypes.StepEnd:
-                case WorkflowEventTypes.StepError:
-                case WorkflowEventTypes.StepTimeout:
                     steps.Add(await ProduceActionAsync(eventMessage, previousMessage, retries));
                     retries.Clear();
                     break;
@@ -98,13 +94,6 @@ internal partial class ServiceConnection
 
     private async Task<WorkflowStep> ProduceActionAsync(EventMessage eventMessage, EventMessage? previousMessage, List<WorkflowStepRetry> retries)
     {
-        var stepType = (eventMessage.WorkflowEventType) switch
-        {
-            WorkflowEventTypes.StepEnd => ActivityResultStatus.Success,
-            WorkflowEventTypes.StepError => ActivityResultStatus.Failure,
-            WorkflowEventTypes.StepTimeout => ActivityResultStatus.Timeout,
-            _ => throw new InvalidOperationException()
-        };
         return new(
             WorkflowStepTypes.Action,
             eventMessage.ActivityID,
@@ -112,9 +101,9 @@ internal partial class ServiceConnection
             previousMessage!.Message.Metadata!.Value.Timestamp,
             eventMessage!.Message.Metadata!.Value.Timestamp,
             (retries.Count==0 ? null : retries.ToArray()),
-            stepType,
-            eventMessage.WorkflowEventType == WorkflowEventTypes.StepError ? System.Text.UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!) : null,
-            eventMessage.WorkflowEventType == WorkflowEventTypes.StepEnd && (eventMessage.Message.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Message.Data, eventMessage.Message.Headers) : null
+            eventMessage.WorkflowStepResultStatus,
+            eventMessage.WorkflowStepResultStatus == ActivityResultStatus.Failure ? System.Text.UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!) : null,
+            eventMessage.WorkflowStepResultStatus == ActivityResultStatus.Success && (eventMessage.Message.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Message.Data, eventMessage.Message.Headers) : null
         );
     }
 }
