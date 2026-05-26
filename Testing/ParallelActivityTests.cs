@@ -1,0 +1,308 @@
+﻿using JetFlow.Configs;
+using JetFlow.Helpers;
+using JetFlow.Interfaces;
+using JetFlow.Messages;
+using JetFlow.Serializers;
+using JetFlow.Testing.Helpers;
+using NATS.Client.Core;
+
+namespace JetFlow.Testing;
+
+[TestClass]
+public class ParallelActivityTests
+{
+    private static NatsTestHarness? natsTestHarness;
+
+    [ClassInitialize]
+    public static async Task Init(TestContext testContext)
+    {
+        natsTestHarness = new NatsTestHarness();
+        await natsTestHarness.StartAsync();
+    }
+
+    [ClassCleanup]
+    public static async Task Cleanup()
+        => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
+
+    private sealed class EmptyActivityWithInput : IActivity<string>
+    {
+        private readonly List<string?> inputs = [];
+        public List<string?> Inputs => inputs;
+        Task IActivity<string>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
+        {
+            inputs.Add(input);
+            return Task.CompletedTask;
+        }
+    }
+    private sealed class ParallelActivityWorkflowWithoutOutput : IWorkflow
+    {
+        private const int ParallelActivityCount = 10;
+        private static readonly List<string> inputs = [];
+        public static List<string> Inputs => inputs;
+        async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
+        {
+            if (inputs.Count==0)
+            {
+                for (var x = 0; x<ParallelActivityCount; x++)
+                    inputs.Add(TestsHelper.GenerateRandomString(32));
+            }
+            var results = await context.ExecuteActivitiesAsync<EmptyActivityWithInput, string>(new(inputs));
+            if (results.Count()!=ParallelActivityCount)
+                throw new Exception("Unexpected activity result count");
+            else if (results.Any(r => !Equals(r.Status, ActivityResultStatus.Success)))
+                throw new Exception("Unexpected activity failure");
+        }
+    }
+
+    [TestMethod]
+    public async Task ExecuteParalleActivitiesWithNoOutput()
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var emptyActivityWithInput = new EmptyActivityWithInput();
+        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var connectionOptions = new ConnectionOptions(natsConnection);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithoutOutput>();
+        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithInput, string>(emptyActivityWithInput);
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithoutOutput>(
+            natsConnection,
+            subjectMapper,
+            () => connection.StartWorkflowAsync<ParallelActivityWorkflowWithoutOutput>()
+        );
+
+        // Assert
+        await ((IAsyncDisposable)connection).DisposeAsync();
+        Assert.IsNotNull(result);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
+        Assert.IsNotNull(endMessage);
+        Assert.IsTrue(endMessage.IsSuccess);
+
+        //Verify
+        Assert.AreEqual(ParallelActivityWorkflowWithoutOutput.Inputs.Count, emptyActivityWithInput.Inputs.Count);
+        foreach (var input in ParallelActivityWorkflowWithoutOutput.Inputs)
+            Assert.Contains(input, emptyActivityWithInput.Inputs);
+    }
+
+    private sealed class EmptyActivityWithInputAndOutput : IActivityWithReturn<string, string>
+    {
+        private readonly List<string?> inputs = [];
+        private readonly List<string> outputs = [];
+        public List<string?> Inputs => inputs;
+        public List<string> Outputs => outputs;
+
+
+        Task<string> IActivityWithReturn<string, string>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
+        {
+            inputs.Add(input);
+            var result = TestsHelper.GenerateRandomString(32);
+            outputs.Add(result);
+            return Task.FromResult(result);
+        }
+    }
+    private sealed class ParallelActivityWorkflowWithOutput : IWorkflow
+    {
+        private const int ParallelActivityCount = 10;
+        private static readonly List<string> inputs = [];
+        private static readonly List<string> outputs = [];
+        public static List<string> Inputs => inputs;
+        public static List<string> Outputs => outputs;
+        async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
+        {
+            if (inputs.Count==0)
+            {
+                for (var x = 0; x<ParallelActivityCount; x++)
+                    inputs.Add(TestsHelper.GenerateRandomString(32));
+            }
+            var results = await context.ExecuteActivitiesAsync<EmptyActivityWithInputAndOutput, string, string>(new(inputs));
+            if (results.Count()!=ParallelActivityCount)
+                throw new Exception("Unexpected activity result count");
+            else if (results.Any(r => !Equals(r.Status, ActivityResultStatus.Success)))
+                throw new Exception("Unexpected activity failure");
+            outputs.AddRange(results.Select(r => r.Output!));
+        }
+    }
+
+    [TestMethod]
+    public async Task ExecuteParalleActivitiesWithOutput()
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var emptyActivityWithInputAndOutput = new EmptyActivityWithInputAndOutput();
+        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var connectionOptions = new ConnectionOptions(natsConnection);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>();
+        await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput);
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithOutput>(
+            natsConnection,
+            subjectMapper,
+            () => connection.StartWorkflowAsync<ParallelActivityWorkflowWithOutput>()
+        );
+
+        // Assert
+        await ((IAsyncDisposable)connection).DisposeAsync();
+        Assert.IsNotNull(result);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
+        Assert.IsNotNull(endMessage);
+        Assert.IsTrue(endMessage.IsSuccess);
+
+        //Verify
+        Assert.AreEqual(ParallelActivityWorkflowWithOutput.Inputs.Count, emptyActivityWithInputAndOutput.Inputs.Count);
+        foreach (var input in ParallelActivityWorkflowWithOutput.Inputs)
+            Assert.Contains(input, emptyActivityWithInputAndOutput.Inputs);
+
+        Assert.AreEqual(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs.Count);
+        foreach (var output in ParallelActivityWorkflowWithOutput.Outputs)
+            Assert.Contains(output, emptyActivityWithInputAndOutput.Outputs);
+    }
+
+    private sealed class EmptyActivityWithProblems : IActivity<string>
+    {
+        private readonly List<string?> inputs = [];
+        public List<string?> Inputs => inputs;
+        async Task IActivity<string>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
+        {
+            inputs.Add(input);
+            if (inputs.Count == 3 || inputs.Count==5)
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            else if (inputs.Count==4 || inputs.Count==6)
+                throw new Exception("Simulated error occured");
+        }
+    }
+    private sealed class ParallelActivityWorkflowWithProblems : IWorkflow
+    {
+        private const int ParallelActivityCount = 10;
+        private static readonly List<string> inputs = [];
+        public static List<string> Inputs => inputs;
+        async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
+        {
+            if (inputs.Count==0)
+            {
+                for (var x = 0; x<ParallelActivityCount; x++)
+                    inputs.Add(TestsHelper.GenerateRandomString(32));
+            }
+            var results = await context.ExecuteActivitiesAsync<EmptyActivityWithProblems, string>(new(inputs)
+            {
+                Timeouts = new(AttemptTimeout: TimeSpan.FromSeconds(3))
+            });
+            if (results.Count()!=ParallelActivityCount)
+                throw new Exception("Unexpected activity result count");
+        }
+    }
+
+    [TestMethod]
+    [DataRow(true, false, DisplayName = "Error on activity timeout enabled, error on activity failure disabled")]
+    [DataRow(false, true, DisplayName = "Error on activity timeout disabled, error on activity failure enabled")]
+    [DataRow(true, true, DisplayName = "Error on activity timeout enabled, error on activity failure enabled")]
+    public async Task ExecuteParalleActivitiesWithProblems(bool errorOnTimeout, bool errorOnFailure)
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var emptyActivityToTimeout = new EmptyActivityWithProblems();
+        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var connectionOptions = new ConnectionOptions(natsConnection);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithProblems>(new()
+        {
+            ErrorOnActivityTimeout=errorOnTimeout,
+            ErrorOnActivityFailure=errorOnFailure
+        });
+        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithProblems, string>(emptyActivityToTimeout);
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithProblems>(
+            natsConnection,
+            subjectMapper,
+            () => connection.StartWorkflowAsync<ParallelActivityWorkflowWithProblems>()
+        );
+
+        // Assert
+        await ((IAsyncDisposable)connection).DisposeAsync();
+        Assert.IsNotNull(result);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
+        Assert.IsNotNull(endMessage);
+        Assert.IsFalse(endMessage.IsSuccess);
+        if (errorOnFailure)
+            Assert.AreEqual($"Activity {NameHelper.GetActivityName<EmptyActivityWithProblems>()} has failed with error: 3: Simulated error occured; 5: Simulated error occured; 2: Activity timed out; 4: Activity timed out", endMessage.ErrorMessage);
+        else
+            Assert.AreEqual($"Activity {NameHelper.GetActivityName<EmptyActivityWithProblems>()} has timed out: 2: Activity timed out; 4: Activity timed out", endMessage.ErrorMessage);
+
+        //Verify
+        Assert.AreEqual(ParallelActivityWorkflowWithProblems.Inputs.Count, emptyActivityToTimeout.Inputs.Count);
+        foreach (var input in ParallelActivityWorkflowWithProblems.Inputs)
+            Assert.Contains(input, emptyActivityToTimeout.Inputs);
+    }
+
+    private sealed class ParallelActivityWorkflowWithLargeNumberOfCalls : IWorkflow
+    {
+        private const int ParallelActivityCount = 1002;
+        private static readonly List<string> inputs = [];
+        public static List<string> Inputs => inputs;
+        async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
+        {
+            if (inputs.Count==0)
+            {
+                for (var x = 0; x<ParallelActivityCount; x++)
+                    inputs.Add(TestsHelper.GenerateRandomString(32));
+            }
+            var results = await context.ExecuteActivitiesAsync<EmptyActivityWithInput, string>(new(inputs));
+            if (results.Count()!=ParallelActivityCount)
+                throw new Exception("Unexpected activity result count");
+            else if (results.Any(r => !Equals(r.Status, ActivityResultStatus.Success)))
+                throw new Exception("Unexpected activity failure");
+        }
+    }
+
+    [TestMethod]
+    public async Task ExecuteParalleActivitiesWithLargeNumberOfCalls()
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var emptyActivityWithInput = new EmptyActivityWithInput();
+        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var connectionOptions = new ConnectionOptions(natsConnection);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>();
+        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithInput, string>(emptyActivityWithInput);
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithLargeNumberOfCalls>(
+            natsConnection,
+            subjectMapper,
+            () => connection.StartWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>()
+        );
+
+        // Assert
+        await ((IAsyncDisposable)connection).DisposeAsync();
+        Assert.IsNotNull(result);
+        var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
+        Assert.IsNotNull(endMessage);
+        Assert.IsTrue(endMessage.IsSuccess);
+
+        //Verify
+        Assert.AreEqual(ParallelActivityWorkflowWithLargeNumberOfCalls.Inputs.Count, emptyActivityWithInput.Inputs.Count);
+        foreach (var input in ParallelActivityWorkflowWithLargeNumberOfCalls.Inputs)
+            Assert.Contains(input, emptyActivityWithInput.Inputs);
+    }
+}

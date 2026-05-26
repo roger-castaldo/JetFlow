@@ -7,10 +7,8 @@ namespace JetFlow;
 
 internal partial class ServiceConnection
 {
-    private async ValueTask TransmitStartActivityMessages<TActivity>(uint stepIndex, ActivityExecutionRequest options, byte[] data, NatsHeaders? headers, EventMessage message, TimeSpan? timeout, CancellationToken cancellationToken)
+    private NatsHeaders CreateWorkflowActivityStartHeaders(string activityName, uint stepIndex, ActivityExecutionRequest options, byte[] data, NatsHeaders? headers, EventMessage message, TimeSpan? timeout)
     {
-        var activityName = NameHelper.GetActivityName<TActivity>();
-        using var activity = TraceHelper.StartWorkflowStep(message, NameHelper.GetActivityName<TActivity>(), stepIndex.ToString());
         headers??= [];
         headers.Add(Constants.ActivityIDHeader, stepIndex.ToString());
         if (options.Retries!=null)
@@ -28,30 +26,47 @@ internal partial class ServiceConnection
             headers.Add(Constants.ActivityTimeoutHeader, options.Timeouts.AttemptTimeout.ToString());
         if (timeout.HasValue)
             headers.Add(Constants.ActivityOverallTimeoutHeader, timeout.Value.ToString());
-        await connection.PublishMessageAsync(new(
+        return headers;
+    }
+
+    private PublishMessage CreateWorkflowActivityStartMessage(string activityName, uint stepIndex, byte[] data, NatsHeaders headers, EventMessage message,uint? idx=null)
+        => new(
                 data,
                 subjectMapper.WorkflowStepStart(message.WorkflowName, message.WorkflowId, activityName),
                 message.InjectHeaders(headers),
-                $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-start"
-            ), cancellationToken: cancellationToken);
+                $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-start{idx}"
+            );
+
+    private IEnumerable<PublishMessage> CreateActivityStartMessages(string activityName, uint stepIndex, ActivityExecutionRequest options, byte[] data, NatsHeaders headers, EventMessage message, TimeSpan? timeout, uint? idx = null)
+    {
+        var activityInstanceId = Guid.NewGuid().ToString();
         IEnumerable<PublishMessage> messages = [new InternalNatsConnection.PublishMessage(
                 data,
-                subjectMapper.ActivityStart(activityName, message.WorkflowName, message.WorkflowId),
+                subjectMapper.ActivityStart(activityName, message.WorkflowName, message.WorkflowId, activityInstanceId),
                 message.InjectHeaders(headers),
-                $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-start"
+                $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-start{idx}"
             )
         ];
         if (timeout.HasValue)
             messages = messages.Append(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                     data,
-                    subjectMapper.ActivityTimer(activityName, message.WorkflowName, message.WorkflowId),
+                    subjectMapper.ActivityTimer(activityName, message.WorkflowName, message.WorkflowId, activityInstanceId),
                     message.InjectHeaders(headers),
-                    $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-timer",
+                    $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-timer{idx}",
                     timeout.Value,
-                    subjectMapper.ActivityTimeout(activityName, message.WorkflowName, message.WorkflowId),
+                    subjectMapper.ActivityTimeout(activityName, message.WorkflowName, message.WorkflowId, activityInstanceId),
                     timeout.Value.Add(options.Timeouts?.AttemptTimeout ?? TimeSpan.Zero)
                 ));
-        await connection.PublishMessagesAsync(messages, cancellationToken);
+        return messages;
+    }
+
+    private async ValueTask TransmitStartActivityMessages<TActivity>(uint stepIndex, ActivityExecutionRequest options, byte[] data, NatsHeaders? headers, EventMessage message, TimeSpan? timeout, CancellationToken cancellationToken)
+    {
+        var activityName = NameHelper.GetActivityName<TActivity>();
+        using var activity = TraceHelper.StartWorkflowStep(message, NameHelper.GetActivityName<TActivity>(), stepIndex.ToString());
+        headers = CreateWorkflowActivityStartHeaders(activityName, stepIndex, options, data, headers, message, timeout);
+        await connection.PublishMessageAsync(CreateWorkflowActivityStartMessage(activityName, stepIndex, data, headers, message), cancellationToken: cancellationToken);
+        await connection.PublishMessagesAsync(CreateActivityStartMessages(activityName, stepIndex, options, data, headers, message, timeout), cancellationToken);
     }
 
     public async ValueTask RetryActivityAsync(RetryTypes retryType, EventMessage message, CancellationToken cancellationToken)
@@ -60,7 +75,7 @@ internal partial class ServiceConnection
             subjectMapper.ActivityQueueStream,
             new()
             {
-                Filter=subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId),
+                Filter=subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId, message.ActivityInstanceID!),
             }, cancellationToken: cancellationToken);
         await connection.PublishMessageAsync(new(
                 UTF8Encoding.UTF8.GetBytes(retryType.ToString()),
@@ -74,20 +89,21 @@ internal partial class ServiceConnection
             .Append(new(Constants.ActivityAttemptHeader, (message.ActivityAttempt + 1).ToString()));
         var timeout = (message.Message.Headers?.TryGetValue(Constants.ActivityOverallTimeoutHeader, out var timeoutStr)??false) && TimeSpan.TryParse(timeoutStr, out var timeoutVal) ? timeoutVal : (TimeSpan?)null;
         List<PublishMessage> messages = [];
+        var activityInstanceId = Guid.NewGuid().ToString();
         if (message.RetryConfiguration?.DelayBetween!=null)
             messages.Add(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                         message.Message.Data?? [],
-                        subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId),
+                        subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId, activityInstanceId),
                         new(headers.ToDictionary()),
                         $"{message.ActivityName}-{message.WorkflowId}-start-attempt{message.ActivityAttempt}", 
                         message.RetryConfiguration.DelayBetween.Value,
-                        subjectMapper.ActivityStart(message.ActivityName!, message.WorkflowName, message.WorkflowId),
+                        subjectMapper.ActivityStart(message.ActivityName!, message.WorkflowName, message.WorkflowId, activityInstanceId),
                         (timeout.HasValue ? timeout.Value.Add(message.RetryConfiguration.DelayBetween.Value) : null)
                     ));
         else
             messages.Add(new InternalNatsConnection.PublishMessage(
                     message.Message.Data?? [],
-                    subjectMapper.ActivityStart(message.ActivityName!, message.WorkflowName, message.WorkflowId),
+                    subjectMapper.ActivityStart(message.ActivityName!, message.WorkflowName, message.WorkflowId, activityInstanceId),
                     new(headers.ToDictionary()),
                     $"{message.ActivityName}-{message.WorkflowId}-start-attempt{message.ActivityAttempt}",
                     timeout
@@ -95,11 +111,11 @@ internal partial class ServiceConnection
         if (timeout.HasValue)
             messages.Add(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                         message.Message.Data?? [],
-                        subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId),
+                        subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId, activityInstanceId),
                         new(headers.ToDictionary()),
                         $"{message.ActivityName}-{message.WorkflowId}-timer-attempt{message.ActivityAttempt}",
                         timeout.Value.Add(message.RetryConfiguration?.DelayBetween.HasValue==true ? message.RetryConfiguration.DelayBetween.Value : TimeSpan.Zero),
-                        subjectMapper.ActivityTimeout(message.ActivityName!, message.WorkflowName, message.WorkflowId)
+                        subjectMapper.ActivityTimeout(message.ActivityName!, message.WorkflowName, message.WorkflowId, activityInstanceId)
                     ));
         await connection.PublishMessagesAsync(messages, cancellationToken);
     }
@@ -109,6 +125,28 @@ internal partial class ServiceConnection
     {
         var (data, headers) = await messageSerializer.EncodeAsync<TInput>(executionRequest.Input);
         await TransmitStartActivityMessages<TActivity>(stepIndex, executionRequest, data, headers, message, executionRequest.Timeouts?.OverallTimeout, cancellationToken);
+    }
+
+    public async ValueTask StartActivitiesAsync<TActivity, TInput>(uint stepIndex, ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, EventMessage message, CancellationToken cancellationToken)
+    {
+        var activityName = NameHelper.GetActivityName<TActivity>();
+        uint idx = 0;
+        var cnt = executionRequest.Input?.Count()??0;
+        var workflowMessages = new List<InternalNatsConnection.PublishMessage>();
+        var activityMessages = new List<InternalNatsConnection.PublishMessage>();
+        foreach(var input in executionRequest.Input??Array.Empty<TInput>())
+        {
+            var (data, headers) = await messageSerializer.EncodeAsync<TInput>(input);
+            headers.Add(Constants.ParalellActivityIndexHeader, idx.ToString());
+            headers.Add(Constants.ParallelActivityCountHeader, cnt.ToString());
+            headers = CreateWorkflowActivityStartHeaders(activityName, stepIndex, executionRequest, data, headers, message, executionRequest.Timeouts?.OverallTimeout);
+            workflowMessages.Add(CreateWorkflowActivityStartMessage(activityName, stepIndex, data, headers, message, idx));
+            activityMessages.AddRange(CreateActivityStartMessages(activityName, stepIndex, executionRequest, data, headers, message, executionRequest.Timeouts?.OverallTimeout, idx));
+            idx++;
+        }
+        using var activity = TraceHelper.StartWorkflowStep(message, NameHelper.GetActivityName<TActivity>(), stepIndex.ToString());
+        await connection.PublishMessagesAsync(workflowMessages, cancellationToken);
+        await connection.PublishMessagesAsync(activityMessages, cancellationToken);
     }
 
     private static NatsHeaders AppendActivityId(NatsHeaders? headers, EventMessage message)
@@ -125,13 +163,13 @@ internal partial class ServiceConnection
             subjectMapper.ActivityQueueStream,
             new()
             {
-                Filter=subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId),
+                Filter=subjectMapper.ActivityTimer(message.ActivityName!, message.WorkflowName, message.WorkflowId, message.ActivityInstanceID!),
             }, cancellationToken: cancellationToken);
         await connection.PublishMessageAsync(new(
                 data,
                 subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, message.ActivityName!),
                 headers,
-                $"{message.WorkflowName}-{message.WorkflowId}-{message.ActivityName}-{message.ActivityID}-end"
+                $"{message.WorkflowName}-{message.WorkflowId}-{message.ActivityName}-{message.ActivityID}-end{message.ParallelActivityIndex}"
             ), cancellationToken);
     }
 
@@ -172,7 +210,7 @@ internal partial class ServiceConnection
 
     #region locks
     private static string GetTimerKey(EventMessage message)
-        => $"{message.WorkflowName}/{message.WorkflowId}/{message.ActivityName}/{message.ActivityID}/attempt{message.ActivityAttempt}";
+        => $"{message.WorkflowName}/{message.WorkflowId}/{message.ActivityName}/{message.ActivityInstanceID}/attempt{message.ActivityAttempt}";
     public async ValueTask MarkActivityDoneInStore(EventMessage message, CancellationToken cancellationToken)
     {
         await timerStore.PutAsync<byte[]>($"{GetTimerKey(message)}/done", [], cancellationToken: cancellationToken);
@@ -203,8 +241,19 @@ internal partial class ServiceConnection
                     hasAny=true;
                     if ((msg.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false) && Equals(message.ActivityID, uint.Parse(activityId.ToString())))
                     {
-                        isDone=true;
-                        break;
+                        if (message.ParallelActivityIndex.HasValue)
+                        {
+                            if ((msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var parallelIdx)??false) && Equals(message.ParallelActivityIndex.ToString(), parallelIdx.ToString()))
+                            {
+                                isDone=true;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            isDone=true;
+                            break;
+                        }
                     }
                 }
             }

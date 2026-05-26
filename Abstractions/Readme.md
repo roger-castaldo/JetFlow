@@ -69,6 +69,8 @@
 - [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow')
   - [ExecuteAsync(context)](#M-JetFlow-Interfaces-IWorkflow-ExecuteAsync-JetFlow-Interfaces-IWorkflowContext- 'JetFlow.Interfaces.IWorkflow.ExecuteAsync(JetFlow.Interfaces.IWorkflowContext)')
 - [IWorkflowContext](#T-JetFlow-Interfaces-IWorkflowContext 'JetFlow.Interfaces.IWorkflowContext')
+  - [ExecuteActivitiesAsync\`\`2(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``2-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}}- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivitiesAsync``2(JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``1}})')
+  - [ExecuteActivitiesAsync\`\`3(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``3-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}}- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivitiesAsync``3(JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``2}})')
   - [ExecuteActivityAsync\`\`1(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``1-JetFlow-ActivityExecutionRequest- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``1(JetFlow.ActivityExecutionRequest)')
   - [ExecuteActivityAsync\`\`2(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest{``1}- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``2(JetFlow.ActivityExecutionRequest{``1})')
   - [ExecuteActivityAsync\`\`2(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``2(JetFlow.ActivityExecutionRequest)')
@@ -1109,6 +1111,55 @@ JetFlow.Interfaces
 ##### Summary
 
 Used to execute activities and wait for a specified amount of time within a workflow. This interface is typically passed as a parameter to the workflow's main method, allowing the workflow to interact with the execution environment and manage its activities effectively.
+
+<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``2-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}}-'></a>
+### ExecuteActivitiesAsync\`\`2(executionRequest) `method`
+
+##### Summary
+
+Executes the specified activity asynchronously multiple times using the provided inputs and execution request, and returns the results of the activities.
+
+##### Returns
+
+A ValueTask that represents the asynchronous operation. The result contains the outcomes of the executed activities.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| executionRequest | [JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{\`\`1}}](#T-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}} 'JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``1}}') | The request containing the inputs and context information for the activity execution. Cannot be null. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TActivity | The type of activity to execute. Must implement IActivity<TInput>. |
+| TInput | The type of input required by the activity. |
+
+<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``3-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}}-'></a>
+### ExecuteActivitiesAsync\`\`3(executionRequest) `method`
+
+##### Summary
+
+Executes the specified activity asynchronously multiple times using the provided inputs and execution request, and returns the results of the activities.
+
+##### Returns
+
+A ValueTask that represents the asynchronous operation. The result contains the outcomes of the executed activities.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| executionRequest | [JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{\`\`2}}](#T-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}} 'JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``2}}') | The request containing the inputs and context information for the activity execution. Cannot be null. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TActivity | The type of activity to execute. Must implement IActivityWithReturn<TOutput, TInput>. |
+| TOutput | The type of the value returned by the activity. |
+| TInput | The type of input required by the activity. |
 
 <a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``1-JetFlow-ActivityExecutionRequest-'></a>
 ### ExecuteActivityAsync\`\`1(executionRequest) `method`

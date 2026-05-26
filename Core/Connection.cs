@@ -121,7 +121,7 @@ public static class Connection
                     new($"jetflow_activity_timeouts")
                     {
                         DurableName = $"jetflow_activity_timeouts",
-                        FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*"),
+                        FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*", "*"),
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     },
                     CancellationToken.None
@@ -147,7 +147,7 @@ public static class Connection
                     new($"act_{NameHelper.GetActivityName<TWorkflowActivity>()}")
                     {
                         DurableName= $"act_{NameHelper.GetActivityName<TWorkflowActivity>()}",
-                        FilterSubject = subjectMapper.ActivityStart(NameHelper.GetActivityName<TWorkflowActivity>(), "*", "*"),
+                        FilterSubject = subjectMapper.ActivityStart(NameHelper.GetActivityName<TWorkflowActivity>(), "*", "*", "*"),
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     },
                     cancellationToken

@@ -6,7 +6,6 @@ namespace JetFlow.Testing.Helpers;
 internal class NatsTestHarness : IAsyncDisposable
 {
     private readonly NatsContainer container = new NatsBuilder("nats:latest")
-            .WithCommand("-js") // enable JetStream"
             .Build();
 
     public NatsOpts Options { get; private set; } = default!;

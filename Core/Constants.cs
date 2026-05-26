@@ -18,6 +18,8 @@ internal static class Constants
     public const string ActivityIDHeader = $"{HeaderBase}activity-id";
     public const string SchedulerSourceID = $"{HeaderBase}scheduler-id";
     public const string ActivityResultHeader = $"{HeaderBase}activity-result";
+    public const string ParalellActivityIndexHeader = $"{HeaderBase}parallel-activity-index";
+    public const string ParallelActivityCountHeader = $"{HeaderBase}parallel-activity-count";
 
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {

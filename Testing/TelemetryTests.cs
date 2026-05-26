@@ -132,7 +132,7 @@ public class TelemetryTests
             Equals(e.Name, TraceConstants.MessagePublished)
             && (
                 e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepStart(name, runId.ToString(), timeoutActivityName)))
-                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.ActivityStart(timeoutActivityName, name, runId.ToString())))
+                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.ActivityStart(timeoutActivityName, name, runId.ToString(), "*")))
             )
         ));
         Assert.HasCount(1, stepStart.Links);
@@ -175,7 +175,7 @@ public class TelemetryTests
             Equals(e.Name, TraceConstants.MessagePublished)
             && (
                 e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepStart(name, runId.ToString(), notImplementedName)))
-                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.ActivityStart(notImplementedName, name, runId.ToString())))
+                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.ActivityStart(notImplementedName, name, runId.ToString(), "*")))
             )
         ));
         Assert.HasCount(1, stepStart.Links);

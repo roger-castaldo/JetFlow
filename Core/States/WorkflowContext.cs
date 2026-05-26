@@ -87,35 +87,43 @@ internal class WorkflowContext
         return result;
     }
 
-    private ActivityResult? GetNextActivity<TActivity>()
+    private (ActivityResult? result, uint? progressIndex, uint? progressCount) GetNextActivity<TActivity>()
     {
         var nextActivityMsg = GetNextActivityMessage<TActivity>();
-        return nextActivityMsg?.WorkflowStepResultStatus switch
-        {
-            null => null,
-            ActivityResultStatus.Success => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success),
-            ActivityResultStatus.Failure => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
-            ActivityResultStatus.Timeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
-            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Message))
-        };
+        return (
+            nextActivityMsg?.WorkflowStepResultStatus switch
+            {
+                null => null,
+                ActivityResultStatus.Success => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success),
+                ActivityResultStatus.Failure => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
+                ActivityResultStatus.Timeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
+                _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Message))
+            }, 
+            nextActivityMsg?.ParallelActivityIndex,
+            nextActivityMsg?.ParallelActivityCount
+        );
     }
 
-    private async ValueTask<ActivityResult<TOutput>?> GetNextActivityAsync<TActivity, TOutput>()
+    private async ValueTask<(ActivityResult<TOutput>?, uint? progressIndex, uint? progressCount)> GetNextActivityAsync<TActivity, TOutput>()
     {
         var nextActivityMsg = GetNextActivityMessage<TActivity>();
-        return nextActivityMsg?.WorkflowStepResultStatus switch
-        {
-            null => null,
-            ActivityResultStatus.Success => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message.Data, nextActivityMsg.Message.Headers)),
-            ActivityResultStatus.Failure => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
-            ActivityResultStatus.Timeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
-            _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Message))
-        };
+        return (
+            nextActivityMsg?.WorkflowStepResultStatus switch
+            {
+                null => null,
+                ActivityResultStatus.Success => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Message.Data, nextActivityMsg.Message.Headers)),
+                ActivityResultStatus.Failure => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Message.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Message.Data) : null),
+                ActivityResultStatus.Timeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
+                _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Message.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Message))
+            },
+            nextActivityMsg?.ParallelActivityIndex,
+            nextActivityMsg?.ParallelActivityCount
+        );
     }
 
     private async ValueTask<ActivityResult> HandleNextActivity<TActivity>(Func<ValueTask> invokeCall)
     {
-        var result = GetNextActivity<TActivity>();
+        var (result,_,_) = GetNextActivity<TActivity>();
         if (result!=null)
             return result;
         await invokeCall();
@@ -130,7 +138,7 @@ internal class WorkflowContext
 
     private async ValueTask<ActivityResult<TOutput>> HandleNextActivity<TActivity, TOutput>(Func<ValueTask> invokeCall)
     {
-        var result = await GetNextActivityAsync<TActivity, TOutput>();
+        var (result,_,_) = await GetNextActivityAsync<TActivity, TOutput>();
         if (result!=null)
             return result;
         await invokeCall();
@@ -142,6 +150,42 @@ internal class WorkflowContext
 
     ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest)
         => HandleNextActivity<TActivity, TOutput>(() => serviceConnection.StartActivityAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken));
+
+    async ValueTask<IEnumerable<ActivityResult>> IWorkflowContext.ExecuteActivitiesAsync<TActivity, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest)
+    {
+        var (result, progressIndex, progressCount) = GetNextActivity<TActivity>();
+        if (result!=null)
+        {
+            var results = new List<(uint index, ActivityResult result)>();
+            results.Add((progressIndex!.Value, result!));
+            while(results.Count<progressCount)
+            {
+                (result, progressIndex, progressCount) = GetNextActivity<TActivity>();
+                results.Add((progressIndex!.Value, result!));
+            }
+            return results.OrderBy(x=>x.index).Select(x=>x.result);
+        }
+        await serviceConnection.StartActivitiesAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken);
+        throw new WorkflowSuspendedException();
+    }
+
+    async ValueTask<IEnumerable<ActivityResult<TOutput>>> IWorkflowContext.ExecuteActivitiesAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest)
+    {
+        var (result, progressIndex, progressCount) = await GetNextActivityAsync<TActivity, TOutput>();
+        if (result!=null)
+        {
+            var results = new List<(uint index, ActivityResult<TOutput> result)>();
+            results.Add((progressIndex!.Value, result!));
+            while (results.Count < progressCount)
+            {
+                (result, progressIndex, progressCount) = await GetNextActivityAsync<TActivity, TOutput>();
+                results.Add((progressIndex!.Value, result!));
+            }
+            return results.OrderBy(x => x.index).Select(x => x.result);
+        }
+        await serviceConnection.StartActivitiesAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken);
+        throw new WorkflowSuspendedException();
+    }
 
     async ValueTask IWorkflowContext.WaitAsync(TimeSpan delay)
     {
@@ -155,5 +199,38 @@ internal class WorkflowContext
         }
         await serviceConnection.StartWorkflowDelayAsync(message, delay, cancellationToken);
         throw new WorkflowSuspendedException();
+    }
+
+    internal (bool isComplete, ActivityResultStatus status, string? errorMessage, string? timeoutMessage) ExtractParallelActivityStatus()
+    {
+        List<string> errors = [];
+        List<string> timeouts = [];
+        uint cnt = 0;
+        foreach(var msg in messages.Where(m=>Equals(m.Subject, message.Message.Subject) 
+        && (m.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false)
+        && Equals(activityId.ToString(), message.ActivityID.ToString())))
+        {
+            cnt++;
+            var idx = ((msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var index)??false) ? uint.Parse(index.ToString()!) : 0);
+            if ((msg.Headers?.TryGetValue(Constants.ActivityResultHeader, out var status)??false) && Enum.TryParse<ActivityResultStatus>(status.ToString(), out var resultStatus))
+            {
+                if (resultStatus == ActivityResultStatus.Timeout)
+                    timeouts.Add($"{idx}: Activity timed out");
+                else if (resultStatus == ActivityResultStatus.Failure)
+                    errors.Add($"{idx}: {(msg.Data==null ? "Activity failed" : System.Text.Encoding.UTF8.GetString(msg.Data))}");
+            }
+        }
+        return (
+            Equals(message.ParallelActivityCount, cnt),
+            (errors.Count>0, timeouts.Count>0) switch
+            {
+                (true, false) => ActivityResultStatus.Failure,
+                (true, true)=> ActivityResultStatus.Failure | ActivityResultStatus.Timeout,
+                (false, true) => ActivityResultStatus.Timeout,
+                _ => ActivityResultStatus.Success
+            },
+            errors.Count > 0 ? string.Join("; ", errors) : null,
+            timeouts.Count > 0 ? string.Join("; ", timeouts) : null
+        );
     }
 }

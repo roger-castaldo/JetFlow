@@ -54,4 +54,23 @@ public interface IWorkflowContext
     /// execution.</returns>
     ValueTask<ActivityResult<TOutput>> ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest)
         where TActivity : IActivityWithReturn<TOutput, TInput>;
+    /// <summary>
+    /// Executes the specified activity asynchronously multiple times using the provided inputs and execution request, and returns the results of the activities.
+    /// </summary>
+    /// <typeparam name="TActivity">The type of activity to execute. Must implement IActivity&lt;TInput&gt;.</typeparam>
+    /// <typeparam name="TInput">The type of input required by the activity.</typeparam>
+    /// <param name="executionRequest">The request containing the inputs and context information for the activity execution. Cannot be null.</param>
+    /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcomes of the executed activities.</returns>
+    ValueTask<IEnumerable<ActivityResult>> ExecuteActivitiesAsync<TActivity, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest)
+        where TActivity : IActivity<TInput>;
+    /// <summary>
+    /// Executes the specified activity asynchronously multiple times using the provided inputs and execution request, and returns the results of the activities.
+    /// </summary>
+    /// <typeparam name="TActivity">The type of activity to execute. Must implement IActivityWithReturn&lt;TOutput, TInput&gt;.</typeparam>
+    /// <typeparam name="TOutput">The type of the value returned by the activity.</typeparam>
+    /// <typeparam name="TInput">The type of input required by the activity.</typeparam>
+    /// <param name="executionRequest">The request containing the inputs and context information for the activity execution. Cannot be null.</param>
+    /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcomes of the executed activities.</returns>
+    ValueTask<IEnumerable<ActivityResult<TOutput>>> ExecuteActivitiesAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest)
+        where TActivity : IActivityWithReturn<TOutput, TInput>;
 }

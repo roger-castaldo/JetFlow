@@ -19,8 +19,8 @@ internal class WorkflowSuspendedException : Exception
 
 internal class ActivityTimeoutException : TimeoutException
 {
-    internal ActivityTimeoutException(string activityName) :
-        base($"Activity {activityName} has timed out") { }
+    internal ActivityTimeoutException(string activityName, string? errorMessage) :
+        base($"Activity {activityName} has timed out{(string.IsNullOrEmpty(errorMessage) ? string.Empty : $": {errorMessage}")}") { }
 }
 
 internal class ActivityFailedException : Exception

@@ -38,12 +38,21 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                     throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
                 MetricsHelper.ProcessWorkflowMessage(message);
                 var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, message);
-                if (!string.IsNullOrEmpty(message.ActivityName))
+                var activityResultStatus = message.WorkflowStepResultStatus;
+                var errorMessage = (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && message.Message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Message.Data) : null);
+                string? timeoutMessage = null;
+                if (message.ParallelActivityCount.HasValue)
                 {
-                    if (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Timeout) && context.Options.ErrorOnActivityTimeout)
-                        throw new ActivityTimeoutException(message.ActivityName);
-                    if (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && context.Options.ErrorOnActivityFailure)
-                        throw new ActivityFailedException(message.ActivityName, message.Message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Message.Data) : string.Empty);
+                    (var isComplete, activityResultStatus, errorMessage, timeoutMessage) = context.ExtractParallelActivityStatus();
+                    if (!isComplete)
+                        throw new WorkflowSuspendedException();
+                }
+                if (!string.IsNullOrEmpty(message.ActivityName) && activityResultStatus.HasValue)
+                {
+                    if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Failure) && context.Options.ErrorOnActivityFailure)
+                        throw new ActivityFailedException(message.ActivityName, $"{errorMessage??string.Empty}{(!string.IsNullOrWhiteSpace(timeoutMessage) ? $"{(!string.IsNullOrWhiteSpace(errorMessage)?";":"")} {timeoutMessage}" : null)}");
+                    if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Timeout) && context.Options.ErrorOnActivityTimeout)
+                        throw new ActivityTimeoutException(message.ActivityName, timeoutMessage);
                 }
                 await HandleWorkflowEventAsync(context);
                 isCompleted=true;

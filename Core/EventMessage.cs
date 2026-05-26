@@ -9,10 +9,12 @@ internal record EventMessage
 {
     private static readonly string[] SharedHeaders = [
         TraceHelper.WorkflowTraceHeaderKey,
-        TraceHelper.WorkflowTraceSpanHeaderKey
+        TraceHelper.WorkflowTraceSpanHeaderKey,
+        Constants.ParalellActivityIndexHeader,
+        Constants.ParallelActivityCountHeader
     ];
     private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|config|stepstart|stepend|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
-    private static readonly Regex activitySubjectRegex = new(@"^(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    private static readonly Regex activitySubjectRegex = new(@"^(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 
     public EventMessage(INatsJSMsg<byte[]> msg)
     {
@@ -30,6 +32,7 @@ internal record EventMessage
                 throw new ArgumentException($"Invalid event subject {msg.Subject}");
             ActivityName = match.Groups["activityName"].Value;
             ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
+            ActivityInstanceID = match.Groups["activityInstance"].Value;
             if (msg.Headers!=null)
             {
                 if (msg.Headers.TryGetValue(Constants.ActivityTimeoutHeader, out var timeoutValue) && TimeSpan.TryParse(timeoutValue, out var timeSpan))
@@ -50,6 +53,10 @@ internal record EventMessage
             ActivityID = uint.Parse(activityId.ToString());
         if (msg.Headers?.TryGetValue(Constants.ActivityResultHeader, out var resultValue)??false)
             WorkflowStepResultStatus = Enum.Parse<ActivityResultStatus>(resultValue.ToString(), true);
+        if (msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var parallelIndexValue)??false)
+            ParallelActivityIndex = uint.Parse(parallelIndexValue.ToString());
+        if (msg.Headers?.TryGetValue(Constants.ParallelActivityCountHeader, out var parallelCountValue)??false)
+            ParallelActivityCount = uint.Parse(parallelCountValue.ToString());
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
         WorkflowName = match.Groups["workflowName"].Value;
         WorkflowId = match.Groups["instance"].Value;
@@ -62,9 +69,12 @@ internal record EventMessage
     public string WorkflowId { get; private init; }
     public WorkflowEventTypes? WorkflowEventType { get; private init; } = null;
     public ActivityResultStatus? WorkflowStepResultStatus { get; private init; } = null;
+    public uint? ParallelActivityIndex { get; private init; } = null;
+    public uint? ParallelActivityCount { get; private init; } = null;
     public string? ActivityName { get; private init; }
     public ActivityEventTypes? ActivityEventType { get; private init; } = null;
     public uint? ActivityID { get; private init; } = null;
+    public string? ActivityInstanceID { get; private init; } = null;
     public TimeSpan? ActivityTimeout { get; private init; } = null;
     public ushort ActivityAttempt { get; private init; } = 0;
     public ActivityRetryConfiguration? RetryConfiguration { get; private init; } = null;

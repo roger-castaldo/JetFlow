@@ -17,7 +17,7 @@ Eventually this service will include:
 * ~~Workflow Activity execution timeouts~~
 * ~~Scheduled Workflows (Delayed start/Repeate Scheduling)~~
 * Allow for multiple serializer types to be used (Json, Protobuf, etc)
-* Support for paralell execution of workflow activities (fan out/fan in)
+* ~~Support for paralell execution of workflow activities (fan out/fan in)~~
 * Support ability to handle workflow and activity message content larger than the max message size of Nats (currently 1mb) by allowing for the content to be stored in an external storage system and only a reference to it being stored in Nats
 
 
