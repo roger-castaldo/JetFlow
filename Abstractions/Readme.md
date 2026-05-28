@@ -122,10 +122,11 @@
   - [WeekDays()](#M-JetFlow-WorkflowScheduleBuilder-WeekDays 'JetFlow.WorkflowScheduleBuilder.WeekDays')
   - [WeekDaysAt(hour,minute)](#M-JetFlow-WorkflowScheduleBuilder-WeekDaysAt-System-Int32,System-Int32- 'JetFlow.WorkflowScheduleBuilder.WeekDaysAt(System.Int32,System.Int32)')
 - [WorkflowStep](#T-JetFlow-WorkflowStep 'JetFlow.WorkflowStep')
-  - [#ctor(Type,Index,Name,StartTime,EndTime,Retries,Status,ErrorMessage,Result)](#M-JetFlow-WorkflowStep-#ctor-JetFlow-WorkflowStepTypes,System-Nullable{System-UInt32},System-String,System-DateTimeOffset,System-DateTimeOffset,JetFlow-WorkflowStepRetry[],System-Nullable{JetFlow-ActivityResultStatus},System-String,System-Object- 'JetFlow.WorkflowStep.#ctor(JetFlow.WorkflowStepTypes,System.Nullable{System.UInt32},System.String,System.DateTimeOffset,System.DateTimeOffset,JetFlow.WorkflowStepRetry[],System.Nullable{JetFlow.ActivityResultStatus},System.String,System.Object)')
+  - [#ctor(Type,Index,Name,StartTime,EndTime,Retries,Input,Status,ErrorMessage,Result)](#M-JetFlow-WorkflowStep-#ctor-JetFlow-WorkflowStepTypes,System-Nullable{System-UInt32},System-String,System-DateTimeOffset,System-DateTimeOffset,JetFlow-WorkflowStepRetry[],System-Object,System-Nullable{JetFlow-ActivityResultStatus},System-String,System-Object- 'JetFlow.WorkflowStep.#ctor(JetFlow.WorkflowStepTypes,System.Nullable{System.UInt32},System.String,System.DateTimeOffset,System.DateTimeOffset,JetFlow.WorkflowStepRetry[],System.Object,System.Nullable{JetFlow.ActivityResultStatus},System.String,System.Object)')
   - [EndTime](#P-JetFlow-WorkflowStep-EndTime 'JetFlow.WorkflowStep.EndTime')
   - [ErrorMessage](#P-JetFlow-WorkflowStep-ErrorMessage 'JetFlow.WorkflowStep.ErrorMessage')
   - [Index](#P-JetFlow-WorkflowStep-Index 'JetFlow.WorkflowStep.Index')
+  - [Input](#P-JetFlow-WorkflowStep-Input 'JetFlow.WorkflowStep.Input')
   - [Name](#P-JetFlow-WorkflowStep-Name 'JetFlow.WorkflowStep.Name')
   - [Result](#P-JetFlow-WorkflowStep-Result 'JetFlow.WorkflowStep.Result')
   - [Retries](#P-JetFlow-WorkflowStep-Retries 'JetFlow.WorkflowStep.Retries')
@@ -1953,8 +1954,8 @@ Represents a single step within a workflow, including its type, timing, status, 
 | ---- | ---- | ----------- |
 | Type | [T:JetFlow.WorkflowStep](#T-T-JetFlow-WorkflowStep 'T:JetFlow.WorkflowStep') | The type of the workflow step. Specifies the operation or action performed at this step. |
 
-<a name='M-JetFlow-WorkflowStep-#ctor-JetFlow-WorkflowStepTypes,System-Nullable{System-UInt32},System-String,System-DateTimeOffset,System-DateTimeOffset,JetFlow-WorkflowStepRetry[],System-Nullable{JetFlow-ActivityResultStatus},System-String,System-Object-'></a>
-### #ctor(Type,Index,Name,StartTime,EndTime,Retries,Status,ErrorMessage,Result) `constructor`
+<a name='M-JetFlow-WorkflowStep-#ctor-JetFlow-WorkflowStepTypes,System-Nullable{System-UInt32},System-String,System-DateTimeOffset,System-DateTimeOffset,JetFlow-WorkflowStepRetry[],System-Object,System-Nullable{JetFlow-ActivityResultStatus},System-String,System-Object-'></a>
+### #ctor(Type,Index,Name,StartTime,EndTime,Retries,Input,Status,ErrorMessage,Result) `constructor`
 
 ##### Summary
 
@@ -1970,6 +1971,7 @@ Represents a single step within a workflow, including its type, timing, status, 
 | StartTime | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The date and time when the step started. |
 | EndTime | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The date and time when the step ended. |
 | Retries | [JetFlow.WorkflowStepRetry[]](#T-JetFlow-WorkflowStepRetry[] 'JetFlow.WorkflowStepRetry[]') | An array of retry attempts for this step, or null if no retries occurred. |
+| Input | [System.Object](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Object 'System.Object') | The input provided to the step, or null if no input was provided. |
 | Status | [System.Nullable{JetFlow.ActivityResultStatus}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Nullable 'System.Nullable{JetFlow.ActivityResultStatus}') | The result status of the step, or null if the status is not set. |
 | ErrorMessage | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The error message associated with the step if it failed, or null if no error occurred. |
 | Result | [System.Object](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Object 'System.Object') | The result produced by the step, or null if there is no result. |
@@ -1994,6 +1996,13 @@ The error message associated with the step if it failed, or null if no error occ
 ##### Summary
 
 The zero-based index of the step within the workflow sequence, or null if not specified.
+
+<a name='P-JetFlow-WorkflowStep-Input'></a>
+### Input `property`
+
+##### Summary
+
+The input provided to the step, or null if no input was provided.
 
 <a name='P-JetFlow-WorkflowStep-Name'></a>
 ### Name `property`

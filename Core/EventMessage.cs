@@ -9,9 +9,7 @@ internal record EventMessage
 {
     private static readonly string[] SharedHeaders = [
         TraceHelper.WorkflowTraceHeaderKey,
-        TraceHelper.WorkflowTraceSpanHeaderKey,
-        Constants.ParalellActivityIndexHeader,
-        Constants.ParallelActivityCountHeader
+        TraceHelper.WorkflowTraceSpanHeaderKey
     ];
     private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|config|stepstart|stepend|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));

@@ -14,8 +14,7 @@ internal partial class ServiceConnection
         DateTimeOffset? start=null;
         DateTimeOffset? end=null;
         WorkflowEnd? workflowEnd=null;
-        EventMessage? previousMessage=null;
-        List<WorkflowStepRetry> retries = [];
+        List<EventMessage> events = [];
         object? arguments = null;
         List<WorkflowStep> steps = [];
         await using var query = await QueryStreamAsync(
@@ -50,18 +49,18 @@ internal partial class ServiceConnection
                     break;
                 case WorkflowEventTypes.DelayStart:
                 case WorkflowEventTypes.StepStart:
-                    previousMessage = eventMessage;
-                    break;
                 case WorkflowEventTypes.StepRetry:
-                    retries.Add(new(Enum.Parse<RetryTypes>(UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!)), eventMessage.Message.Metadata!.Value.Timestamp));
+                    events.Add(eventMessage);
                     break;
                 case WorkflowEventTypes.DelayEnd:
+                    var startMessage = FindMatchingMessages(eventMessage, ref events).FirstOrDefault(e => Equals(e.WorkflowEventType, WorkflowEventTypes.DelayStart));
                     steps.Add(new(
                         WorkflowStepTypes.Delay,
                         null,
                         null,
-                        previousMessage!.Message.Metadata!.Value.Timestamp,
+                        startMessage!.Message.Metadata!.Value.Timestamp,
                         eventMessage!.Message.Metadata!.Value.Timestamp,
+                        null,
                         null,
                         null,
                         null,
@@ -69,8 +68,10 @@ internal partial class ServiceConnection
                     ));
                     break;
                 case WorkflowEventTypes.StepEnd:
+                    var messages = FindMatchingMessages(eventMessage, ref events);
+                    var previousMessage = messages.FirstOrDefault(e => Equals(e.WorkflowEventType, WorkflowEventTypes.StepStart));
+                    var retries = messages.Where(e => Equals(e.WorkflowEventType, WorkflowEventTypes.StepRetry)).Select(e => new WorkflowStepRetry(Enum.Parse<RetryTypes>(UTF8Encoding.UTF8.GetString(e.Message.Data!)), e.Message.Metadata!.Value.Timestamp)).ToArray();
                     steps.Add(await ProduceActionAsync(eventMessage, previousMessage, retries));
-                    retries.Clear();
                     break;
             }
         }
@@ -92,7 +93,16 @@ internal partial class ServiceConnection
         );
     }
 
-    private async Task<WorkflowStep> ProduceActionAsync(EventMessage eventMessage, EventMessage? previousMessage, List<WorkflowStepRetry> retries)
+    private static IEnumerable<EventMessage> FindMatchingMessages(EventMessage eventMessage, ref List<EventMessage> events)
+    {
+        var result = events.Where(e => Equals(e.ActivityID, eventMessage.ActivityID)
+                    && Equals(e.ParallelActivityIndex, eventMessage.ParallelActivityIndex)).ToArray();
+        events.RemoveAll(e => Equals(e.ActivityID, eventMessage.ActivityID)
+                    && Equals(e.ParallelActivityIndex, eventMessage.ParallelActivityIndex));
+        return result;
+    }
+
+    private async Task<WorkflowStep> ProduceActionAsync(EventMessage eventMessage, EventMessage? previousMessage, IEnumerable<WorkflowStepRetry> retries)
     {
         return new(
             WorkflowStepTypes.Action,
@@ -100,7 +110,8 @@ internal partial class ServiceConnection
             eventMessage.ActivityName,
             previousMessage!.Message.Metadata!.Value.Timestamp,
             eventMessage!.Message.Metadata!.Value.Timestamp,
-            (retries.Count==0 ? null : retries.ToArray()),
+            (retries.Any() ? retries.ToArray() : null),
+            ((previousMessage?.Message.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(previousMessage!.Message.Data, previousMessage!.Message.Headers) : null),
             eventMessage.WorkflowStepResultStatus,
             eventMessage.WorkflowStepResultStatus == ActivityResultStatus.Failure ? System.Text.UTF8Encoding.UTF8.GetString(eventMessage.Message.Data!) : null,
             eventMessage.WorkflowStepResultStatus == ActivityResultStatus.Success && (eventMessage.Message.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Message.Data, eventMessage.Message.Headers) : null

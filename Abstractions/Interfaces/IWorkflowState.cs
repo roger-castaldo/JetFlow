@@ -15,12 +15,12 @@ public interface IWorkflowState
     /// <typeparam name="TWorkflowActivity">The type of the workflow activity whose result is being retrieved.</typeparam>
     /// <typeparam name="TValue">The type of the value returned by the activity.</typeparam>
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the value of the completed activity, or null if the activity has not been completed or did not produce a result.</returns>
-    ValueTask<TValue?> GetActivityResultValueAsync<TWorkflowActivity, TValue>();
+    ValueTask<IEnumerable<TValue?>?> GetActivityResultValueAsync<TWorkflowActivity, TValue>();
     /// <summary>
     /// Called by workflow activities to retrieve the result value of a previously completed activity by specifying the activity's name. This method is also generic, allowing the caller to specify the expected type of the result value. Similar to the previous method, it returns a nullable value, indicating that the result may not be present if the activity has not been completed or if it did not produce a result. This provides flexibility for activities to access results based on activity names rather than types, which can be useful in scenarios where multiple activities of the same type are executed within a workflow.
     /// </summary>
     /// <typeparam name="TValue">The type of the value returned by the activity.</typeparam>
     /// <param name="activityName">The name of the activity whose result is being retrieved.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the value of the completed activity, or null if the activity has not been completed or did not produce a result.</returns>
-    ValueTask<TValue?> GetActivityResultValueAsync<TValue>(string activityName);
+    ValueTask<IEnumerable<TValue?>?> GetActivityResultValueAsync<TValue>(string activityName);
 }

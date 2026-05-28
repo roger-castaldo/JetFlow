@@ -5,6 +5,9 @@ using JetFlow.Messages;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
+using NATS.Client.JetStream;
+using NATS.Net;
+using System.Text.Json;
 
 namespace JetFlow.Testing;
 
@@ -167,6 +170,70 @@ public class ParallelActivityTests
         Assert.AreEqual(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs.Count);
         foreach (var output in ParallelActivityWorkflowWithOutput.Outputs)
             Assert.Contains(output, emptyActivityWithInputAndOutput.Outputs);
+    }
+
+    [TestMethod]
+    public async Task ExecuteParalleActivitiesWithOutputToArchive()
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var runId = Guid.Empty;
+        var emptyActivityWithInputAndOutput = new EmptyActivityWithInputAndOutput();
+        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var jsContext = new NatsJSContext(natsConnection);
+        var objContext = jsContext.CreateObjectStoreContext();
+        var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>(new() { CompletionAction = WorkflowCompletionActions.ArchiveThenNothing });
+        await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput);
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForArchive<ParallelActivityWorkflowWithOutput>(
+            natsConnection,
+            subjectMapper,
+            async () =>
+            {
+                runId = await connection.StartWorkflowAsync<ParallelActivityWorkflowWithOutput>(CancellationToken.None);
+                return runId;
+            }
+        );
+
+        // Assert
+        await ((IAsyncDisposable)connection).DisposeAsync();
+        Assert.IsNotNull(result);
+        
+        //Verify
+        Assert.AreEqual(ParallelActivityWorkflowWithOutput.Inputs.Count, emptyActivityWithInputAndOutput.Inputs.Count);
+        foreach (var input in ParallelActivityWorkflowWithOutput.Inputs)
+            Assert.Contains(input, emptyActivityWithInputAndOutput.Inputs);
+
+        Assert.AreEqual(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs.Count);
+        foreach (var output in ParallelActivityWorkflowWithOutput.Outputs)
+            Assert.Contains(output, emptyActivityWithInputAndOutput.Outputs);
+
+        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>()}/{runId}");
+        var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
+        Assert.AreEqual(runId, archive.ID);
+        Assert.IsNull(archive.SchedulerId);
+        Assert.IsTrue(archive.IsSuccessful);
+        Assert.AreEqual(NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>(), archive.Name);
+        Assert.AreEqual(WorkflowCompletionActions.ArchiveThenNothing, archive.Options.CompletionAction);
+        Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
+        Assert.IsNotEmpty(archive.Steps);
+        Assert.AreEqual(emptyActivityWithInputAndOutput.Inputs.Count, archive.Steps.Count());
+        var stepIndex = archive.Steps.First().Index;
+        Assert.IsTrue(archive.Steps.All(s => 
+            Equals(s.Name, NameHelper.GetActivityName<EmptyActivityWithInputAndOutput>())
+            && Equals(s.Status, ActivityResultStatus.Success)
+            && Equals(stepIndex, s.Index)
+            && emptyActivityWithInputAndOutput.Inputs.Contains(s.Input?.ToString())
+            && emptyActivityWithInputAndOutput.Outputs.Contains(s.Result?.ToString())
+        ));
     }
 
     private sealed class EmptyActivityWithProblems : IActivity<string>

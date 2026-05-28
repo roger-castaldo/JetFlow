@@ -3,6 +3,7 @@ using JetFlow.Interfaces;
 using JetFlow.Messages;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
+using Microsoft.Extensions.Configuration;
 using NATS.Client.Core;
 
 namespace JetFlow.Testing;
@@ -135,7 +136,7 @@ public class ActivityExecutionTests
 
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
-            RecievedString = await state.GetActivityResultValueAsync<GenerateRandomString, string>();
+            RecievedString = (await state.GetActivityResultValueAsync<GenerateRandomString, string>())?.FirstOrDefault();
 
         }
     }
@@ -145,7 +146,7 @@ public class ActivityExecutionTests
 
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
-            RecievedString = await state.GetActivityResultValueAsync<string>("GenerateRandomString");
+            RecievedString = (await state.GetActivityResultValueAsync<string>("GenerateRandomString"))?.FirstOrDefault();
         }
     }
     private sealed class ActivityContextWorkflow : IWorkflow
@@ -195,5 +196,80 @@ public class ActivityExecutionTests
         Assert.IsFalse(string.IsNullOrWhiteSpace(ActivityContextWorkflow.GeneratedString));
         Assert.AreEqual(ActivityContextWorkflow.GeneratedString, recieveRandomStringByClass.RecievedString);
         Assert.AreEqual(ActivityContextWorkflow.GeneratedString, recieveRandomStringByName.RecievedString);
+    }
+
+    private sealed class GenerateRandomStringAtLength : IActivityWithReturn<string, int>
+    {
+        Task<string> IActivityWithReturn<string, int>.ExecuteAsync(int input, IWorkflowState state, CancellationToken cancellationToken)
+            =>Task.FromResult(TestsHelper.GenerateRandomString(input));
+    }
+    private sealed class RecieveRandomStringsFromContextByClass : IActivity
+    {
+        public IEnumerable<string?>? RecievedStrings { get; private set; } = null;
+
+        async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
+        {
+            RecievedStrings = await state.GetActivityResultValueAsync<GenerateRandomStringAtLength, string>();
+
+        }
+    }
+    private sealed class RecieveRandomStringsFromContextByName : IActivity
+    {
+        public IEnumerable<string?>? RecievedStrings { get; private set; } = null;
+
+        async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
+        {
+            RecievedStrings = await state.GetActivityResultValueAsync<string>("GenerateRandomStringAtLength");
+        }
+    }
+    private sealed class ParallelActivityContextWorkflow : IWorkflow
+    {
+        public static IEnumerable<string?>? GeneratedStrings { get; private set; } = null;
+
+        async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
+        {
+            GeneratedStrings = (await context.ExecuteActivitiesAsync<GenerateRandomStringAtLength, string, int>(new([ 16, 32, 64]))).Select(r => r.Output);
+            _ = await context.ExecuteActivityAsync<RecieveRandomStringsFromContextByClass>(new());
+            _ = await context.ExecuteActivityAsync<RecieveRandomStringsFromContextByName>(new());
+        }
+    }
+
+    [TestMethod]
+    public async Task TestParallelActivityContextVariables()
+    {
+        Assert.IsNotNull(natsTestHarness);
+        //Arrange
+        var generateRandomString = new GenerateRandomStringAtLength();
+        var recieveRandomStringByClass = new RecieveRandomStringsFromContextByClass();
+        var recieveRandomStringByName = new RecieveRandomStringsFromContextByName();
+        var subjectMapper = new SubjectMapper(null);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var connectionOptions = new ConnectionOptions(natsConnection);
+        var messageSerializer = new MessageSerializer(connectionOptions);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<ParallelActivityContextWorkflow>();
+        await connection.RegisterWorkflowActivityWithReturnAsync<GenerateRandomStringAtLength, string, int>(generateRandomString, CancellationToken.None);
+        await connection.RegisterWorkflowActivityAsync<RecieveRandomStringsFromContextByClass>(recieveRandomStringByClass, CancellationToken.None);
+        await connection.RegisterWorkflowActivityAsync<RecieveRandomStringsFromContextByName>(recieveRandomStringByName, CancellationToken.None);
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityContextWorkflow>(natsConnection, subjectMapper,
+            () => connection.StartWorkflowAsync<ParallelActivityContextWorkflow>(CancellationToken.None)
+        );
+
+        // Assert
+        await ((IAsyncDisposable)connection).DisposeAsync();
+        Assert.IsNotNull(result);
+        var endResult = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
+
+        //Verify
+        Assert.IsNotNull(endResult);
+        Assert.IsTrue(endResult.IsSuccess);
+        Assert.IsNotNull(ParallelActivityContextWorkflow.GeneratedStrings);
+        Assert.IsNotNull(recieveRandomStringByClass.RecievedStrings);
+        Assert.IsNotNull(recieveRandomStringByName.RecievedStrings);
+        CollectionAssert.AreEqual(ParallelActivityContextWorkflow.GeneratedStrings.ToArray(), recieveRandomStringByClass.RecievedStrings.ToArray());
+        CollectionAssert.AreEqual(ParallelActivityContextWorkflow.GeneratedStrings.ToArray(), recieveRandomStringByName.RecievedStrings.ToArray());
     }
 }

@@ -53,6 +53,7 @@ public record struct WorkflowStepRetry(
 /// <param name="StartTime">The date and time when the step started.</param>
 /// <param name="EndTime">The date and time when the step ended.</param>
 /// <param name="Retries">An array of retry attempts for this step, or null if no retries occurred.</param>
+/// <param name="Input">The input provided to the step, or null if no input was provided.</param>
 /// <param name="Status">The result status of the step, or null if the status is not set.</param>
 /// <param name="ErrorMessage">The error message associated with the step if it failed, or null if no error occurred.</param>
 /// <param name="Result">The result produced by the step, or null if there is no result.</param>
@@ -64,6 +65,7 @@ public record struct WorkflowStep(
     DateTimeOffset StartTime,
     DateTimeOffset EndTime,
     WorkflowStepRetry[]? Retries,
+    object? Input,
     [property: JsonConverter(typeof(JsonStringEnumConverter))]
     ActivityResultStatus? Status,
     string? ErrorMessage,

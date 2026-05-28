@@ -159,6 +159,11 @@ internal partial class ServiceConnection
     private async ValueTask PublishActivityEndingAsync(EventMessage message, ActivityResultStatus status, byte[] data, NatsHeaders headers, CancellationToken cancellationToken)
     {
         headers.Add(Constants.ActivityResultHeader, status.ToString());
+        if (message.ParallelActivityIndex.HasValue)
+        {
+            headers.Add(Constants.ParalellActivityIndexHeader, message.ParallelActivityIndex.ToString());
+            headers.Add(Constants.ParallelActivityCountHeader, message.ParallelActivityCount.ToString());
+        }
         await connection.PurgeStreamAsync(
             subjectMapper.ActivityQueueStream,
             new()
