@@ -48,7 +48,8 @@ public class SubjectMapperTests
         
         Assert.AreEqual($"JETFLOW_{streamStart}ACTIVITY_LOCKS", subjectMapper.ActivityLocksKeystore);
         Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_CONFIGS", subjectMapper.WorkflowConfigKeystore);
-        Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_ARCHIVES", subjectMapper.WorkflowArchiveKeystore);
+        Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_ARCHIVES", subjectMapper.WorkflowArchiveObjectstore);
+        Assert.AreEqual($"JETFLOW_{streamStart}LARGE_MESSAGES", subjectMapper.LargeMessageObjectstore);
 
         Assert.AreEqual($"JETFLOW_{streamStart}SCHEDULED_WORKFLOWS", subjectMapper.ScheduledWorkflowStreamsName);
         Assert.AreEqual($"jetflow.{subjectNamespace}swf.>", subjectMapper.ScheduledWorkflowsFilter);

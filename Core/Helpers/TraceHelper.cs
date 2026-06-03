@@ -49,18 +49,18 @@ internal static class TraceHelper
 
     private static IEnumerable<ActivityLink>? ExtractWorkflowLink(EventMessage message)
     {
-        if (message.Message.Headers!=null
-            && message.Message.Headers.TryGetValue(WorkflowTraceHeaderKey, out var traceKey)
-            && message.Message.Headers.TryGetValue(WorkflowTraceSpanHeaderKey, out var spanKey))
+        if (message.Headers!=null
+            && message.Headers.TryGetValue(WorkflowTraceHeaderKey, out var traceKey)
+            && message.Headers.TryGetValue(WorkflowTraceSpanHeaderKey, out var spanKey))
             return [new(new(ActivityTraceId.CreateFromString(traceKey.ToString()), ActivitySpanId.CreateFromString(spanKey.ToString()), ActivityTraceFlags.Recorded, isRemote: true))];
         return null;
     }
 
     private static IEnumerable<ActivityLink>? ExtractWorkflowActivityLink(EventMessage message)
     {
-        if (message.Message.Headers!=null
-            && message.Message.Headers.TryGetValue(WorkflowStepTraceParentHeaderKey, out var traceKey)
-            && message.Message.Headers.TryGetValue(WorkflowStepTraceParentSpanHeaderKey, out var spanKey))
+        if (message.Headers!=null
+            && message.Headers.TryGetValue(WorkflowStepTraceParentHeaderKey, out var traceKey)
+            && message.Headers.TryGetValue(WorkflowStepTraceParentSpanHeaderKey, out var spanKey))
             return [new(new(ActivityTraceId.CreateFromString(traceKey.ToString()), ActivitySpanId.CreateFromString(spanKey.ToString()), ActivityTraceFlags.Recorded, isRemote: true))];
         return null;
     }

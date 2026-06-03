@@ -1,7 +1,6 @@
 ﻿using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Serializers;
-using NATS.Client.JetStream;
 
 namespace JetFlow;
 
@@ -29,7 +28,7 @@ internal class WorkflowState : IWorkflowState
         );
         await foreach (var msg in query)
         {
-            var eventMessage = new EventMessage(msg);
+            var eventMessage = await EventMessage.CreateMessageAsync(serviceConnection, msg, CancellationToken.None);
             if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepStart) && Equals(message.ActivityID, eventMessage.ActivityID)) 
                 break;
             if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepEnd))
@@ -58,7 +57,7 @@ internal class WorkflowState : IWorkflowState
     async ValueTask<IEnumerable<TValue?>?> IWorkflowState.GetActivityResultValueAsync<TValue>(string activityName) where TValue : default
     {
         if (messages.TryGetValue(activityName, out var msgs))
-            return await Task.WhenAll(msgs.Select(msg=>messageSerializer.DecodeAsync<TValue>(msg.Message.Data, msg.Message.Headers).AsTask()));
+            return await Task.WhenAll(msgs.Select(msg=>messageSerializer.DecodeAsync<TValue>(msg.Data, msg.Headers).AsTask()));
         return default;
     }
 }

@@ -58,7 +58,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithUnregisteredActivity>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithUnregisteredActivity>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithUnregisteredActivity>(CancellationToken.None)
         );
 
         // Assert
@@ -76,7 +76,7 @@ public class WorkflowOptionTests
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
         }
     }
 
@@ -104,7 +104,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithSlowActivity>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithSlowActivity>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithSlowActivity>(CancellationToken.None)
         );
 
         // Assert
@@ -150,7 +150,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithActivityError>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithActivityError>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithActivityError>(CancellationToken.None)
         );
 
         // Assert
@@ -174,7 +174,7 @@ public class WorkflowOptionTests
 
     private sealed record TimeStampResult(byte[]? Message, long Timestamp);
 
-    private async Task<(TimeStampResult? completion, TimeStampResult? archive, TimeStampResult? purge)> ExecuteCompletionTest(WorkflowCompletionActions completionAction, TimeSpan? purgeDelay=null)
+    private static async Task<(TimeStampResult? completion, TimeStampResult? archive, TimeStampResult? purge)> ExecuteCompletionTest(WorkflowCompletionActions completionAction, TimeSpan? purgeDelay=null)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -195,7 +195,17 @@ public class WorkflowOptionTests
         {
             try
             {
-                await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"), cancellationToken: cancellationTokenSource.Token))
+                var context = new NatsJSContext(natsConnection);
+                var consumer = await context.CreateConsumerAsync(
+                    subjectMapper.WorkflowEventsStreamsName,
+                    new(Guid.NewGuid().ToString())
+                    {
+                        FilterSubject=subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
+                    }
+                );
+                await consumer.RefreshAsync(cancellationTokenSource.Token);
+                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
                 {
                     if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
                     {
@@ -203,6 +213,7 @@ public class WorkflowOptionTests
                         break;
                     }
                 }
+                await context.DeleteConsumerAsync(subjectMapper.WorkflowEventsStreamsName, consumer.Info.Name);
             }
             catch (OperationCanceledException) { /*buried to handle cancelling*/}
         });
@@ -210,7 +221,17 @@ public class WorkflowOptionTests
         {
             try
             {
-                await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"), cancellationToken: cancellationTokenSource.Token))
+                var context = new NatsJSContext(natsConnection);
+                var consumer = await context.CreateConsumerAsync(
+                    subjectMapper.WorkflowEventsStreamsName,
+                    new(Guid.NewGuid().ToString())
+                    {
+                        FilterSubject=subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
+                    }
+                );
+                await consumer.RefreshAsync(cancellationTokenSource.Token);
+                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
                 {
                     if (Equals(msg.Subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
                     {
@@ -218,6 +239,7 @@ public class WorkflowOptionTests
                         break;
                     }
                 }
+                await context.DeleteConsumerAsync(subjectMapper.WorkflowEventsStreamsName, consumer.Info.Name);
             }
             catch (OperationCanceledException) {/*buried to handle cancelling*/ }
         });
@@ -225,39 +247,25 @@ public class WorkflowOptionTests
         {
             try
             {
-                if (purgeDelay.HasValue)
-                {
-                    var context = new NatsJSContext(natsConnection);
-                    var consumer = await context.CreateConsumerAsync(
-                        subjectMapper.WorkflowEventsStreamsName,
-                        new(Guid.NewGuid().ToString())
-                        {
-                            FilterSubject=subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
-                            AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
-                        }
-                    );
-                    await consumer.RefreshAsync(cancellationTokenSource.Token);
-                    await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
+                var context = new NatsJSContext(natsConnection);
+                var consumer = await context.CreateConsumerAsync(
+                    subjectMapper.WorkflowEventsStreamsName,
+                    new(Guid.NewGuid().ToString())
                     {
-                        if (Equals(msg.Subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                        {
-                            purge.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
-                            break;
-                        }
+                        FilterSubject=subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
                     }
-                    await context.DeleteConsumerAsync(subjectMapper.WorkflowEventsStreamsName, consumer.Info.Name);
-                }
-                else
+                );
+                await consumer.RefreshAsync(cancellationTokenSource.Token);
+                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
                 {
-                    await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"), cancellationToken: cancellationTokenSource.Token))
+                    if (Equals(msg.Subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
                     {
-                        if (Equals(msg.Subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                        {
-                            purge.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
-                            break;
-                        }
+                        purge.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
+                        break;
                     }
                 }
+                await context.DeleteConsumerAsync(subjectMapper.WorkflowEventsStreamsName, consumer.Info.Name);
             }
             catch (OperationCanceledException) { /*buried to handle cancelling*/}
         });
@@ -269,15 +277,17 @@ public class WorkflowOptionTests
         var completionResult = await completion.Task;
         var archiveResult = await (await Task.WhenAny<TimeStampResult?>(
             archive.Task,
-            Task.Delay(TimeSpan.FromSeconds(10)).ContinueWith<TimeStampResult?>(_ => null)
+            Task.Delay(TimeSpan.FromSeconds(20)).ContinueWith<TimeStampResult?>(_ => null)
         ));
         var purgeResult = await (await Task.WhenAny<TimeStampResult?>(
             purge.Task,
-            Task.Delay(TimeSpan.FromSeconds(10)).ContinueWith<TimeStampResult?>(_ => null)
+            Task.Delay(TimeSpan.FromSeconds(20)).ContinueWith<TimeStampResult?>(_ => null)
         ));
 
         //cleanup
         await cancellationTokenSource.CancelAsync();
+        if (purgeResult!=null)
+            await Task.Delay(TimeSpan.FromSeconds(30)); //wait for any in-flight messages to be processed before disposing connection
         await ((IAsyncDisposable)connection).DisposeAsync();
 
         return (completionResult, archiveResult, purgeResult);
@@ -287,7 +297,7 @@ public class WorkflowOptionTests
     public async Task WorkflowCompletionPostActionNone()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.None);
+        var results = await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.None);
 
         //Assert
         Assert.IsNotNull(results.completion);
@@ -299,7 +309,7 @@ public class WorkflowOptionTests
     public async Task WorkflowCompletionPostActionArchiveThenNothing()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenNothing);
+        var results = await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenNothing);
 
         //Assert
         Assert.IsNotNull(results.completion);
@@ -312,7 +322,7 @@ public class WorkflowOptionTests
     public async Task WorkflowCompletionPostActionArchiveThenPurge()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenPurge, purgeDelay: TimeSpan.FromSeconds(1));
+        var results = await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenPurge, purgeDelay: TimeSpan.FromSeconds(1));
 
         //Assert
         Assert.IsNotNull(results.completion);
@@ -326,7 +336,7 @@ public class WorkflowOptionTests
     public async Task WorkflowCompletionPostActionPurge()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.Purge);
+        var results = await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.Purge);
 
         //Assert
         Assert.IsNotNull(results.completion);
@@ -343,7 +353,7 @@ public class WorkflowOptionTests
         //Arrange
         var delay = TimeSpan.FromSeconds(RandomNumberGenerator.GetInt32(3,5));
         //Act
-        var results = await ExecuteCompletionTest(completionAction, delay);
+        var results = await WorkflowOptionTests.ExecuteCompletionTest(completionAction, delay);
 
         //Assert
         Assert.IsNotNull(results.completion);

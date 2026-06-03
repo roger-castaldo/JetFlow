@@ -1,7 +1,7 @@
 ﻿using JetFlow.Helpers;
 using NATS.Client.Core;
-using NATS.Client.JetStream;
 using System.Text.RegularExpressions;
+using NATS.Client.JetStream;
 
 namespace JetFlow;
 
@@ -14,10 +14,23 @@ internal record EventMessage
     private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|config|stepstart|stepend|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 
-    public EventMessage(INatsJSMsg<byte[]> msg)
+    public static async ValueTask<EventMessage> CreateMessageAsync(ServiceConnection connection, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
+        => new(
+            msg.Subject, 
+            msg.Headers, 
+            await connection.RetrieveMessageDataAsync(msg.Data, cancellationToken), 
+            msg.Metadata,
+            async(token)=>await msg.AckAsync(cancellationToken: token),
+            async (token) => await msg.NakAsync(cancellationToken: token)
+        );
+
+    private readonly Func<CancellationToken, ValueTask> ack;
+    private readonly Func<CancellationToken, ValueTask> nak;
+
+    private EventMessage(string subject, NatsHeaders? headers, byte[]? data, NatsJSMsgMetadata? metadata, Func<CancellationToken,ValueTask> ack, Func<CancellationToken,ValueTask> nak)
     {
         RecievedTimestamp = DateTimeOffset.Now;
-        var match = workflowSubjectRegex.Match(msg.Subject);
+        var match = workflowSubjectRegex.Match(subject);
         if (match.Success)
         {
             WorkflowEventType = Enum.Parse<WorkflowEventTypes>(match.Groups["eventType"].Value, true);
@@ -25,40 +38,45 @@ internal record EventMessage
         }
         else
         {
-            match = activitySubjectRegex.Match(msg.Subject);
+            match = activitySubjectRegex.Match(subject);
             if (!match.Success)
-                throw new ArgumentException($"Invalid event subject {msg.Subject}");
+                throw new ArgumentException($"Invalid event subject {subject}");
             ActivityName = match.Groups["activityName"].Value;
             ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
             ActivityInstanceID = match.Groups["activityInstance"].Value;
-            if (msg.Headers!=null)
+            if (headers!=null)
             {
-                if (msg.Headers.TryGetValue(Constants.ActivityTimeoutHeader, out var timeoutValue) && TimeSpan.TryParse(timeoutValue, out var timeSpan))
+                if (headers.TryGetValue(Constants.ActivityTimeoutHeader, out var timeoutValue) && TimeSpan.TryParse(timeoutValue, out var timeSpan))
                     ActivityTimeout = timeSpan;
-                if (msg.Headers.TryGetValue(Constants.ActivityAttemptHeader, out var attemptValue) && ushort.TryParse(attemptValue, out var attempt))
+                if (headers.TryGetValue(Constants.ActivityAttemptHeader, out var attemptValue) && ushort.TryParse(attemptValue, out var attempt))
                     ActivityAttempt = attempt;
-                if (msg.Headers.TryGetValue(Constants.ActivityMaximumAttemptsHeader, out var maxAttemptValue) && ushort.TryParse(maxAttemptValue, out var maxAttempt)) 
+                if (headers.TryGetValue(Constants.ActivityMaximumAttemptsHeader, out var maxAttemptValue) && ushort.TryParse(maxAttemptValue, out var maxAttempt)) 
                     RetryConfiguration = new(
                         maxAttempt,
-                        msg.Headers.TryGetValue(Constants.ActiviyRetryDelayBetweenHeader, out var delayValue) && TimeSpan.TryParse(delayValue, out var delay) ? delay : (TimeSpan?)null,
-                        msg.Headers.TryGetValue(Constants.ActivityRetryOnTimeoutHeader, out var retryOnTimeoutValue) && bool.TryParse(retryOnTimeoutValue, out var retryOnTimeout) ? retryOnTimeout : true,
-                        msg.Headers.TryGetValue(Constants.ActivityRetryOnErrorHeader, out var retryOnErrorValue) && bool.TryParse(retryOnErrorValue, out var retryOnError) ? retryOnError : true,
-                        msg.Headers.TryGetValue(Constants.ActivityRetryBlockedErrorsHeader, out var blockedErrorsValue) ? [..blockedErrorsValue.ToArray().Where(s => !string.IsNullOrWhiteSpace(s)).OfType<string>()] : null
+                        headers.TryGetValue(Constants.ActiviyRetryDelayBetweenHeader, out var delayValue) && TimeSpan.TryParse(delayValue, out var delay) ? delay : (TimeSpan?)null,
+                        headers.TryGetValue(Constants.ActivityRetryOnTimeoutHeader, out var retryOnTimeoutValue) && bool.TryParse(retryOnTimeoutValue, out var retryOnTimeout) ? retryOnTimeout : true,
+                        headers.TryGetValue(Constants.ActivityRetryOnErrorHeader, out var retryOnErrorValue) && bool.TryParse(retryOnErrorValue, out var retryOnError) ? retryOnError : true,
+                        headers.TryGetValue(Constants.ActivityRetryBlockedErrorsHeader, out var blockedErrorsValue) ? [..blockedErrorsValue.ToArray().Where(s => !string.IsNullOrWhiteSpace(s)).OfType<string>()] : null
                     );
             }
         }
-        if (msg.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false)
+        if (headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false)
             ActivityID = uint.Parse(activityId.ToString());
-        if (msg.Headers?.TryGetValue(Constants.ActivityResultHeader, out var resultValue)??false)
+        if (headers?.TryGetValue(Constants.ActivityResultHeader, out var resultValue)??false)
             WorkflowStepResultStatus = Enum.Parse<ActivityResultStatus>(resultValue.ToString(), true);
-        if (msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var parallelIndexValue)??false)
+        if (headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var parallelIndexValue)??false)
             ParallelActivityIndex = uint.Parse(parallelIndexValue.ToString());
-        if (msg.Headers?.TryGetValue(Constants.ParallelActivityCountHeader, out var parallelCountValue)??false)
+        if (headers?.TryGetValue(Constants.ParallelActivityCountHeader, out var parallelCountValue)??false)
             ParallelActivityCount = uint.Parse(parallelCountValue.ToString());
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
         WorkflowName = match.Groups["workflowName"].Value;
         WorkflowId = match.Groups["instance"].Value;
-        Message=msg;
+        Subject = subject;
+        Data = data?? [];
+        Headers = headers;
+        Metadata = metadata;
+        this.ack = ack;
+        this.nak = nak;
     }
 
     public DateTimeOffset RecievedTimestamp { get; private init; }
@@ -76,11 +94,14 @@ internal record EventMessage
     public TimeSpan? ActivityTimeout { get; private init; } = null;
     public ushort ActivityAttempt { get; private init; } = 0;
     public ActivityRetryConfiguration? RetryConfiguration { get; private init; } = null;
-    public INatsJSMsg<byte[]> Message { get; private init; }
+    public string Subject { get; private init; }
+    public byte[] Data { get; private init; }
+    public NatsJSMsgMetadata? Metadata { get; private init; }
+    public NatsHeaders? Headers { get; private init; }
     public NatsHeaders InjectHeaders(NatsHeaders? headers)
     {
         var result = new NatsHeaders(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(
-            Message.Headers==null ? [] : Message.Headers.Where(pair=>SharedHeaders.Contains(pair.Key))
+            Headers==null ? [] : Headers.Where(pair=>SharedHeaders.Contains(pair.Key))
         ));
         if (headers!=null)
         {
@@ -92,4 +113,6 @@ internal record EventMessage
         }
         return result;
     }
+    public ValueTask AckAsync(CancellationToken cancellationToken = default) => ack(cancellationToken);
+    public ValueTask NakAsync(CancellationToken cancellationToken = default) => nak(cancellationToken);
 }

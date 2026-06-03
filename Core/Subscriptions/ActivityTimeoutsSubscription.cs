@@ -15,10 +15,10 @@ internal class ActivityTimeoutsSubscription(ServiceConnection serviceConnection,
             {
                 await ServiceConnection.MarkActivityDoneInStore(message, CancellationToken);
                 await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Timeout, message, ServiceConnection, CancellationToken);
-                await message.Message.AckAsync(cancellationToken: CancellationToken);
+                await message.AckAsync(CancellationToken);
             }
         }
         else
-            await message.Message.NakAsync(cancellationToken: CancellationToken);
+            await message.NakAsync(CancellationToken);
     }
 }

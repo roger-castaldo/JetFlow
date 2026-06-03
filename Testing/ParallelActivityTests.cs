@@ -70,14 +70,14 @@ public class ParallelActivityTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithoutOutput>();
-        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithInput, string>(emptyActivityWithInput);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithoutOutput>(cancellationToken: TestContext.CancellationToken);
+        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithInput, string>(emptyActivityWithInput, TestContext.CancellationToken);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithoutOutput>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<ParallelActivityWorkflowWithoutOutput>()
+            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithoutOutput>(TestContext.CancellationToken)
         );
 
         // Assert
@@ -88,7 +88,7 @@ public class ParallelActivityTests
         Assert.IsTrue(endMessage.IsSuccess);
 
         //Verify
-        Assert.AreEqual(ParallelActivityWorkflowWithoutOutput.Inputs.Count, emptyActivityWithInput.Inputs.Count);
+        Assert.HasCount(ParallelActivityWorkflowWithoutOutput.Inputs.Count, emptyActivityWithInput.Inputs);
         foreach (var input in ParallelActivityWorkflowWithoutOutput.Inputs)
             Assert.Contains(input, emptyActivityWithInput.Inputs);
     }
@@ -116,6 +116,11 @@ public class ParallelActivityTests
         private static readonly List<string> outputs = [];
         public static List<string> Inputs => inputs;
         public static List<string> Outputs => outputs;
+        public static void Reset()
+        {
+            inputs.Clear();
+            outputs.Clear();
+        }
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
             if (inputs.Count==0)
@@ -137,6 +142,7 @@ public class ParallelActivityTests
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
+        ParallelActivityWorkflowWithOutput.Reset();
         var emptyActivityWithInputAndOutput = new EmptyActivityWithInputAndOutput();
         var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
@@ -145,14 +151,14 @@ public class ParallelActivityTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>();
-        await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>(cancellationToken: TestContext.CancellationToken);
+        await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput, TestContext.CancellationToken);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithOutput>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<ParallelActivityWorkflowWithOutput>()
+            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithOutput>(TestContext.CancellationToken)
         );
 
         // Assert
@@ -163,11 +169,11 @@ public class ParallelActivityTests
         Assert.IsTrue(endMessage.IsSuccess);
 
         //Verify
-        Assert.AreEqual(ParallelActivityWorkflowWithOutput.Inputs.Count, emptyActivityWithInputAndOutput.Inputs.Count);
+        Assert.HasCount(ParallelActivityWorkflowWithOutput.Inputs.Count, emptyActivityWithInputAndOutput.Inputs);
         foreach (var input in ParallelActivityWorkflowWithOutput.Inputs)
             Assert.Contains(input, emptyActivityWithInputAndOutput.Inputs);
 
-        Assert.AreEqual(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs.Count);
+        Assert.HasCount(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs);
         foreach (var output in ParallelActivityWorkflowWithOutput.Outputs)
             Assert.Contains(output, emptyActivityWithInputAndOutput.Outputs);
     }
@@ -177,6 +183,7 @@ public class ParallelActivityTests
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
+        ParallelActivityWorkflowWithOutput.Reset();
         var runId = Guid.Empty;
         var emptyActivityWithInputAndOutput = new EmptyActivityWithInputAndOutput();
         var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
@@ -188,8 +195,8 @@ public class ParallelActivityTests
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>(new() { CompletionAction = WorkflowCompletionActions.ArchiveThenNothing });
-        await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>(new() { CompletionAction = WorkflowCompletionActions.ArchiveThenNothing }, TestContext.CancellationToken);
+        await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput, TestContext.CancellationToken);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForArchive<ParallelActivityWorkflowWithOutput>(
@@ -207,16 +214,16 @@ public class ParallelActivityTests
         Assert.IsNotNull(result);
         
         //Verify
-        Assert.AreEqual(ParallelActivityWorkflowWithOutput.Inputs.Count, emptyActivityWithInputAndOutput.Inputs.Count);
+        Assert.HasCount(ParallelActivityWorkflowWithOutput.Inputs.Count, emptyActivityWithInputAndOutput.Inputs);
         foreach (var input in ParallelActivityWorkflowWithOutput.Inputs)
             Assert.Contains(input, emptyActivityWithInputAndOutput.Inputs);
 
-        Assert.AreEqual(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs.Count);
+        Assert.HasCount(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs);
         foreach (var output in ParallelActivityWorkflowWithOutput.Outputs)
             Assert.Contains(output, emptyActivityWithInputAndOutput.Outputs);
 
-        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
-        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>()}/{runId}");
+        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>()}/{runId}", TestContext.CancellationToken);
         var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(runId, archive.ID);
         Assert.IsNull(archive.SchedulerId);
@@ -225,14 +232,14 @@ public class ParallelActivityTests
         Assert.AreEqual(WorkflowCompletionActions.ArchiveThenNothing, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotEmpty(archive.Steps);
-        Assert.AreEqual(emptyActivityWithInputAndOutput.Inputs.Count, archive.Steps.Count());
+        Assert.HasCount(emptyActivityWithInputAndOutput.Inputs.Count, archive.Steps);
         var stepIndex = archive.Steps.First().Index;
         Assert.IsTrue(archive.Steps.All(s => 
             Equals(s.Name, NameHelper.GetActivityName<EmptyActivityWithInputAndOutput>())
             && Equals(s.Status, ActivityResultStatus.Success)
             && Equals(stepIndex, s.Index)
             && emptyActivityWithInputAndOutput.Inputs.Contains(s.Input?.ToString())
-            && emptyActivityWithInputAndOutput.Outputs.Contains(s.Result?.ToString())
+            && emptyActivityWithInputAndOutput.Outputs.Contains(s.Result?.ToString()??string.Empty)
         ));
     }
 
@@ -290,14 +297,14 @@ public class ParallelActivityTests
         {
             ErrorOnActivityTimeout=errorOnTimeout,
             ErrorOnActivityFailure=errorOnFailure
-        });
-        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithProblems, string>(emptyActivityToTimeout);
+        }, TestContext.CancellationToken);
+        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithProblems, string>(emptyActivityToTimeout, TestContext.CancellationToken);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithProblems>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<ParallelActivityWorkflowWithProblems>()
+            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithProblems>(TestContext.CancellationToken)
         );
 
         // Assert
@@ -312,7 +319,7 @@ public class ParallelActivityTests
             Assert.AreEqual($"Activity {NameHelper.GetActivityName<EmptyActivityWithProblems>()} has timed out: 2: Activity timed out; 4: Activity timed out", endMessage.ErrorMessage);
 
         //Verify
-        Assert.AreEqual(ParallelActivityWorkflowWithProblems.Inputs.Count, emptyActivityToTimeout.Inputs.Count);
+        Assert.HasCount(ParallelActivityWorkflowWithProblems.Inputs.Count, emptyActivityToTimeout.Inputs);
         foreach (var input in ParallelActivityWorkflowWithProblems.Inputs)
             Assert.Contains(input, emptyActivityToTimeout.Inputs);
     }
@@ -350,14 +357,14 @@ public class ParallelActivityTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>();
-        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithInput, string>(emptyActivityWithInput);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>(cancellationToken: TestContext.CancellationToken);
+        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithInput, string>(emptyActivityWithInput, TestContext.CancellationToken);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithLargeNumberOfCalls>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>()
+            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>(TestContext.CancellationToken)
         );
 
         // Assert
@@ -368,8 +375,10 @@ public class ParallelActivityTests
         Assert.IsTrue(endMessage.IsSuccess);
 
         //Verify
-        Assert.AreEqual(ParallelActivityWorkflowWithLargeNumberOfCalls.Inputs.Count, emptyActivityWithInput.Inputs.Count);
+        Assert.HasCount(ParallelActivityWorkflowWithLargeNumberOfCalls.Inputs.Count, emptyActivityWithInput.Inputs);
         foreach (var input in ParallelActivityWorkflowWithLargeNumberOfCalls.Inputs)
             Assert.Contains(input, emptyActivityWithInput.Inputs);
     }
+
+    public TestContext TestContext { get; set; }
 }

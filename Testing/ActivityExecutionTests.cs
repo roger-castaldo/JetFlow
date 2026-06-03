@@ -3,7 +3,6 @@ using JetFlow.Interfaces;
 using JetFlow.Messages;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
-using Microsoft.Extensions.Configuration;
 using NATS.Client.Core;
 
 namespace JetFlow.Testing;
@@ -93,7 +92,7 @@ public class ActivityExecutionTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<BasicWorkflow, string>();
+        await connection.RegisterWorkflowAsync<BasicWorkflow, string>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<BasicActivity>(basicActivity, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<BasicActivityWithInput, string>(basicActivityWithInput, CancellationToken.None);
         await connection.RegisterWorkflowActivityWithReturnAsync<BasicActivityWithReturn, string>(basicActivityWithReturn, CancellationToken.None);
@@ -102,7 +101,7 @@ public class ActivityExecutionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<BasicWorkflow>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<BasicWorkflow, string>(input, CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<BasicWorkflow, string>(input, CancellationToken.None)
         );
 
         // Assert
@@ -175,14 +174,14 @@ public class ActivityExecutionTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<ActivityContextWorkflow>();
+        await connection.RegisterWorkflowAsync<ActivityContextWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<GenerateRandomString, string>(generateRandomString, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<RecieveRandomStringFromContextByClass>(recieveRandomStringByClass, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<RecieveRandomStringFromContextByName>(recieveRandomStringByName, CancellationToken.None);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ActivityContextWorkflow>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<ActivityContextWorkflow>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<ActivityContextWorkflow>(CancellationToken.None)
         );
 
         // Assert
@@ -248,14 +247,14 @@ public class ActivityExecutionTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<ParallelActivityContextWorkflow>();
+        await connection.RegisterWorkflowAsync<ParallelActivityContextWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<GenerateRandomStringAtLength, string, int>(generateRandomString, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<RecieveRandomStringsFromContextByClass>(recieveRandomStringByClass, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<RecieveRandomStringsFromContextByName>(recieveRandomStringByName, CancellationToken.None);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityContextWorkflow>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<ParallelActivityContextWorkflow>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<ParallelActivityContextWorkflow>(CancellationToken.None)
         );
 
         // Assert
@@ -272,4 +271,6 @@ public class ActivityExecutionTests
         CollectionAssert.AreEqual(ParallelActivityContextWorkflow.GeneratedStrings.ToArray(), recieveRandomStringByClass.RecievedStrings.ToArray());
         CollectionAssert.AreEqual(ParallelActivityContextWorkflow.GeneratedStrings.ToArray(), recieveRandomStringByName.RecievedStrings.ToArray());
     }
+
+    public TestContext TestContext { get; set; }
 }

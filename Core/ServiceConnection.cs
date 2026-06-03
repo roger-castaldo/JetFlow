@@ -4,11 +4,12 @@ using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using NATS.Client.ObjectStore;
+using System.Linq.Expressions;
 
 namespace JetFlow;
 
 internal partial class ServiceConnection(InternalNatsConnection connection, 
-    INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore,
+    INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore, INatsObjStore largeMessageStore,
     SubjectMapper subjectMapper, MessageSerializer messageSerializer)
 {
     public async ValueTask<IJetstreamQuery> QueryStreamAsync(string streamName, bool headersOnly, params string[] filterSubjects)
@@ -26,10 +27,11 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
             ), connection);
 
     public async ValueTask PurgeWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
-    {
-        await connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
-        await connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken);
-    }
+        => await Task.WhenAll(
+            connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken),
+            connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken),
+            PurgeWorkflowLargeFilesAsync(message, cancellationToken)
+        );
 
     private sealed class JetstreamQuery(INatsJSConsumer consumer, InternalNatsConnection connection) : IJetstreamQuery
     {

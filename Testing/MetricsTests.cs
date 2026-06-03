@@ -81,21 +81,21 @@ public class MetricsTests
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<MetricsWorkflow>();
+        await connection.RegisterWorkflowAsync<MetricsWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<MetricsDelayedActivity>(new(), CancellationToken.None);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<MetricsWorkflow>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<MetricsWorkflow>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<MetricsWorkflow>(CancellationToken.None)
         );
 
         // Assert
         Assert.IsNotNull(result);
         await ((IAsyncDisposable)connection).DisposeAsync();
         //delay for metrics completion
-        await Task.Delay(TimeSpan.FromSeconds(5));
+        await Task.Delay(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
 
         var data = captured.ToArray();
         Assert.HasCount(6, data);
@@ -132,4 +132,6 @@ public class MetricsTests
             && r.lmeasurement==1
 , data);
     }
+
+    public TestContext TestContext { get; set; }
 }

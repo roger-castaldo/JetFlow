@@ -57,16 +57,16 @@ public class WorkflowExecutionTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<EmptyActivityWorkflow>();
+        await connection.RegisterWorkflowAsync<EmptyActivityWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<EmptyActivity>(new(), CancellationToken.None);
 
         //Act
         var id = await connection.StartWorkflowAsync<EmptyActivityWorkflow>(CancellationToken.None);
         var (data, headers) = await messageSerializer.EncodeAsync<WorkflowEnd>(new(DateTime.UtcNow, null));
-        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>(), id.ToString()), data, headers: headers);
+        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>(), id.ToString()), data, headers: headers, cancellationToken: TestContext.CancellationToken);
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>(), "*")))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>(), "*"), cancellationToken: TestContext.CancellationToken))
             {
                 if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>(), id.ToString())))
                 {
@@ -74,8 +74,8 @@ public class WorkflowExecutionTests
                     break;
                 }
             }
-        });
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        }, TestContext.CancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
         EmptyActivityWorkflow.DelayStartTask.TrySetResult();
         var result = await completion.Task;
 
@@ -111,15 +111,15 @@ public class WorkflowExecutionTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<DelayedWorkflow>();
+        await connection.RegisterWorkflowAsync<DelayedWorkflow>(cancellationToken: TestContext.CancellationToken);
 
         //Act
         var id = await connection.StartWorkflowAsync<DelayedWorkflow>(CancellationToken.None);
         var (data, headers) = await messageSerializer.EncodeAsync<WorkflowEnd>(new(DateTime.UtcNow, null));
-        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>(), id.ToString()), data, headers: headers);
+        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>(), id.ToString()), data, headers: headers, cancellationToken: TestContext.CancellationToken);
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>(), "*")))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>(), "*"), cancellationToken: TestContext.CancellationToken))
             {
                 if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>(), id.ToString())))
                 {
@@ -127,8 +127,8 @@ public class WorkflowExecutionTests
                     break;
                 }
             }
-        });
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        }, TestContext.CancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
         DelayedWorkflow.DelayStartTask.TrySetResult();
         var result = await completion.Task;
 
@@ -173,7 +173,7 @@ public class WorkflowExecutionTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<InvokeMismatchedActivityWorkflow>();
+        await connection.RegisterWorkflowAsync<InvokeMismatchedActivityWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<EmptyActivity>(new(), CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<OtherEmptyActivity>(new(), CancellationToken.None);
 
@@ -181,7 +181,7 @@ public class WorkflowExecutionTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<InvokeMismatchedActivityWorkflow>(
             natsConnection,
             subjectMapper,
-            ()=> connection.StartWorkflowAsync<InvokeMismatchedActivityWorkflow>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<InvokeMismatchedActivityWorkflow>(CancellationToken.None)
         );
         
         // Assert
@@ -216,14 +216,14 @@ public class WorkflowExecutionTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<InvalidDelayStepWorkflow>();
+        await connection.RegisterWorkflowAsync<InvalidDelayStepWorkflow>(cancellationToken: TestContext.CancellationToken);
 
         //Act
         var id = await connection.StartWorkflowAsync<InvalidDelayStepWorkflow>(CancellationToken.None);
-        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), id.ToString(), NameHelper.GetActivityName<EmptyActivity>()), []);
+        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), id.ToString(), NameHelper.GetActivityName<EmptyActivity>()), [], cancellationToken: TestContext.CancellationToken);
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), "*")))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), "*"), cancellationToken: TestContext.CancellationToken))
             {
                 if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), id.ToString())))
                 {
@@ -231,8 +231,8 @@ public class WorkflowExecutionTests
                     break;
                 }
             }
-        });
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        }, TestContext.CancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
         InvalidDelayStepWorkflow.DelayStartTask.TrySetResult();
         var result = await completion.Task;
 
@@ -362,7 +362,7 @@ public class WorkflowExecutionTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>();
+        await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<NoActionActivity>(new(), CancellationToken.None);
         await connection.RegisterWorkflowActivityWithReturnAsync<NoActionActivityWithReturn, string>(noActWithReturn, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<NoActionActivityWithInput, string>(noActWithInput, CancellationToken.None);
@@ -377,7 +377,7 @@ public class WorkflowExecutionTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<AllActivityResultsWorkflow>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<AllActivityResultsWorkflow>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<AllActivityResultsWorkflow>(CancellationToken.None)
         );
 
         // Assert
@@ -442,7 +442,7 @@ public class WorkflowExecutionTests
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
         {
             CompletionAction = action
-        });
+        }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<NoActionActivity>(new(), CancellationToken.None);
         await connection.RegisterWorkflowActivityWithReturnAsync<NoActionActivityWithReturn, string>(noActWithReturn, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<NoActionActivityWithInput, string>(noActWithInput, CancellationToken.None);
@@ -466,7 +466,7 @@ public class WorkflowExecutionTests
 
         // Assert
         Assert.IsNotNull(result);
-        await Task.Delay(TimeSpan.FromSeconds(5));
+        await Task.Delay(TimeSpan.FromMinutes(1), TestContext.CancellationToken);
 
         //Verify
         var workflowName = NameHelper.GetWorkflowName<AllActivityResultsWorkflow>();
@@ -512,7 +512,7 @@ public class WorkflowExecutionTests
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
         {
             CompletionAction = action
-        });
+        }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<NoActionActivity>(new(), CancellationToken.None);
         await connection.RegisterWorkflowActivityWithReturnAsync<NoActionActivityWithReturn, string>(noActWithReturn, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<NoActionActivityWithInput, string>(noActWithInput, CancellationToken.None);
@@ -538,8 +538,8 @@ public class WorkflowExecutionTests
         Assert.IsNotNull(result);
 
         //Verify
-        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
-        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<AllActivityResultsWorkflow>()}/{runId}");
+        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<AllActivityResultsWorkflow>()}/{runId}", TestContext.CancellationToken);
         var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(runId, archive.ID);
         Assert.IsNull(archive.SchedulerId);
@@ -576,4 +576,6 @@ public class WorkflowExecutionTests
         Assert.AreEqual(status, step.Status);
         Assert.AreEqual(type, step.Type);
     }
+
+    public TestContext TestContext { get; set; }
 }

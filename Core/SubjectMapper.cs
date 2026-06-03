@@ -67,8 +67,11 @@ internal class SubjectMapper
     public string WorkflowConfigKeystore
         => $"JETFLOW_{streamNamespace}WORKFLOW_CONFIGS";
     
-    public string WorkflowArchiveKeystore
+    public string WorkflowArchiveObjectstore
         => $"JETFLOW_{streamNamespace}WORKFLOW_ARCHIVES";
+
+    public string LargeMessageObjectstore
+        => $"JETFLOW_{streamNamespace}LARGE_MESSAGES";
 
     public string ScheduledWorkflowStreamsName
         => $"JETFLOW_{streamNamespace}SCHEDULED_WORKFLOWS";

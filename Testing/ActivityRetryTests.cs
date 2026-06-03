@@ -67,14 +67,14 @@ public class ActivityRetryTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<WorkflowWithActivityTimeout>();
+        await connection.RegisterWorkflowAsync<WorkflowWithActivityTimeout>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<TimeoutActivity>(timeoutActivity, CancellationToken.None);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithActivityTimeout>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithActivityTimeout>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithActivityTimeout>(CancellationToken.None)
         );
 
         // Assert
@@ -144,14 +144,14 @@ public class ActivityRetryTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<WorkflowWithUnimplmentedActivity>();
+        await connection.RegisterWorkflowAsync<WorkflowWithUnimplmentedActivity>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<UnimplementedActivity>(unimplementedActivity, CancellationToken.None);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithUnimplmentedActivity>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithUnimplmentedActivity>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithUnimplmentedActivity>(CancellationToken.None)
         );
 
         // Assert
@@ -209,14 +209,14 @@ public class ActivityRetryTests
         var connectionOptions = new ConnectionOptions(natsConnection);
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<WorkflowWithUnimplementedActivityWithTimers>();
+        await connection.RegisterWorkflowAsync<WorkflowWithUnimplementedActivityWithTimers>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<UnimplementedActivityWithTimers>(unimplementedActivityWithTimers, CancellationToken.None);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithUnimplementedActivityWithTimers>(
             natsConnection,
             subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithUnimplementedActivityWithTimers>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithUnimplementedActivityWithTimers>(CancellationToken.None)
         );
 
         // Assert
@@ -286,8 +286,8 @@ public class ActivityRetryTests
         await connection.RegisterWorkflowAsync<WorkflowWithRetryForArchiving>(options: new()
         {
             CompletionAction = action
-        });
-        await connection.RegisterWorkflowActivityAsync<MultiRetryActivity>(new());
+        }, TestContext.CancellationToken);
+        await connection.RegisterWorkflowActivityAsync<MultiRetryActivity>(new(), TestContext.CancellationToken);
 
 
         //Act
@@ -305,8 +305,8 @@ public class ActivityRetryTests
         Assert.IsNotNull(result);
 
         //Verify
-        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
-        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>()}/{runId}");
+        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>()}/{runId}", TestContext.CancellationToken);
         var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(runId, archive.ID);
         Assert.IsTrue(archive.IsSuccessful);
@@ -333,4 +333,6 @@ public class ActivityRetryTests
         //cleanup
         await ((IAsyncDisposable)connection).DisposeAsync();
     }
+
+    public TestContext TestContext { get; set; }
 }

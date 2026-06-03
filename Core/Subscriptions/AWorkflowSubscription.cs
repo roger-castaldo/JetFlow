@@ -39,7 +39,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                 MetricsHelper.ProcessWorkflowMessage(message);
                 var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, message);
                 var activityResultStatus = message.WorkflowStepResultStatus;
-                var errorMessage = (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && message.Message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Message.Data) : null);
+                var errorMessage = (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Data) : null);
                 string? timeoutMessage = null;
                 if (message.ParallelActivityCount.HasValue)
                 {
@@ -50,7 +50,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                 if (!string.IsNullOrEmpty(message.ActivityName) && activityResultStatus.HasValue)
                 {
                     if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Failure) && context.Options.ErrorOnActivityFailure)
-                        throw new ActivityFailedException(message.ActivityName, $"{errorMessage??string.Empty}{(!string.IsNullOrWhiteSpace(timeoutMessage) ? $"{(!string.IsNullOrWhiteSpace(errorMessage)?";":"")} {timeoutMessage}" : null)}");
+                        throw new ActivityFailedException(message.ActivityName, $"{errorMessage??string.Empty}{(!string.IsNullOrWhiteSpace(timeoutMessage) ? $"{(!string.IsNullOrWhiteSpace(errorMessage) ? ";" : "")} {timeoutMessage}" : null)}");
                     if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Timeout) && context.Options.ErrorOnActivityTimeout)
                         throw new ActivityTimeoutException(message.ActivityName, timeoutMessage);
                 }
@@ -69,7 +69,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             }
             finally
             {
-                await message.Message.AckAsync(cancellationToken: CancellationToken);
+                await message.AckAsync(CancellationToken);
             }
             if (isCompleted)
             {
@@ -83,7 +83,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
     {
         if (Equals(message.WorkflowEventType, WorkflowEventTypes.Purge))
         {
-            await message.Message.AckAsync(cancellationToken: CancellationToken);
+            await message.AckAsync(CancellationToken);
             await ServiceConnection.PurgeWorkflowAsync(message, CancellationToken);
             return;
         }
@@ -104,7 +104,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         }
         if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge) || Equals(options.CompletionAction, WorkflowCompletionActions.Purge))
             await ServiceConnection.MarkWorkflowForPurge(message, options.PurgeDelay, CancellationToken);
-        await message.Message.AckAsync(cancellationToken: CancellationToken);
+        await message.AckAsync(CancellationToken);
     }
 
     protected abstract ValueTask HandleWorkflowEventAsync(WorkflowContext context);

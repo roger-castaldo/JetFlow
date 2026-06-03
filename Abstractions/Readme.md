@@ -69,13 +69,13 @@
 - [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow')
   - [ExecuteAsync(context)](#M-JetFlow-Interfaces-IWorkflow-ExecuteAsync-JetFlow-Interfaces-IWorkflowContext- 'JetFlow.Interfaces.IWorkflow.ExecuteAsync(JetFlow.Interfaces.IWorkflowContext)')
 - [IWorkflowContext](#T-JetFlow-Interfaces-IWorkflowContext 'JetFlow.Interfaces.IWorkflowContext')
-  - [ExecuteActivitiesAsync\`\`2(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``2-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}}- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivitiesAsync``2(JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``1}})')
-  - [ExecuteActivitiesAsync\`\`3(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``3-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}}- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivitiesAsync``3(JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``2}})')
-  - [ExecuteActivityAsync\`\`1(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``1-JetFlow-ActivityExecutionRequest- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``1(JetFlow.ActivityExecutionRequest)')
-  - [ExecuteActivityAsync\`\`2(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest{``1}- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``2(JetFlow.ActivityExecutionRequest{``1})')
-  - [ExecuteActivityAsync\`\`2(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``2(JetFlow.ActivityExecutionRequest)')
-  - [ExecuteActivityAsync\`\`3(executionRequest)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``3-JetFlow-ActivityExecutionRequest{``2}- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``3(JetFlow.ActivityExecutionRequest{``2})')
-  - [WaitAsync(delay)](#M-JetFlow-Interfaces-IWorkflowContext-WaitAsync-System-TimeSpan- 'JetFlow.Interfaces.IWorkflowContext.WaitAsync(System.TimeSpan)')
+  - [ExecuteActivitiesAsync\`\`2(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``2-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}},System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivitiesAsync``2(JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``1}},System.Threading.CancellationToken)')
+  - [ExecuteActivitiesAsync\`\`3(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``3-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}},System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivitiesAsync``3(JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``2}},System.Threading.CancellationToken)')
+  - [ExecuteActivityAsync\`\`1(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``1-JetFlow-ActivityExecutionRequest,System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``1(JetFlow.ActivityExecutionRequest,System.Threading.CancellationToken)')
+  - [ExecuteActivityAsync\`\`2(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest{``1},System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``2(JetFlow.ActivityExecutionRequest{``1},System.Threading.CancellationToken)')
+  - [ExecuteActivityAsync\`\`2(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest,System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``2(JetFlow.ActivityExecutionRequest,System.Threading.CancellationToken)')
+  - [ExecuteActivityAsync\`\`3(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``3-JetFlow-ActivityExecutionRequest{``2},System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``3(JetFlow.ActivityExecutionRequest{``2},System.Threading.CancellationToken)')
+  - [WaitAsync(delay,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-WaitAsync-System-TimeSpan,System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.WaitAsync(System.TimeSpan,System.Threading.CancellationToken)')
 - [IWorkflowSchedule](#T-JetFlow-Interfaces-IWorkflowSchedule 'JetFlow.Interfaces.IWorkflowSchedule')
   - [AsString](#P-JetFlow-Interfaces-IWorkflowSchedule-AsString 'JetFlow.Interfaces.IWorkflowSchedule.AsString')
 - [IWorkflowState](#T-JetFlow-Interfaces-IWorkflowState 'JetFlow.Interfaces.IWorkflowState')
@@ -1113,8 +1113,8 @@ JetFlow.Interfaces
 
 Used to execute activities and wait for a specified amount of time within a workflow. This interface is typically passed as a parameter to the workflow's main method, allowing the workflow to interact with the execution environment and manage its activities effectively.
 
-<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``2-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}}-'></a>
-### ExecuteActivitiesAsync\`\`2(executionRequest) `method`
+<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``2-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}},System-Threading-CancellationToken-'></a>
+### ExecuteActivitiesAsync\`\`2(executionRequest,cancellationToken) `method`
 
 ##### Summary
 
@@ -1129,6 +1129,7 @@ A ValueTask that represents the asynchronous operation. The result contains the 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | executionRequest | [JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{\`\`1}}](#T-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}} 'JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``1}}') | The request containing the inputs and context information for the activity execution. Cannot be null. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token that can be used to cancel the activity execution. Optional. |
 
 ##### Generic Types
 
@@ -1137,8 +1138,8 @@ A ValueTask that represents the asynchronous operation. The result contains the 
 | TActivity | The type of activity to execute. Must implement IActivity<TInput>. |
 | TInput | The type of input required by the activity. |
 
-<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``3-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}}-'></a>
-### ExecuteActivitiesAsync\`\`3(executionRequest) `method`
+<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``3-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}},System-Threading-CancellationToken-'></a>
+### ExecuteActivitiesAsync\`\`3(executionRequest,cancellationToken) `method`
 
 ##### Summary
 
@@ -1153,6 +1154,7 @@ A ValueTask that represents the asynchronous operation. The result contains the 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | executionRequest | [JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{\`\`2}}](#T-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}} 'JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``2}}') | The request containing the inputs and context information for the activity execution. Cannot be null. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token that can be used to cancel the activity execution. Optional. |
 
 ##### Generic Types
 
@@ -1162,8 +1164,8 @@ A ValueTask that represents the asynchronous operation. The result contains the 
 | TOutput | The type of the value returned by the activity. |
 | TInput | The type of input required by the activity. |
 
-<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``1-JetFlow-ActivityExecutionRequest-'></a>
-### ExecuteActivityAsync\`\`1(executionRequest) `method`
+<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``1-JetFlow-ActivityExecutionRequest,System-Threading-CancellationToken-'></a>
+### ExecuteActivityAsync\`\`1(executionRequest,cancellationToken) `method`
 
 ##### Summary
 
@@ -1180,6 +1182,7 @@ activity.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | executionRequest | [JetFlow.ActivityExecutionRequest](#T-JetFlow-ActivityExecutionRequest 'JetFlow.ActivityExecutionRequest') | The request containing all information required to execute the activity. Cannot be null. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token that can be used to cancel the activity execution. Optional. |
 
 ##### Generic Types
 
@@ -1187,8 +1190,8 @@ activity.
 | ---- | ----------- |
 | TActivity | The type of activity to execute. Must implement the IActivity interface. |
 
-<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest{``1}-'></a>
-### ExecuteActivityAsync\`\`2(executionRequest) `method`
+<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest{``1},System-Threading-CancellationToken-'></a>
+### ExecuteActivityAsync\`\`2(executionRequest,cancellationToken) `method`
 
 ##### Summary
 
@@ -1204,6 +1207,7 @@ execution.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | executionRequest | [JetFlow.ActivityExecutionRequest{\`\`1}](#T-JetFlow-ActivityExecutionRequest{``1} 'JetFlow.ActivityExecutionRequest{``1}') | The request containing the input and context information for the activity execution. Cannot be null. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token that can be used to cancel the activity execution. Optional. |
 
 ##### Generic Types
 
@@ -1212,8 +1216,8 @@ execution.
 | TActivity | The type of activity to execute. Must implement IActivity<TInput>. |
 | TInput | The type of input required by the activity. |
 
-<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest-'></a>
-### ExecuteActivityAsync\`\`2(executionRequest) `method`
+<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``2-JetFlow-ActivityExecutionRequest,System-Threading-CancellationToken-'></a>
+### ExecuteActivityAsync\`\`2(executionRequest,cancellationToken) `method`
 
 ##### Summary
 
@@ -1230,6 +1234,7 @@ activity.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | executionRequest | [JetFlow.ActivityExecutionRequest](#T-JetFlow-ActivityExecutionRequest 'JetFlow.ActivityExecutionRequest') | The request containing all information required to execute the activity. Cannot be null. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token that can be used to cancel the activity execution. Optional. |
 
 ##### Generic Types
 
@@ -1238,8 +1243,8 @@ activity.
 | TActivity | The type of activity to execute. Must implement IActivityWithReturn<TOutput>. |
 | TOutput | The type of the value returned by the activity. |
 
-<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``3-JetFlow-ActivityExecutionRequest{``2}-'></a>
-### ExecuteActivityAsync\`\`3(executionRequest) `method`
+<a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``3-JetFlow-ActivityExecutionRequest{``2},System-Threading-CancellationToken-'></a>
+### ExecuteActivityAsync\`\`3(executionRequest,cancellationToken) `method`
 
 ##### Summary
 
@@ -1256,6 +1261,7 @@ execution.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | executionRequest | [JetFlow.ActivityExecutionRequest{\`\`2}](#T-JetFlow-ActivityExecutionRequest{``2} 'JetFlow.ActivityExecutionRequest{``2}') | The request containing the input and context information for the activity execution. Cannot be null. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token that can be used to cancel the activity execution. Optional. |
 
 ##### Generic Types
 
@@ -1265,8 +1271,8 @@ execution.
 | TOutput | The type of the value returned by the activity. |
 | TInput | The type of input required by the activity. |
 
-<a name='M-JetFlow-Interfaces-IWorkflowContext-WaitAsync-System-TimeSpan-'></a>
-### WaitAsync(delay) `method`
+<a name='M-JetFlow-Interfaces-IWorkflowContext-WaitAsync-System-TimeSpan,System-Threading-CancellationToken-'></a>
+### WaitAsync(delay,cancellationToken) `method`
 
 ##### Summary
 
@@ -1281,6 +1287,7 @@ A ValueTask that represents the asynchronous wait operation.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | delay | [System.TimeSpan](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.TimeSpan 'System.TimeSpan') | The amount of time to wait before the operation completes. Must be a non-negative time span. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token that can be used to cancel the activity execution. Optional. |
 
 <a name='T-JetFlow-Interfaces-IWorkflowSchedule'></a>
 ## IWorkflowSchedule `type`

@@ -34,7 +34,7 @@ public static class Connection
     public static ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 
-    private sealed record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore,
+    private sealed record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore, INatsObjStore LargeMessageStore,
             INatsJSConsumer ActivityTimeoutsConsumer, INatsJSConsumer ScheduledWorkflowConsumer);
 
     internal class ConnectionInstance : IConnection, IAsyncDisposable
@@ -54,7 +54,7 @@ public static class Connection
             this.subjectMapper = subjectMapper;
             serverVersion = (connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version));
             internalConnection = new(connection, natsJSContext, serverVersion);
-            serviceConnection = new(internalConnection, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, subjectMapper, messageSerializer);
+            serviceConnection = new(internalConnection, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, stores.LargeMessageStore, subjectMapper, messageSerializer);
             subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
             subscriptions.Add(new ScheduledWorkflowsSubscription(subjectMapper, serviceConnection, stores.ScheduledWorkflowConsumer, cancellationTokenSource.Token));
         }
@@ -63,13 +63,16 @@ public static class Connection
         {
             var connection = options.Connection;
             var jsContext = options.NatsJSContext;
-            try
+            if (connection.ConnectionState != NatsConnectionState.Open)
             {
-                await connection.ConnectAsync();
-            }
-            catch
-            {
-                //burying connection errors
+                try
+                {
+                    await connection.ConnectAsync();
+                }
+                catch
+                {
+                    //burying connection errors
+                }
             }
             if (connection.ConnectionState != NatsConnectionState.Open)
                 throw new UnableToConnectException();
@@ -115,7 +118,8 @@ public static class Connection
             });
             await configurationStore.PutAsync<WorkflowOptions>(ServiceConnection.DefaultConfigKey, options.DefaultWorkflowOptions, serializer: new WorkflowOptionsSerializer());
             var objContext = jsContext.CreateObjectStoreContext();
-            var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
+            var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore);
+            var largeMessageStore = await objContext.CreateObjectStoreAsync(subjectMapper.LargeMessageObjectstore);
             var activityTimeoutsConsumer = await jsContext.CreateOrUpdateConsumerAsync(
                     subjectMapper.ActivityQueueStream,
                     new($"jetflow_activity_timeouts")
@@ -137,7 +141,7 @@ public static class Connection
                     CancellationToken.None
                 );
             return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, 
-                new(timerStore, configurationStore, archiveStore, activityTimeoutsConsumer, scheduledWorkflowConsumer)
+                new(timerStore, configurationStore, archiveStore, largeMessageStore, activityTimeoutsConsumer, scheduledWorkflowConsumer)
             );
         }
 

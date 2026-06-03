@@ -85,7 +85,7 @@ public class MessageSerializerTests
         var messageSerializer = new MessageSerializer(new(new NATS.Client.Core.NatsOpts()));
         var headers = new NatsHeaders();
         headers.Add(ContentHeaderKey, "/brotli");
-        var data = Array.Empty<byte>();
+        var data = new byte[] {1,2,3};
 
         //Act
         var exception = await Assert.ThrowsAsync<InvalidContentTypeException>(async()=>_ = await messageSerializer.DecodeAsync(data, headers));
@@ -103,7 +103,7 @@ public class MessageSerializerTests
         var messageSerializer = new MessageSerializer(new(new NATS.Client.Core.NatsOpts()));
         var headers = new NatsHeaders();
         headers.Add(ContentHeaderKey, "application/binary");
-        var data = Array.Empty<byte>();
+        var data = new byte[] { 1, 2, 3 };
 
         //Act
         var exception = await Assert.ThrowsAsync<InvalidContentTypeException>(async () => _ = await messageSerializer.DecodeAsync(data, headers));

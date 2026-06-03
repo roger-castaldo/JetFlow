@@ -2,11 +2,15 @@
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
+using NATS.Client.ObjectStore.Models;
+using NATS.Net;
 
 namespace JetFlow;
 
 internal class InternalNatsConnection(INatsConnection connection, INatsJSContext jsContext, Version? serverVersion)
 {
+    public int MaxMessagePayload => connection.ServerInfo?.MaxPayload??1_048_576;
+
     public record PublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, TimeSpan? Timeout = null);
     public record ScheduledPublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, string DelayString, string DestinationSubject, TimeSpan? Timeout = null)
         : PublishMessage(Data, Subject, Headers, Id, Timeout)
@@ -162,16 +166,32 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
             await connection.PublishAsync<byte[]>(subject, data, headers:headers, cancellationToken: cancellationToken);
         TraceHelper.AddPublishEvent(subject);
     }
-    public static string GetMessageID(INatsJSMsg<byte[]> msg)
-        => (msg.Headers?.TryGetValue(MessageIdHeader, out var id)==true ? id.ToString() : string.Empty);
+    public static string GetMessageID(NatsHeaders? headers)
+        => (headers?.TryGetValue(MessageIdHeader, out var id)==true ? id.ToString() : string.Empty);
     public ValueTask<INatsJSConsumer> CreateOrUpdateConsumerAsync(
         string stream,
         ConsumerConfig config,
         CancellationToken cancellationToken = default)
         => jsContext.CreateOrUpdateConsumerAsync(stream, config, cancellationToken);
 
-    internal ValueTask<StreamPurgeResponse> PurgeStreamAsync(string stream, StreamPurgeRequest request, CancellationToken cancellationToken)
-        => jsContext.PurgeStreamAsync(stream, request, cancellationToken);
+    internal async Task PurgeStreamAsync(string stream, StreamPurgeRequest request, CancellationToken cancellationToken)
+        => _ = await jsContext.PurgeStreamAsync(stream, request, cancellationToken);
+
+    internal async Task PurgeObjectStoreAsync(string bucketName, Func<ObjectMetadata?, bool> filter, CancellationToken cancellationToken)
+    {
+        var objectStore = await jsContext.CreateObjectStoreContext().GetObjectStoreAsync(bucketName, cancellationToken);
+        if (objectStore != null)
+        {
+            var tasks = new List<Task>();
+            await foreach (var file in objectStore.ListAsync(cancellationToken: cancellationToken))
+            {
+                if (filter(file))
+                    tasks.Add(objectStore.DeleteAsync(file.Name, cancellationToken: cancellationToken).AsTask());
+            }
+            if (tasks.Count>0)
+                await Task.WhenAll(tasks);
+        }
+    }
 
     internal ValueTask<bool> DeleteConsumerAsync(string streamName, string consumerName)
         => jsContext.DeleteConsumerAsync(streamName, consumerName);

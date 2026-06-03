@@ -80,9 +80,9 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
             catch { /* burying error in case cancellation fails*/ }
             activity?.Dispose();
             if (ackMessage)
-                await message.Message.AckAsync();
+                await message.AckAsync(CancellationToken);
             else
-                await message.Message.NakAsync();
+                await message.NakAsync();
         }
     }
     protected abstract Task HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken);
