@@ -13,4 +13,21 @@ internal static class TestsHelper
             .ToArray()
         );
 
+    internal static bool SubjectMatches(object? value, string subject)
+    {
+        if (value==null)
+            return false;
+        var svalue = (value.ToString()??string.Empty).Split('.');
+        var ssubject = subject.Split('.');
+        if (svalue.Length != ssubject.Length)
+            return false;
+        for(var x=0; x<svalue.Length; x++)
+        {
+            if (ssubject[x] == "*")
+                continue;
+            if (!Equals(svalue[x],ssubject[x]))
+                return false;
+        }
+        return true;
+    }
 }

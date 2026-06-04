@@ -26,7 +26,7 @@ internal abstract class ASubscription
                 await consumer.RefreshAsync(CancellationToken); // or try to recreate consumer
                 await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: CancellationToken))
                 {
-                    var message = new EventMessage(msg);
+                    var message = await EventMessage.CreateMessageAsync(ServiceConnection, msg, CancellationToken);
                     await ProcessMessageAsync(message);
                 }
             }

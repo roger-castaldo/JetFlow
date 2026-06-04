@@ -21,5 +21,5 @@ internal class WorkflowSubscription<TWorkflow, TInput>
      where TWorkflow : class, IWorkflow<TInput>
 {
     protected override async ValueTask HandleWorkflowEventAsync(WorkflowContext context)
-        => await Workflow.ExecuteAsync(context, (await MessageSerializer.DecodeAsync<TInput>(context.StartMessage.Data, context.StartMessage.Headers)));
+        => await Workflow.ExecuteAsync(context, (await MessageSerializer.DecodeAsync<TInput>(await ServiceConnection.RetrieveMessageDataAsync(context.StartMessage.Data, CancellationToken), context.StartMessage.Headers)));
 }

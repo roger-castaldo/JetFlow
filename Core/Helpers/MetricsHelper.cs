@@ -20,9 +20,9 @@ internal static class MetricsHelper
            );
     public static long StartActivity(EventMessage message)
     {
-        if (message.Message.Metadata!=null)
+        if (message.Metadata!=null)
             ActivityQueueLatency.Record(
-                message.RecievedTimestamp.Subtract(message.Message.Metadata.Value.Timestamp).TotalMilliseconds,
+                message.RecievedTimestamp.Subtract(message.Metadata.Value.Timestamp).TotalMilliseconds,
                 new(TraceConstants.WorkflowNameTag, message.WorkflowName),
                 new(TraceConstants.ActivityNameTag, message.ActivityName)
             );
@@ -31,9 +31,9 @@ internal static class MetricsHelper
 
     public static void ProcessWorkflowMessage(EventMessage message)
     {
-        if (message.Message.Metadata!=null)
+        if (message.Metadata!=null)
             WorkflowQueueLatency.Record(
-                message.RecievedTimestamp.Subtract(message.Message.Metadata.Value.Timestamp).TotalMilliseconds,
+                message.RecievedTimestamp.Subtract(message.Metadata.Value.Timestamp).TotalMilliseconds,
                 new(TraceConstants.WorkflowNameTag, message.WorkflowName),
                 new(TraceConstants.ActivityNameTag, message.ActivityName)
             );

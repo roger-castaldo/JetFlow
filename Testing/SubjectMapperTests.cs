@@ -20,6 +20,7 @@ public class SubjectMapperTests
         var instance = TestsHelper.GenerateRandomString(32);
         var stepName = TestsHelper.GenerateRandomString(32);
         var activityName = TestsHelper.GenerateRandomString(32);
+        var activityInstance = TestsHelper.GenerateRandomString(32);
 
         //Verify
         Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_EVENTS", subjectMapper.WorkflowEventsStreamsName);
@@ -34,22 +35,21 @@ public class SubjectMapperTests
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.timer", subjectMapper.WorkflowTimer(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepstart", subjectMapper.WorkflowStepStart(workflowName, instance, stepName));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepend", subjectMapper.WorkflowStepEnd(workflowName, instance, stepName));
-        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.steperror", subjectMapper.WorkflowStepError(workflowName, instance, stepName));
-        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.steptimeout", subjectMapper.WorkflowStepTimeout(workflowName, instance, stepName));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepretry", subjectMapper.WorkflowStepRetry(workflowName, instance, stepName));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.>", subjectMapper.WorkflowPurgeFilter(workflowName, instance));
         
         Assert.AreEqual($"JETFLOW_{streamStart}ACTIVITY_QUEUE", subjectMapper.ActivityQueueStream);
         Assert.AreEqual($"jetflow.{subjectNamespace}act.>", subjectMapper.ActivityEventsFilter);
-        Assert.AreEqual($"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{instance}.start", subjectMapper.ActivityStart(activityName, workflowName, instance));
-        Assert.AreEqual($"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{instance}.timer", subjectMapper.ActivityTimer(activityName, workflowName, instance));
-        Assert.AreEqual($"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{instance}.timeout", subjectMapper.ActivityTimeout(activityName, workflowName, instance));
+        Assert.AreEqual($"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{instance}.{activityInstance}.start", subjectMapper.ActivityStart(activityName, workflowName, instance, activityInstance));
+        Assert.AreEqual($"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{instance}.{activityInstance}.timer", subjectMapper.ActivityTimer(activityName, workflowName, instance, activityInstance));
+        Assert.AreEqual($"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{instance}.{activityInstance}.timeout", subjectMapper.ActivityTimeout(activityName, workflowName, instance, activityInstance));
         Assert.AreEqual($"jetflow.{subjectNamespace}act.*.{workflowName}.{instance}.>", subjectMapper.WorkflowActivityPurgeFilter(workflowName, instance));
 
         
         Assert.AreEqual($"JETFLOW_{streamStart}ACTIVITY_LOCKS", subjectMapper.ActivityLocksKeystore);
         Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_CONFIGS", subjectMapper.WorkflowConfigKeystore);
-        Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_ARCHIVES", subjectMapper.WorkflowArchiveKeystore);
+        Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_ARCHIVES", subjectMapper.WorkflowArchiveObjectstore);
+        Assert.AreEqual($"JETFLOW_{streamStart}LARGE_MESSAGES", subjectMapper.LargeMessageObjectstore);
 
         Assert.AreEqual($"JETFLOW_{streamStart}SCHEDULED_WORKFLOWS", subjectMapper.ScheduledWorkflowStreamsName);
         Assert.AreEqual($"jetflow.{subjectNamespace}swf.>", subjectMapper.ScheduledWorkflowsFilter);

@@ -43,10 +43,6 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepstart";
     public string WorkflowStepEnd(string workflowName, string instance, string stepName)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepend";
-    public string WorkflowStepError(string workflowName, string instance, string stepName)
-        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.steperror";
-    public string WorkflowStepTimeout(string workflowName, string instance, string stepName)
-        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.steptimeout";
     public string WorkflowStepRetry(string workflowName, string instance, string stepName)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepretry";
     public string WorkflowPurgeFilter(string workflowName, string instance)
@@ -56,12 +52,12 @@ internal class SubjectMapper
         => $"JETFLOW_{streamNamespace}ACTIVITY_QUEUE";
     public string ActivityEventsFilter
         => $"jetflow.{subjectNamespace}act.>";
-    public string ActivityStart(string activityName, string workflowName, string workflowInstance)
-        => $"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.start";
-    public string ActivityTimer(string activityName, string workflowName, string workflowInstance)
-        => $"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.timer";
-    public string ActivityTimeout(string activityName, string workflowName, string workflowInstance)
-        => $"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.timeout";
+    public string ActivityStart(string activityName, string workflowName, string workflowInstance, string activityInstance)
+        => $"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.{activityInstance}.start";
+    public string ActivityTimer(string activityName, string workflowName, string workflowInstance, string activityInstance)
+        => $"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.{activityInstance}.timer";
+    public string ActivityTimeout(string activityName, string workflowName, string workflowInstance, string activityInstance)
+        => $"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.{activityInstance}.timeout";
     public string WorkflowActivityPurgeFilter(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}act.*.{workflowName}.{instance}.>";
 
@@ -71,8 +67,11 @@ internal class SubjectMapper
     public string WorkflowConfigKeystore
         => $"JETFLOW_{streamNamespace}WORKFLOW_CONFIGS";
     
-    public string WorkflowArchiveKeystore
+    public string WorkflowArchiveObjectstore
         => $"JETFLOW_{streamNamespace}WORKFLOW_ARCHIVES";
+
+    public string LargeMessageObjectstore
+        => $"JETFLOW_{streamNamespace}LARGE_MESSAGES";
 
     public string ScheduledWorkflowStreamsName
         => $"JETFLOW_{streamNamespace}SCHEDULED_WORKFLOWS";

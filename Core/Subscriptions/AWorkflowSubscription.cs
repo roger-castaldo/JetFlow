@@ -15,8 +15,6 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
     private static readonly WorkflowEventTypes[] ValidOperations = [
         WorkflowEventTypes.Start,
         WorkflowEventTypes.StepEnd,
-        WorkflowEventTypes.StepError,
-        WorkflowEventTypes.StepTimeout,
         WorkflowEventTypes.DelayEnd
     ];
     private static readonly WorkflowEventTypes[] EndOperations = [
@@ -40,12 +38,26 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                     throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
                 MetricsHelper.ProcessWorkflowMessage(message);
                 var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, message);
-                if (!string.IsNullOrEmpty(message.ActivityName))
+                var activityResultStatus = message.WorkflowStepResultStatus;
+                var errorMessage = (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Data) : null);
+                string? timeoutMessage = null;
+                if (message.ParallelActivityCount.HasValue)
                 {
-                    if (Equals(message.WorkflowEventType, WorkflowEventTypes.StepTimeout) && context.Options.ErrorOnActivityTimeout)
-                        throw new ActivityTimeoutException(message.ActivityName);
-                    if (Equals(message.WorkflowEventType, WorkflowEventTypes.StepError) && context.Options.ErrorOnActivityFailure)
-                        throw new ActivityFailedException(message.ActivityName, message.Message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Message.Data) : string.Empty);
+                    (var isComplete, activityResultStatus, errorMessage, timeoutMessage) = context.ExtractParallelActivityStatus();
+                    if (!isComplete)
+                        throw new WorkflowSuspendedException();
+                }
+                if (!string.IsNullOrEmpty(message.ActivityName) && activityResultStatus.HasValue)
+                {
+                    if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Failure) && context.Options.ErrorOnActivityFailure)
+                    {
+                        errorMessage??=string.Empty;
+                        if (!string.IsNullOrWhiteSpace(timeoutMessage))
+                            errorMessage = $"{errorMessage}{(!string.IsNullOrWhiteSpace(errorMessage) ? ";" : "")} {timeoutMessage}";
+                        throw new ActivityFailedException(message.ActivityName, errorMessage);
+                    }
+                    if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Timeout) && context.Options.ErrorOnActivityTimeout)
+                        throw new ActivityTimeoutException(message.ActivityName, timeoutMessage);
                 }
                 await HandleWorkflowEventAsync(context);
                 isCompleted=true;
@@ -62,7 +74,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             }
             finally
             {
-                await message.Message.AckAsync(cancellationToken: CancellationToken);
+                await message.AckAsync(CancellationToken);
             }
             if (isCompleted)
             {
@@ -76,7 +88,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
     {
         if (Equals(message.WorkflowEventType, WorkflowEventTypes.Purge))
         {
-            await message.Message.AckAsync(cancellationToken: CancellationToken);
+            await message.AckAsync(CancellationToken);
             await ServiceConnection.PurgeWorkflowAsync(message, CancellationToken);
             return;
         }
@@ -97,7 +109,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         }
         if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge) || Equals(options.CompletionAction, WorkflowCompletionActions.Purge))
             await ServiceConnection.MarkWorkflowForPurge(message, options.PurgeDelay, CancellationToken);
-        await message.Message.AckAsync(cancellationToken: CancellationToken);
+        await message.AckAsync(CancellationToken);
     }
 
     protected abstract ValueTask HandleWorkflowEventAsync(WorkflowContext context);

@@ -11,10 +11,16 @@ Eventually this service will include:
 * ~~Support built in for Open Telemetry tracking and shared spans~~
 * ~~Support for custom archive and cleanup configurations~~
 * Examples of how to use this
-* Full documentation
+* ~~Full documentation~~
 * ~~Unit Testing~~
 * ~~Built in Retry/Circuit Break policies~~
 * ~~Workflow Activity execution timeouts~~
 * ~~Scheduled Workflows (Delayed start/Repeate Scheduling)~~
-* Allow for archive TTL to be set on a per workflow basis
 * Allow for multiple serializer types to be used (Json, Protobuf, etc)
+* ~~Support for paralell execution of workflow activities (fan out/fan in)~~
+* Support ability to handle workflow and activity message content larger than the max message size of Nats (currently 1mb) by allowing for the content to be stored in an external storage system and only a reference to it being stored in Nats
+
+
+[Abstractions](./Abstractions/Readme.md) 
+
+[Core](./Core/Readme.md)

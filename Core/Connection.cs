@@ -13,19 +13,34 @@ using System.Collections.Concurrent;
 
 namespace JetFlow;
 
+/// <summary>
+/// Used to create a connection to the JetFlow runtime, and register workflows and activities. It also manages the lifecycle of the connection and all subscriptions created through it, so disposing it will close all connections and subscriptions created through it. You can have multiple instances of this class connected to the same NATS server, but it's recommended to reuse the same instance as much as possible to avoid unnecessary connections and subscriptions.
+/// </summary>
 public static class Connection 
 {
+    /// <summary>
+    /// The name of the trace provider and metrics meter used by JetFlow, you can use it to correlate traces and metrics with the JetFlow runtime. It's recommended to use the same name for both traces and metrics to make it easier to correlate them.
+    /// </summary>
     public const string TraceProviderName = "JetFlow";
+    /// <summary>
+    /// The name of the metrics meter used by JetFlow, you can use it to correlate metrics with the JetFlow runtime. It's recommended to use the same name for both traces and metrics to make it easier to correlate them.
+    /// </summary>
     public const string MetricsMeterName = "JetFlow.Runtime";
+    /// <summary>
+    /// Called to create a new instance of the connection, which will be used to register workflows and activities, and manage the lifecycle of the connection and all subscriptions created through it. It's recommended to reuse the same instance as much as possible to avoid unnecessary connections and subscriptions. This method will attempt to connect to the NATS server, and if it fails, it will throw an exception. If the connection is successful, it will create the necessary streams, key value stores, object stores and consumers required for the JetFlow runtime to function properly. The connection will be left open until the instance is disposed, so you can use it to register workflows and activities at any time after it's created.
+    /// </summary>
+    /// <param name="options">The ConnectionOptions object containing the configuration options for the connection.</param>
+    /// <returns>A ValueTask representing the asynchronous operation, with a result of type IConnection.</returns>
     public static ValueTask<IConnection> CreateInstanceAsync(ConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 
-    private sealed record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore,
+    private sealed record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore, INatsObjStore LargeMessageStore,
             INatsJSConsumer ActivityTimeoutsConsumer, INatsJSConsumer ScheduledWorkflowConsumer);
 
     internal class ConnectionInstance : IConnection, IAsyncDisposable
     {
         private readonly MessageSerializer messageSerializer;
+        private readonly InternalNatsConnection internalConnection;
         private readonly ServiceConnection serviceConnection;
         private readonly Version? serverVersion;
         private readonly SubjectMapper subjectMapper;
@@ -38,7 +53,8 @@ public static class Connection
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
             serverVersion = (connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version));
-            serviceConnection = new(connection, natsJSContext, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, subjectMapper, messageSerializer);
+            internalConnection = new(connection, natsJSContext, serverVersion);
+            serviceConnection = new(internalConnection, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, stores.LargeMessageStore, subjectMapper, messageSerializer);
             subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
             subscriptions.Add(new ScheduledWorkflowsSubscription(subjectMapper, serviceConnection, stores.ScheduledWorkflowConsumer, cancellationTokenSource.Token));
         }
@@ -47,23 +63,28 @@ public static class Connection
         {
             var connection = options.Connection;
             var jsContext = options.NatsJSContext;
-            try
+            if (connection.ConnectionState != NatsConnectionState.Open)
             {
-                await connection.ConnectAsync();
-            }
-            catch
-            {
-                //burying connection errors
+                try
+                {
+                    await connection.ConnectAsync();
+                }
+                catch
+                {
+                    //burying connection errors
+                }
             }
             if (connection.ConnectionState != NatsConnectionState.Open)
                 throw new UnableToConnectException();
+            var serverVersion = (connection.ServerInfo==null ? new Version("0.0.0.0") : new Version(connection.ServerInfo.Version));
             var subjectMapper = new SubjectMapper(options.Namespace);
             await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.WorkflowEventsStreamsName, [subjectMapper.WorkflowEventsFilter])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
                 AllowDirect = true,
                 AllowMsgSchedules = true,
-                AllowMsgTTL=true
+                AllowMsgTTL=true,
+                AllowAtomicPublish = serverVersion>=new Version("2.12")
             });
             await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ActivityQueueStream, [subjectMapper.ActivityEventsFilter])
             {
@@ -71,14 +92,16 @@ public static class Connection
                 AllowDirect = true,
                 AllowMsgSchedules = true,
                 AllowMsgTTL=true,
-                Retention = StreamConfigRetention.Workqueue
+                Retention = StreamConfigRetention.Workqueue,
+                AllowAtomicPublish = serverVersion>=new Version("2.12")
             });
             await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ScheduledWorkflowStreamsName, [subjectMapper.ScheduledWorkflowsFilter])
             {
                 DuplicateWindow = TimeSpan.FromMinutes(10),
                 AllowDirect = true,
                 AllowMsgSchedules = true,
-                AllowMsgTTL=true
+                AllowMsgTTL=true,
+                AllowAtomicPublish = serverVersion>=new Version("2.12")
             });
             var kc = jsContext.CreateKeyValueStoreContext();
             var timerStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.ActivityLocksKeystore)
@@ -95,13 +118,14 @@ public static class Connection
             });
             await configurationStore.PutAsync<WorkflowOptions>(ServiceConnection.DefaultConfigKey, options.DefaultWorkflowOptions, serializer: new WorkflowOptionsSerializer());
             var objContext = jsContext.CreateObjectStoreContext();
-            var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveKeystore);
+            var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore);
+            var largeMessageStore = await objContext.CreateObjectStoreAsync(subjectMapper.LargeMessageObjectstore);
             var activityTimeoutsConsumer = await jsContext.CreateOrUpdateConsumerAsync(
                     subjectMapper.ActivityQueueStream,
                     new($"jetflow_activity_timeouts")
                     {
                         DurableName = $"jetflow_activity_timeouts",
-                        FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*"),
+                        FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*", "*"),
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     },
                     CancellationToken.None
@@ -117,17 +141,17 @@ public static class Connection
                     CancellationToken.None
                 );
             return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, 
-                new(timerStore, configurationStore, archiveStore, activityTimeoutsConsumer, scheduledWorkflowConsumer)
+                new(timerStore, configurationStore, archiveStore, largeMessageStore, activityTimeoutsConsumer, scheduledWorkflowConsumer)
             );
         }
 
         private ValueTask<INatsJSConsumer> CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(CancellationToken cancellationToken)
-            => serviceConnection.CreateOrUpdateConsumerAsync(
+            => internalConnection.CreateOrUpdateConsumerAsync(
                     subjectMapper.ActivityQueueStream,
                     new($"act_{NameHelper.GetActivityName<TWorkflowActivity>()}")
                     {
                         DurableName= $"act_{NameHelper.GetActivityName<TWorkflowActivity>()}",
-                        FilterSubject = subjectMapper.ActivityStart(NameHelper.GetActivityName<TWorkflowActivity>(), "*", "*"),
+                        FilterSubject = subjectMapper.ActivityStart(NameHelper.GetActivityName<TWorkflowActivity>(), "*", "*", "*"),
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     },
                     cancellationToken
@@ -146,7 +170,7 @@ public static class Connection
             => subscriptions.Add(new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
 
         private ValueTask<INatsJSConsumer> CreateWorkflowConsumerAsync<TWorkflow>(CancellationToken cancellationToken)
-            => serviceConnection.CreateOrUpdateConsumerAsync(
+            => internalConnection.CreateOrUpdateConsumerAsync(
                     subjectMapper.WorkflowEventsStreamsName,
                     new($"wfr_{NameHelper.GetWorkflowName<TWorkflow>()}")
                     {
@@ -156,9 +180,7 @@ public static class Connection
                             subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
                             subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
                             subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
-                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
-                            subjectMapper.WorkflowStepError(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
-                            subjectMapper.WorkflowStepTimeout(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*")
+                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*")
                         ],
                         DeliverPolicy = NATS.Client.JetStream.Models.ConsumerConfigDeliverPolicy.New,
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit

@@ -7,45 +7,47 @@ namespace JetFlow;
 
 internal partial class ServiceConnection
 {
-    public async ValueTask<Guid> StartWorkflowAsync(string name, byte[] data, NatsHeaders? headers, byte[]? configData, CancellationToken cancellationToken)
+    public async ValueTask<Guid> StartWorkflowAsync(string name, Guid id, byte[] data, NatsHeaders? headers, byte[]? configData, CancellationToken cancellationToken)
     {
-        var id = Guid.NewGuid();
         headers ??= new();
         using var activity = TraceHelper.StartWorkflow(name, id.ToString());
         configData ??= InternalsSerializer.SerializeWorkflowOptions(await GetWorkflowOptions(name));
-        await PublishMessageAsync(new(
+        await connection.PublishMessagesAsync([
+            new InternalNatsConnection.PublishMessage(
                 configData,
                 subjectMapper.WorkflowConfigure(name, id.ToString()),
                 new(headers.ToDictionary()),
                 $"{name}-{id}-configure"
-            ), cancellationToken: cancellationToken);
-        await PublishMessageAsync(new(
+            ),
+            new InternalNatsConnection.PublishMessage(
                 data,
                 subjectMapper.WorkflowStart(name, id.ToString()),
                 new(headers.ToDictionary()),
                 $"{name}-{id}-start"
-            ), cancellationToken: cancellationToken);
+            )
+        ], cancellationToken);
         return id;
     }
-    private async ValueTask<Guid> StartWorkflowAsync<TWorkflow>(byte[] data, NatsHeaders? headers, CancellationToken cancellationToken)
+    private async ValueTask<Guid> StartWorkflowAsync<TWorkflow>(Guid id, byte[] data, NatsHeaders? headers, CancellationToken cancellationToken)
     {
         var name = NameHelper.GetWorkflowName<TWorkflow>();
         var configData = InternalsSerializer.SerializeWorkflowOptions(await GetWorkflowOptions(name));
-        return await StartWorkflowAsync(name, data, headers, configData, cancellationToken);
+        return await StartWorkflowAsync(name, id, data, headers, configData, cancellationToken);
     }
     public ValueTask<Guid> StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
-        => StartWorkflowAsync<TWorkflow>([], null, cancellationToken);
+        => StartWorkflowAsync<TWorkflow>(Guid.NewGuid(), [], null, cancellationToken);
     public async ValueTask<Guid> StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow<TInput>
     {
-        var (data, headers) = await messageSerializer.EncodeAsync<TInput>(input);
-        return await StartWorkflowAsync<TWorkflow>(data, headers, cancellationToken);
+        var id = Guid.NewGuid();
+        var (data, headers) = await EncodeMessageAsync<TInput>(input, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
+        return await StartWorkflowAsync<TWorkflow>(id, data, headers, cancellationToken);
     }
     public async ValueTask EndWorkflowAsync(EventMessage message, Messages.WorkflowEnd workflowEnd, CancellationToken cancellationToken)
     {
-        var (data, headers) = await messageSerializer.EncodeAsync<Messages.WorkflowEnd>(workflowEnd);
-        await PublishMessageAsync(new(
+        var (data, headers) = await EncodeMessageAsync<Messages.WorkflowEnd>(workflowEnd, message.WorkflowName, message.WorkflowId, cancellationToken);
+        await connection.PublishMessageAsync(new(
                 data,
                 subjectMapper.WorkflowEnd(message.WorkflowName, message.WorkflowId),
                 message.InjectHeaders(headers),
@@ -56,24 +58,25 @@ internal partial class ServiceConnection
     {
         var id = Guid.NewGuid();
         using var activity = TraceHelper.StartDelay(message);
-        await PublishMessageAsync(new(
+        await connection.PublishMessagesAsync([
+            new InternalNatsConnection.PublishMessage(
                 [],
                 subjectMapper.WorkflowDelayStart(message.WorkflowName, message.WorkflowId),
                 message.InjectHeaders(null),
                 $"{message.WorkflowName}-{message.WorkflowId}-{id}-delaystart"
-            ), cancellationToken: cancellationToken);
-        await PublishDelayedMessageAsync(new(
+            ),
+            InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                 [],
                 subjectMapper.WorkflowTimer(message.WorkflowName, message.WorkflowId),
                 message.InjectHeaders(null),
-                $"{message.WorkflowName}-{message.WorkflowId}-{id}-delaytimer"
-            ), 
-            delay,
-            subjectMapper.WorkflowDelayEnd(message.WorkflowName, message.WorkflowId),
-            cancellationToken: cancellationToken);
+                $"{message.WorkflowName}-{message.WorkflowId}-{id}-delaytimer",
+                delay,
+                subjectMapper.WorkflowDelayEnd(message.WorkflowName, message.WorkflowId)
+            )
+        ], cancellationToken);
     }
     public ValueTask MarkWorkflowArchived(EventMessage message, CancellationToken cancellationToken)
-        => PublishMessageAsync(new(
+        => connection.PublishMessageAsync(new(
                 [],
                 subjectMapper.WorkflowArchived(message.WorkflowName, message.WorkflowId),
                 message.InjectHeaders(null),
@@ -82,16 +85,16 @@ internal partial class ServiceConnection
         );
     public ValueTask MarkWorkflowForPurge(EventMessage message, TimeSpan? purgeDelay, CancellationToken cancellationToken)
         => (purgeDelay.HasValue ?
-           PublishDelayedMessageAsync(new(
-                [],
-                subjectMapper.WorkflowTimer(message.WorkflowName, message.WorkflowId),
-                message.InjectHeaders(null),
-                $"{message.WorkflowName}-{message.WorkflowId}-purge"
-               ), 
-               purgeDelay.Value,
-               subjectMapper.WorkflowPurge(message.WorkflowName, message.WorkflowId),
+           connection.PublishScheduledMessageAsync(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
+                    [],
+                    subjectMapper.WorkflowTimer(message.WorkflowName, message.WorkflowId),
+                    message.InjectHeaders(null),
+                    $"{message.WorkflowName}-{message.WorkflowId}-purge", 
+                   purgeDelay.Value,
+                   subjectMapper.WorkflowPurge(message.WorkflowName, message.WorkflowId)
+               ),
                cancellationToken: cancellationToken)
-           : PublishMessageAsync(new(
+           : connection.PublishMessageAsync(new(
                    [],
                    subjectMapper.WorkflowPurge(message.WorkflowName, message.WorkflowId),
                    message.InjectHeaders(null),

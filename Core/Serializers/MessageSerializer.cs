@@ -34,7 +34,7 @@ internal class MessageSerializer
 
     private async ValueTask<T?> DecodeObjectAsync<T>(byte[]? data, NatsHeaders? headers)
     {
-        if (data==null)
+        if (data==null || data.Length==0)
             return default;
 
         // Ensure encoding is always assigned to avoid CS8887.

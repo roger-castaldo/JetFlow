@@ -58,7 +58,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithUnregisteredActivity>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithUnregisteredActivity>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithUnregisteredActivity>(CancellationToken.None)
         );
 
         // Assert
@@ -76,7 +76,7 @@ public class WorkflowOptionTests
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
         }
     }
 
@@ -104,7 +104,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithSlowActivity>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithSlowActivity>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithSlowActivity>(CancellationToken.None)
         );
 
         // Assert
@@ -150,7 +150,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithActivityError>(natsConnection, subjectMapper,
-            () => connection.StartWorkflowAsync<WorkflowWithActivityError>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithActivityError>(CancellationToken.None)
         );
 
         // Assert
@@ -174,7 +174,7 @@ public class WorkflowOptionTests
 
     private sealed record TimeStampResult(byte[]? Message, long Timestamp);
 
-    private async Task<(TimeStampResult? completion, TimeStampResult? archive, TimeStampResult? purge)> ExecuteCompletionTest(WorkflowCompletionActions completionAction, TimeSpan? purgeDelay=null)
+    private static async Task<(TimeStampResult? completion, TimeStampResult? archive, TimeStampResult? purge)> ExecuteCompletionTest(WorkflowCompletionActions completionAction, TimeSpan? purgeDelay=null)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -191,76 +191,30 @@ public class WorkflowOptionTests
         var archive = new TaskCompletionSource<TimeStampResult?>();
         var purge = new TaskCompletionSource<TimeStampResult?>();
 
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"), cancellationToken: cancellationTokenSource.Token))
-                {
-                    if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                    {
-                        completion.TrySetResult(new(msg.Data,Stopwatch.GetTimestamp()));
-                        break;
-                    }
-                }
-            }
-            catch (OperationCanceledException) { /*buried to handle cancelling*/}
-        });
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"), cancellationToken: cancellationTokenSource.Token))
-                {
-                    if (Equals(msg.Subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                    {
-                        archive.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
-                        break;
-                    }
-                }
-            }
-            catch (OperationCanceledException) {/*buried to handle cancelling*/ }
-        });
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                if (purgeDelay.HasValue)
-                {
-                    var context = new NatsJSContext(natsConnection);
-                    var consumer = await context.CreateConsumerAsync(
-                        subjectMapper.WorkflowEventsStreamsName,
-                        new(Guid.NewGuid().ToString())
-                        {
-                            FilterSubject=subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
-                            AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
-                        }
-                    );
-                    await consumer.RefreshAsync(cancellationTokenSource.Token);
-                    await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
-                    {
-                        if (Equals(msg.Subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                        {
-                            purge.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
-                            break;
-                        }
-                    }
-                    await context.DeleteConsumerAsync(subjectMapper.WorkflowEventsStreamsName, consumer.Info.Name);
-                }
-                else
-                {
-                    await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"), cancellationToken: cancellationTokenSource.Token))
-                    {
-                        if (Equals(msg.Subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                        {
-                            purge.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
-                            break;
-                        }
-                    }
-                }
-            }
-            catch (OperationCanceledException) { /*buried to handle cancelling*/}
-        });
+        StartMessageListener(
+            natsConnection, 
+            subjectMapper.WorkflowEventsStreamsName, 
+            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            completion, 
+            (subject)=>Equals(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            cancellationTokenSource.Token
+        );
+        StartMessageListener(
+            natsConnection,
+            subjectMapper.WorkflowEventsStreamsName,
+            subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            archive,
+            (subject) => Equals(subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            cancellationTokenSource.Token
+        );
+        StartMessageListener(
+            natsConnection,
+            subjectMapper.WorkflowEventsStreamsName,
+            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            purge,
+            (subject) => Equals(subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            cancellationTokenSource.Token
+        );
 
         //Act
         runId = await connection.StartWorkflowAsync<WorkflowWithNoSteps>(cancellationTokenSource.Token);
@@ -269,70 +223,102 @@ public class WorkflowOptionTests
         var completionResult = await completion.Task;
         var archiveResult = await (await Task.WhenAny<TimeStampResult?>(
             archive.Task,
-            Task.Delay(TimeSpan.FromSeconds(10)).ContinueWith<TimeStampResult?>(_ => null)
+            Task.Delay(TimeSpan.FromSeconds(20)).ContinueWith<TimeStampResult?>(_ => null)
         ));
         var purgeResult = await (await Task.WhenAny<TimeStampResult?>(
             purge.Task,
-            Task.Delay(TimeSpan.FromSeconds(10)).ContinueWith<TimeStampResult?>(_ => null)
+            Task.Delay(TimeSpan.FromSeconds(20)).ContinueWith<TimeStampResult?>(_ => null)
         ));
 
         //cleanup
         await cancellationTokenSource.CancelAsync();
+        if (purgeResult!=null)
+            await Task.Delay(TimeSpan.FromSeconds(30)); //wait for any in-flight messages to be processed before disposing connection
         await ((IAsyncDisposable)connection).DisposeAsync();
 
         return (completionResult, archiveResult, purgeResult);
+    }
+
+    private static void StartMessageListener(NatsConnection natsConnection, string workflowEventsStreamsName, string filterSubject, TaskCompletionSource<TimeStampResult?> completion, Func<object, bool> isMatch, CancellationToken token)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var context = new NatsJSContext(natsConnection);
+                var consumer = await context.CreateConsumerAsync(
+                    workflowEventsStreamsName,
+                    new(Guid.NewGuid().ToString())
+                    {
+                        FilterSubject=filterSubject,
+                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
+                    }
+                );
+                await consumer.RefreshAsync(token);
+                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: token))
+                {
+                    if (isMatch(msg.Subject))
+                    {
+                        completion.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
+                        break;
+                    }
+                }
+                await context.DeleteConsumerAsync(workflowEventsStreamsName, consumer.Info.Name);
+            }
+            catch (OperationCanceledException) { /*buried to handle cancelling*/}
+        });
     }
 
     [TestMethod]
     public async Task WorkflowCompletionPostActionNone()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.None);
+        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.None);
 
         //Assert
-        Assert.IsNotNull(results.completion);
-        Assert.IsNull(results.archive);
-        Assert.IsNull(results.purge);
+        Assert.IsNotNull(completion);
+        Assert.IsNull(archive);
+        Assert.IsNull(purge);
     }
 
     [TestMethod]
     public async Task WorkflowCompletionPostActionArchiveThenNothing()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenNothing);
+        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenNothing);
 
         //Assert
-        Assert.IsNotNull(results.completion);
-        Assert.IsNotNull(results.archive);
-        Assert.IsNull(results.purge);
-        Assert.IsGreaterThan(results.completion.Timestamp, results.archive.Timestamp);
+        Assert.IsNotNull(completion);
+        Assert.IsNotNull(archive);
+        Assert.IsNull(purge);
+        Assert.IsGreaterThan(completion.Timestamp, archive.Timestamp);
     }
 
     [TestMethod]
     public async Task WorkflowCompletionPostActionArchiveThenPurge()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenPurge, purgeDelay: TimeSpan.FromSeconds(1));
+        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenPurge, purgeDelay: TimeSpan.FromSeconds(1));
 
         //Assert
-        Assert.IsNotNull(results.completion);
-        Assert.IsNotNull(results.archive);
-        Assert.IsNotNull(results.purge);
-        Assert.IsGreaterThanOrEqualTo(results.completion.Timestamp, results.archive.Timestamp);
-        Assert.IsGreaterThanOrEqualTo(results.archive.Timestamp, results.purge.Timestamp);
+        Assert.IsNotNull(completion);
+        Assert.IsNotNull(archive);
+        Assert.IsNotNull(purge);
+        Assert.IsGreaterThanOrEqualTo(completion.Timestamp, archive.Timestamp);
+        Assert.IsGreaterThanOrEqualTo(archive.Timestamp, purge.Timestamp);
     }
 
     [TestMethod]
     public async Task WorkflowCompletionPostActionPurge()
     {
         //Act
-        var results = await ExecuteCompletionTest(WorkflowCompletionActions.Purge);
+        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.Purge);
 
         //Assert
-        Assert.IsNotNull(results.completion);
-        Assert.IsNull(results.archive);
-        Assert.IsNotNull(results.purge);
-        Assert.IsGreaterThan(results.completion.Timestamp, results.purge.Timestamp);
+        Assert.IsNotNull(completion);
+        Assert.IsNull(archive);
+        Assert.IsNotNull(purge);
+        Assert.IsGreaterThan(completion.Timestamp, purge.Timestamp);
     }
 
     [TestMethod]
@@ -343,21 +329,21 @@ public class WorkflowOptionTests
         //Arrange
         var delay = TimeSpan.FromSeconds(RandomNumberGenerator.GetInt32(3,5));
         //Act
-        var results = await ExecuteCompletionTest(completionAction, delay);
+        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(completionAction, delay);
 
         //Assert
-        Assert.IsNotNull(results.completion);
-        Assert.IsNotNull(results.purge);
+        Assert.IsNotNull(completion);
+        Assert.IsNotNull(purge);
         double mid;
         if (completionAction== WorkflowCompletionActions.ArchiveThenPurge)
         {
-            Assert.IsNotNull(results.archive);
-            mid = Math.Floor(Stopwatch.GetElapsedTime(results.archive.Timestamp).Subtract(Stopwatch.GetElapsedTime(results.purge.Timestamp)).TotalSeconds);
+            Assert.IsNotNull(archive);
+            mid = Math.Floor(Stopwatch.GetElapsedTime(archive.Timestamp).Subtract(Stopwatch.GetElapsedTime(purge.Timestamp)).TotalSeconds);
         }
         else
         {
-            Assert.IsNull(results.archive);
-            mid = Math.Floor(Stopwatch.GetElapsedTime(results.completion.Timestamp).Subtract(Stopwatch.GetElapsedTime(results.purge.Timestamp)).TotalSeconds);
+            Assert.IsNull(archive);
+            mid = Math.Floor(Stopwatch.GetElapsedTime(completion.Timestamp).Subtract(Stopwatch.GetElapsedTime(purge.Timestamp)).TotalSeconds);
         }
         Assert.IsGreaterThanOrEqualTo(delay.TotalSeconds-1, mid);
         Assert.IsLessThanOrEqualTo(delay.TotalSeconds+1, mid);
