@@ -14,6 +14,9 @@ namespace JetFlow.Testing;
 [TestClass]
 public class ParallelActivityTests
 {
+    private static readonly InvalidDataException UnexpectedActivityResultCount = new("Unexpected activity result count");
+    private static readonly InvalidDataException UnexpectedActivityStatus = new("Unexpected activity failure");
+
     private static NatsTestHarness? natsTestHarness;
 
     [ClassInitialize]
@@ -51,9 +54,9 @@ public class ParallelActivityTests
             }
             var results = await context.ExecuteActivitiesAsync<EmptyActivityWithInput, string>(new(inputs));
             if (results.Count()!=ParallelActivityCount)
-                throw new Exception("Unexpected activity result count");
+                throw UnexpectedActivityResultCount;
             else if (results.Any(r => !Equals(r.Status, ActivityResultStatus.Success)))
-                throw new Exception("Unexpected activity failure");
+                throw UnexpectedActivityStatus;
         }
     }
 
@@ -63,7 +66,6 @@ public class ParallelActivityTests
         Assert.IsNotNull(natsTestHarness);
         //Arrange
         var emptyActivityWithInput = new EmptyActivityWithInput();
-        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
@@ -130,9 +132,9 @@ public class ParallelActivityTests
             }
             var results = await context.ExecuteActivitiesAsync<EmptyActivityWithInputAndOutput, string, string>(new(inputs));
             if (results.Count()!=ParallelActivityCount)
-                throw new Exception("Unexpected activity result count");
+                throw UnexpectedActivityResultCount;
             else if (results.Any(r => !Equals(r.Status, ActivityResultStatus.Success)))
-                throw new Exception("Unexpected activity failure");
+                throw UnexpectedActivityStatus;
             outputs.AddRange(results.Select(r => r.Output!));
         }
     }
@@ -186,14 +188,12 @@ public class ParallelActivityTests
         ParallelActivityWorkflowWithOutput.Reset();
         var runId = Guid.Empty;
         var emptyActivityWithInputAndOutput = new EmptyActivityWithInputAndOutput();
-        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var jsContext = new NatsJSContext(natsConnection);
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>(new() { CompletionAction = WorkflowCompletionActions.ArchiveThenNothing }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput, TestContext.CancellationToken);
@@ -233,7 +233,7 @@ public class ParallelActivityTests
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotEmpty(archive.Steps);
         Assert.HasCount(emptyActivityWithInputAndOutput.Inputs.Count, archive.Steps);
-        var stepIndex = archive.Steps.First().Index;
+        var stepIndex = archive.Steps.ElementAt(0).Index;
         Assert.IsTrue(archive.Steps.All(s => 
             Equals(s.Name, NameHelper.GetActivityName<EmptyActivityWithInputAndOutput>())
             && Equals(s.Status, ActivityResultStatus.Success)
@@ -273,7 +273,7 @@ public class ParallelActivityTests
                 Timeouts = new(AttemptTimeout: TimeSpan.FromSeconds(3))
             });
             if (results.Count()!=ParallelActivityCount)
-                throw new Exception("Unexpected activity result count");
+                throw UnexpectedActivityResultCount;
         }
     }
 
@@ -286,7 +286,6 @@ public class ParallelActivityTests
         Assert.IsNotNull(natsTestHarness);
         //Arrange
         var emptyActivityToTimeout = new EmptyActivityWithProblems();
-        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
@@ -338,9 +337,9 @@ public class ParallelActivityTests
             }
             var results = await context.ExecuteActivitiesAsync<EmptyActivityWithInput, string>(new(inputs));
             if (results.Count()!=ParallelActivityCount)
-                throw new Exception("Unexpected activity result count");
+                throw UnexpectedActivityResultCount;
             else if (results.Any(r => !Equals(r.Status, ActivityResultStatus.Success)))
-                throw new Exception("Unexpected activity failure");
+                throw UnexpectedActivityStatus;
         }
     }
 
@@ -350,7 +349,6 @@ public class ParallelActivityTests
         Assert.IsNotNull(natsTestHarness);
         //Arrange
         var emptyActivityWithInput = new EmptyActivityWithInput();
-        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);

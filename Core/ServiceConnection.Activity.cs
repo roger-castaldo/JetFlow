@@ -1,5 +1,8 @@
 ﻿using JetFlow.Helpers;
 using NATS.Client.Core;
+using NATS.Client.JetStream;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using static JetFlow.InternalNatsConnection;
 
@@ -7,7 +10,7 @@ namespace JetFlow;
 
 internal partial class ServiceConnection
 {
-    private NatsHeaders CreateWorkflowActivityStartHeaders(string activityName, uint stepIndex, ActivityExecutionRequest options, byte[] data, NatsHeaders? headers, EventMessage message, TimeSpan? timeout)
+    private static NatsHeaders CreateWorkflowActivityStartHeaders(uint stepIndex, ActivityExecutionRequest options, NatsHeaders? headers, TimeSpan? timeout)
     {
         headers??= [];
         headers.Add(Constants.ActivityIDHeader, stepIndex.ToString());
@@ -64,7 +67,7 @@ internal partial class ServiceConnection
     {
         var activityName = NameHelper.GetActivityName<TActivity>();
         using var activity = TraceHelper.StartWorkflowStep(message, NameHelper.GetActivityName<TActivity>(), stepIndex.ToString());
-        headers = CreateWorkflowActivityStartHeaders(activityName, stepIndex, options, data, headers, message, timeout);
+        headers = ServiceConnection.CreateWorkflowActivityStartHeaders(stepIndex, options, headers, timeout);
         await connection.PublishMessageAsync(CreateWorkflowActivityStartMessage(activityName, stepIndex, data, headers, message), cancellationToken: cancellationToken);
         await connection.PublishMessagesAsync(CreateActivityStartMessages(activityName, stepIndex, options, data, headers, message, timeout), cancellationToken);
     }
@@ -87,7 +90,7 @@ internal partial class ServiceConnection
             .Where(pair => !Equals(Constants.ActivityAttemptHeader, pair.Key)
             && pair.Key.Contains("-jetflow-"))
             .Append(new(Constants.ActivityAttemptHeader, (message.ActivityAttempt + 1).ToString()));
-        var timeout = (message.Headers?.TryGetValue(Constants.ActivityOverallTimeoutHeader, out var timeoutStr)??false) && TimeSpan.TryParse(timeoutStr, out var timeoutVal) ? timeoutVal : (TimeSpan?)null;
+        var timeout = (message.Headers?.TryGetValue(Constants.ActivityOverallTimeoutHeader, out var timeoutStr)??false) && TimeSpan.TryParse(timeoutStr, CultureInfo.InvariantCulture, out var timeoutVal) ? timeoutVal : (TimeSpan?)null;
         List<PublishMessage> messages = [];
         var activityInstanceId = Guid.NewGuid().ToString();
         if (message.RetryConfiguration?.DelayBetween!=null)
@@ -139,7 +142,7 @@ internal partial class ServiceConnection
             var (data, headers) = await EncodeMessageAsync<TInput>(input, message.WorkflowName, message.WorkflowId, cancellationToken);
             headers.Add(Constants.ParalellActivityIndexHeader, idx.ToString());
             headers.Add(Constants.ParallelActivityCountHeader, cnt.ToString());
-            headers = CreateWorkflowActivityStartHeaders(activityName, stepIndex, executionRequest, data, headers, message, executionRequest.Timeouts?.OverallTimeout);
+            headers = ServiceConnection.CreateWorkflowActivityStartHeaders(stepIndex, executionRequest, headers, executionRequest.Timeouts?.OverallTimeout);
             workflowMessages.Add(CreateWorkflowActivityStartMessage(activityName, stepIndex, data, headers, message, idx));
             activityMessages.AddRange(CreateActivityStartMessages(activityName, stepIndex, executionRequest, data, headers, message, executionRequest.Timeouts?.OverallTimeout, idx));
             idx++;
@@ -244,27 +247,27 @@ internal partial class ServiceConnection
                 await foreach (var msg in query)
                 {
                     hasAny=true;
-                    if ((msg.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false) && Equals(message.ActivityID, uint.Parse(activityId.ToString())))
-                    {
-                        if (message.ParallelActivityIndex.HasValue)
-                        {
-                            if ((msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var parallelIdx)??false) && Equals(message.ParallelActivityIndex.ToString(), parallelIdx.ToString()))
-                            {
-                                isDone=true;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            isDone=true;
-                            break;
-                        }
-                    }
+                    isDone = MessageActivityMatches(msg, message);
+                    if (isDone)
+                        break;
+                    
                 }
             }
             return (!isDone, key);
         }
         return (false, key);
+    }
+
+    private static bool MessageActivityMatches(INatsJSMsg<byte[]> msg, EventMessage message)
+    {
+        if ((msg.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false) && Equals(message.ActivityID, uint.Parse(activityId.ToString())))
+        {
+            if (message.ParallelActivityIndex.HasValue)
+                return (msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var parallelIdx)??false) && Equals(message.ParallelActivityIndex.ToString(), parallelIdx.ToString());
+            else
+                return true;
+        }
+        return false;
     }
 
     public async ValueTask<ulong> KeepActivityAlive(EventMessage message, ulong revision, CancellationToken cancellationToken)

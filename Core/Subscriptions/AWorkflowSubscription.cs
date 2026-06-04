@@ -50,7 +50,12 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                 if (!string.IsNullOrEmpty(message.ActivityName) && activityResultStatus.HasValue)
                 {
                     if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Failure) && context.Options.ErrorOnActivityFailure)
-                        throw new ActivityFailedException(message.ActivityName, $"{errorMessage??string.Empty}{(!string.IsNullOrWhiteSpace(timeoutMessage) ? $"{(!string.IsNullOrWhiteSpace(errorMessage) ? ";" : "")} {timeoutMessage}" : null)}");
+                    {
+                        errorMessage??=string.Empty;
+                        if (!string.IsNullOrWhiteSpace(timeoutMessage))
+                            errorMessage = $"{errorMessage}{(!string.IsNullOrWhiteSpace(errorMessage) ? ";" : "")} {timeoutMessage}";
+                        throw new ActivityFailedException(message.ActivityName, errorMessage);
+                    }
                     if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Timeout) && context.Options.ErrorOnActivityTimeout)
                         throw new ActivityTimeoutException(message.ActivityName, timeoutMessage);
                 }

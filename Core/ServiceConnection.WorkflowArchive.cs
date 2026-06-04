@@ -69,7 +69,7 @@ internal partial class ServiceConnection
                     break;
                 case WorkflowEventTypes.StepEnd:
                     var messages = FindMatchingMessages(eventMessage, ref events);
-                    var previousMessage = messages.FirstOrDefault(e => Equals(e.WorkflowEventType, WorkflowEventTypes.StepStart));
+                    var previousMessage = messages.First(e => Equals(e.WorkflowEventType, WorkflowEventTypes.StepStart));
                     var retries = messages.Where(e => Equals(e.WorkflowEventType, WorkflowEventTypes.StepRetry)).Select(e => new WorkflowStepRetry(Enum.Parse<RetryTypes>(UTF8Encoding.UTF8.GetString(e.Data!)), e.Metadata!.Value.Timestamp)).ToArray();
                     steps.Add(await ProduceActionAsync(eventMessage, previousMessage, retries));
                     break;
@@ -102,7 +102,7 @@ internal partial class ServiceConnection
         return result;
     }
 
-    private async Task<WorkflowStep> ProduceActionAsync(EventMessage eventMessage, EventMessage? previousMessage, IEnumerable<WorkflowStepRetry> retries)
+    private async Task<WorkflowStep> ProduceActionAsync(EventMessage eventMessage, EventMessage previousMessage, IEnumerable<WorkflowStepRetry> retries)
     {
         return new(
             WorkflowStepTypes.Action,
@@ -111,7 +111,7 @@ internal partial class ServiceConnection
             previousMessage!.Metadata!.Value.Timestamp,
             eventMessage!.Metadata!.Value.Timestamp,
             (retries.Any() ? retries.ToArray() : null),
-            ((previousMessage?.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(previousMessage!.Data, previousMessage!.Headers) : null),
+            ((previousMessage.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(previousMessage.Data, previousMessage.Headers) : null),
             eventMessage.WorkflowStepResultStatus,
             eventMessage.WorkflowStepResultStatus == ActivityResultStatus.Failure ? System.Text.UTF8Encoding.UTF8.GetString(eventMessage.Data!) : null,
             eventMessage.WorkflowStepResultStatus == ActivityResultStatus.Success && (eventMessage.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Data, eventMessage.Headers) : null

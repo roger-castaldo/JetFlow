@@ -191,84 +191,30 @@ public class WorkflowOptionTests
         var archive = new TaskCompletionSource<TimeStampResult?>();
         var purge = new TaskCompletionSource<TimeStampResult?>();
 
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var context = new NatsJSContext(natsConnection);
-                var consumer = await context.CreateConsumerAsync(
-                    subjectMapper.WorkflowEventsStreamsName,
-                    new(Guid.NewGuid().ToString())
-                    {
-                        FilterSubject=subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
-                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
-                    }
-                );
-                await consumer.RefreshAsync(cancellationTokenSource.Token);
-                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
-                {
-                    if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                    {
-                        completion.TrySetResult(new(msg.Data,Stopwatch.GetTimestamp()));
-                        break;
-                    }
-                }
-                await context.DeleteConsumerAsync(subjectMapper.WorkflowEventsStreamsName, consumer.Info.Name);
-            }
-            catch (OperationCanceledException) { /*buried to handle cancelling*/}
-        });
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var context = new NatsJSContext(natsConnection);
-                var consumer = await context.CreateConsumerAsync(
-                    subjectMapper.WorkflowEventsStreamsName,
-                    new(Guid.NewGuid().ToString())
-                    {
-                        FilterSubject=subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
-                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
-                    }
-                );
-                await consumer.RefreshAsync(cancellationTokenSource.Token);
-                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
-                {
-                    if (Equals(msg.Subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                    {
-                        archive.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
-                        break;
-                    }
-                }
-                await context.DeleteConsumerAsync(subjectMapper.WorkflowEventsStreamsName, consumer.Info.Name);
-            }
-            catch (OperationCanceledException) {/*buried to handle cancelling*/ }
-        });
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var context = new NatsJSContext(natsConnection);
-                var consumer = await context.CreateConsumerAsync(
-                    subjectMapper.WorkflowEventsStreamsName,
-                    new(Guid.NewGuid().ToString())
-                    {
-                        FilterSubject=subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
-                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
-                    }
-                );
-                await consumer.RefreshAsync(cancellationTokenSource.Token);
-                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: cancellationTokenSource.Token))
-                {
-                    if (Equals(msg.Subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())))
-                    {
-                        purge.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
-                        break;
-                    }
-                }
-                await context.DeleteConsumerAsync(subjectMapper.WorkflowEventsStreamsName, consumer.Info.Name);
-            }
-            catch (OperationCanceledException) { /*buried to handle cancelling*/}
-        });
+        StartMessageListener(
+            natsConnection, 
+            subjectMapper.WorkflowEventsStreamsName, 
+            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            completion, 
+            (subject)=>Equals(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            cancellationTokenSource.Token
+        );
+        StartMessageListener(
+            natsConnection,
+            subjectMapper.WorkflowEventsStreamsName,
+            subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            archive,
+            (subject) => Equals(subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            cancellationTokenSource.Token
+        );
+        StartMessageListener(
+            natsConnection,
+            subjectMapper.WorkflowEventsStreamsName,
+            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            purge,
+            (subject) => Equals(subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            cancellationTokenSource.Token
+        );
 
         //Act
         runId = await connection.StartWorkflowAsync<WorkflowWithNoSteps>(cancellationTokenSource.Token);
@@ -291,6 +237,36 @@ public class WorkflowOptionTests
         await ((IAsyncDisposable)connection).DisposeAsync();
 
         return (completionResult, archiveResult, purgeResult);
+    }
+
+    private static void StartMessageListener(NatsConnection natsConnection, string workflowEventsStreamsName, string filterSubject, TaskCompletionSource<TimeStampResult?> completion, Func<object, bool> isMatch, CancellationToken token)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var context = new NatsJSContext(natsConnection);
+                var consumer = await context.CreateConsumerAsync(
+                    workflowEventsStreamsName,
+                    new(Guid.NewGuid().ToString())
+                    {
+                        FilterSubject=filterSubject,
+                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None
+                    }
+                );
+                await consumer.RefreshAsync(token);
+                await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: token))
+                {
+                    if (isMatch(msg.Subject))
+                    {
+                        completion.TrySetResult(new(msg.Data, Stopwatch.GetTimestamp()));
+                        break;
+                    }
+                }
+                await context.DeleteConsumerAsync(workflowEventsStreamsName, consumer.Info.Name);
+            }
+            catch (OperationCanceledException) { /*buried to handle cancelling*/}
+        });
     }
 
     [TestMethod]

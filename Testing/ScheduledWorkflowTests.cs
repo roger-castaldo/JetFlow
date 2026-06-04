@@ -146,7 +146,6 @@ public class ScheduledWorkflowTests
         Assert.IsNotNull(natsTestHarness);
         await Task.Delay(TimeSpan.FromSeconds(30), TestContext.CancellationToken);
         //Arrange
-        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
@@ -198,7 +197,6 @@ public class ScheduledWorkflowTests
         await Task.Delay(TimeSpan.FromSeconds(30), TestContext.CancellationToken);
         //Arrange
         var input = TestsHelper.GenerateRandomString(32);
-        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);

@@ -2,6 +2,8 @@
 using NATS.Client.Core;
 using System.Text.RegularExpressions;
 using NATS.Client.JetStream;
+using Microsoft.Extensions.Primitives;
+using System.Globalization;
 
 namespace JetFlow;
 
@@ -27,6 +29,21 @@ internal record EventMessage
     private readonly Func<CancellationToken, ValueTask> ack;
     private readonly Func<CancellationToken, ValueTask> nak;
 
+    private static T? ExtractHeader<T>(NatsHeaders? headers, string headerKey, Func<string, T?> converter)
+        where T : struct
+    {
+        if (headers?.TryGetValue(headerKey, out var value)??false)
+            return converter(value.ToString());
+        return null;
+    }
+
+    private static string[]? ExtractHeaders(NatsHeaders? headers, string headerKey, Func<StringValues, string[]> converter)
+    {
+        if (headers?.TryGetValue(headerKey, out var value)??false)
+            return converter(value);
+        return null;
+    }
+
     private EventMessage(string subject, NatsHeaders? headers, byte[]? data, NatsJSMsgMetadata? metadata, Func<CancellationToken,ValueTask> ack, Func<CancellationToken,ValueTask> nak)
     {
         RecievedTimestamp = DateTimeOffset.Now;
@@ -44,30 +61,21 @@ internal record EventMessage
             ActivityName = match.Groups["activityName"].Value;
             ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
             ActivityInstanceID = match.Groups["activityInstance"].Value;
-            if (headers!=null)
-            {
-                if (headers.TryGetValue(Constants.ActivityTimeoutHeader, out var timeoutValue) && TimeSpan.TryParse(timeoutValue, out var timeSpan))
-                    ActivityTimeout = timeSpan;
-                if (headers.TryGetValue(Constants.ActivityAttemptHeader, out var attemptValue) && ushort.TryParse(attemptValue, out var attempt))
-                    ActivityAttempt = attempt;
-                if (headers.TryGetValue(Constants.ActivityMaximumAttemptsHeader, out var maxAttemptValue) && ushort.TryParse(maxAttemptValue, out var maxAttempt)) 
-                    RetryConfiguration = new(
-                        maxAttempt,
-                        headers.TryGetValue(Constants.ActiviyRetryDelayBetweenHeader, out var delayValue) && TimeSpan.TryParse(delayValue, out var delay) ? delay : (TimeSpan?)null,
-                        headers.TryGetValue(Constants.ActivityRetryOnTimeoutHeader, out var retryOnTimeoutValue) && bool.TryParse(retryOnTimeoutValue, out var retryOnTimeout) ? retryOnTimeout : true,
-                        headers.TryGetValue(Constants.ActivityRetryOnErrorHeader, out var retryOnErrorValue) && bool.TryParse(retryOnErrorValue, out var retryOnError) ? retryOnError : true,
-                        headers.TryGetValue(Constants.ActivityRetryBlockedErrorsHeader, out var blockedErrorsValue) ? [..blockedErrorsValue.ToArray().Where(s => !string.IsNullOrWhiteSpace(s)).OfType<string>()] : null
-                    );
-            }
+            ActivityTimeout = ExtractHeader<TimeSpan>(headers, Constants.ActivityTimeoutHeader, value => (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var timeSpan) ? timeSpan : (TimeSpan?)null));
+            ActivityAttempt = ExtractHeader<ushort>(headers, Constants.ActivityAttemptHeader, value => ushort.TryParse(value, out var attempt) ? attempt : (ushort)0)??0;
+            if (headers?.TryGetValue(Constants.ActivityMaximumAttemptsHeader, out _)??false)
+                RetryConfiguration = new(
+                    ExtractHeader<ushort>(headers, Constants.ActivityMaximumAttemptsHeader, value => ushort.TryParse(value, out var maxAttempt) ? maxAttempt : (ushort)0)??0,
+                    ExtractHeader<TimeSpan>(headers, Constants.ActiviyRetryDelayBetweenHeader, value => (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var timeSpan) ? timeSpan : (TimeSpan?)null)),
+                    ExtractHeader<bool>(headers, Constants.ActivityRetryOnTimeoutHeader, value => !bool.TryParse(value, out var retryOnTimeout)||retryOnTimeout)??false,
+                    ExtractHeader<bool>(headers, Constants.ActivityRetryOnErrorHeader, value => !bool.TryParse(value, out var retryOnError)||retryOnError)??false,
+                    ExtractHeaders(headers, Constants.ActivityRetryBlockedErrorsHeader, value => [.. value.Where(s => !string.IsNullOrWhiteSpace(s)).OfType<string>()])
+                );
         }
-        if (headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false)
-            ActivityID = uint.Parse(activityId.ToString());
-        if (headers?.TryGetValue(Constants.ActivityResultHeader, out var resultValue)??false)
-            WorkflowStepResultStatus = Enum.Parse<ActivityResultStatus>(resultValue.ToString(), true);
-        if (headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var parallelIndexValue)??false)
-            ParallelActivityIndex = uint.Parse(parallelIndexValue.ToString());
-        if (headers?.TryGetValue(Constants.ParallelActivityCountHeader, out var parallelCountValue)??false)
-            ParallelActivityCount = uint.Parse(parallelCountValue.ToString());
+        ActivityID = ExtractHeader<uint>(headers, Constants.ActivityIDHeader, value => uint.Parse(value));
+        WorkflowStepResultStatus = ExtractHeader<ActivityResultStatus>(headers, Constants.ActivityResultHeader, value => Enum.Parse<ActivityResultStatus>(value, true));
+        ParallelActivityIndex = ExtractHeader<uint>(headers, Constants.ParalellActivityIndexHeader, value => uint.Parse(value));
+        ParallelActivityCount = ExtractHeader<uint>(headers, Constants.ParallelActivityCountHeader, value => uint.Parse(value));
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
         WorkflowName = match.Groups["workflowName"].Value;
         WorkflowId = match.Groups["instance"].Value;

@@ -3,6 +3,7 @@
 /// <summary>
 /// Represents the status of an activity result, indicating whether it was successful, failed, or timed out.
 /// </summary>
+[Flags]
 public enum ActivityResultStatus
 {
     /// <summary>

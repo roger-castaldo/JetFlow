@@ -34,7 +34,7 @@ internal class MessageSerializer
 
     private async ValueTask<T?> DecodeObjectAsync<T>(byte[]? data, NatsHeaders? headers)
     {
-        if (data==null || (data?.Length??0)==0)
+        if (data==null || data.Length==0)
             return default;
 
         // Ensure encoding is always assigned to avoid CS8887.
@@ -47,9 +47,9 @@ internal class MessageSerializer
 
         using Stream input = (match.Groups["compression"].Success ? match.Groups["compression"].Value : string.Empty).ToLowerInvariant() switch
         {
-            BrotliEncoding => new BrotliStream(new MemoryStream(data!), CompressionMode.Decompress),
-            GZipEncoding => new GZipStream(new MemoryStream(data!), CompressionMode.Decompress),
-            _ => new MemoryStream(data!)
+            BrotliEncoding => new BrotliStream(new MemoryStream(data), CompressionMode.Decompress),
+            GZipEncoding => new GZipStream(new MemoryStream(data), CompressionMode.Decompress),
+            _ => new MemoryStream(data)
         };
 
         if (match.Groups["contenttype"].Value.Equals(JsonEncoding, StringComparison.InvariantCultureIgnoreCase))

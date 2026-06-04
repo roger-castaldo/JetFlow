@@ -114,7 +114,7 @@ public class LargeMessageTests
             if (file.Name.StartsWith($"{NameHelper.GetWorkflowName<LargeMessageWorkflow>()}/{runId}/"))
             {
                 messageCount++;
-                var content = JsonSerializer.Deserialize<string>(new BrotliStream(new MemoryStream(await largeStore.GetBytesAsync(file.Name, TestContext.CancellationToken)), CompressionMode.Decompress));
+                var content = await JsonSerializer.DeserializeAsync<string>(new BrotliStream(new MemoryStream(await largeStore.GetBytesAsync(file.Name, TestContext.CancellationToken)), CompressionMode.Decompress));
                 Assert.IsTrue(
                     Equals(content, LargeMessageWorkflow.InputMessage)
                     || Equals(content, LargeMessageWorkflow.IncomingMessage)
@@ -140,7 +140,6 @@ public class LargeMessageTests
         var jsContext = new NatsJSContext(natsConnection);
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         var largeIOActivity = new LargeIOActivity(natsConnection.ServerInfo);
         await connection.RegisterWorkflowAsync<LargeMessageWorkflow, string>(new() { CompletionAction = WorkflowCompletionActions.ArchiveThenNothing}, TestContext.CancellationToken);
@@ -203,7 +202,6 @@ public class LargeMessageTests
         var jsContext = new NatsJSContext(natsConnection);
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
-        var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         var largeIOActivity = new LargeIOActivity(natsConnection.ServerInfo);
         await connection.RegisterWorkflowAsync<LargeMessageWorkflow, string>(new() { CompletionAction = completionAction }, TestContext.CancellationToken);

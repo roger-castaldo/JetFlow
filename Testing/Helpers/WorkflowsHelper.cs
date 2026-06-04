@@ -59,18 +59,12 @@ internal static class WorkflowsHelper
                         }
                     }
                 }
-                catch (NatsJSProtocolException)
-                {
-                    //bury error
-                }
                 catch (NatsJSException)
                 {
-                    // log exception
                     await Task.Delay(1000); // backoff
-                }
-                catch (OperationCanceledException)
+                }catch(Exception ex) when (ex is NatsJSProtocolException || ex is OperationCanceledException)
                 {
-                    // expected on cancellation, ignore
+                    // expected on consumer refresh failure or cancellation, ignore
                 }
             }
             await close();

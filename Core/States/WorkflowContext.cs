@@ -15,7 +15,6 @@ internal class WorkflowContext
     private readonly IReadOnlyCollection<INatsJSMsg<byte[]>> messages = [];
     private int index = 0;
     private uint activityIndex = 0;
-    private readonly CancellationToken cancellationToken = CancellationToken.None;
     public INatsJSMsg<byte[]> StartMessage {  get; private init; }
     public WorkflowOptions Options { get; private init; }
 
@@ -211,7 +210,7 @@ internal class WorkflowContext
         && Equals(activityId.ToString(), message.ActivityID.ToString())))
         {
             cnt++;
-            var idx = ((msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var index)??false) ? uint.Parse(index.ToString()!) : 0);
+            var idx = ((msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var paindex)??false) ? uint.Parse(paindex.ToString()!) : 0);
             if ((msg.Headers?.TryGetValue(Constants.ActivityResultHeader, out var status)??false) && Enum.TryParse<ActivityResultStatus>(status.ToString(), out var resultStatus))
             {
                 if (resultStatus == ActivityResultStatus.Timeout)
