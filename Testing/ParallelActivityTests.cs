@@ -146,7 +146,6 @@ public class ParallelActivityTests
         //Arrange
         ParallelActivityWorkflowWithOutput.Reset();
         var emptyActivityWithInputAndOutput = new EmptyActivityWithInputAndOutput();
-        var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
@@ -233,7 +232,7 @@ public class ParallelActivityTests
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotEmpty(archive.Steps);
         Assert.HasCount(emptyActivityWithInputAndOutput.Inputs.Count, archive.Steps);
-        var stepIndex = archive.Steps.ElementAt(0).Index;
+        var stepIndex = archive.Steps[0].Index;
         Assert.IsTrue(archive.Steps.All(s => 
             Equals(s.Name, NameHelper.GetActivityName<EmptyActivityWithInputAndOutput>())
             && Equals(s.Status, ActivityResultStatus.Success)
@@ -253,7 +252,7 @@ public class ParallelActivityTests
             if (inputs.Count == 3 || inputs.Count==5)
                 await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
             else if (inputs.Count==4 || inputs.Count==6)
-                throw new Exception("Simulated error occured");
+                throw new InvalidDataException("Simulated error occured");
         }
     }
     private sealed class ParallelActivityWorkflowWithProblems : IWorkflow

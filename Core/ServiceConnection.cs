@@ -4,7 +4,6 @@ using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using NATS.Client.ObjectStore;
-using System.Linq.Expressions;
 
 namespace JetFlow;
 

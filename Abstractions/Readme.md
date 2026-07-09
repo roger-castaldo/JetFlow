@@ -10,6 +10,9 @@
 - [ActivityExecutionRequest\`1](#T-JetFlow-ActivityExecutionRequest`1 'JetFlow.ActivityExecutionRequest`1')
   - [#ctor(Input)](#M-JetFlow-ActivityExecutionRequest`1-#ctor-`0- 'JetFlow.ActivityExecutionRequest`1.#ctor(`0)')
   - [Input](#P-JetFlow-ActivityExecutionRequest`1-Input 'JetFlow.ActivityExecutionRequest`1.Input')
+- [ActivityNameAttribute](#T-JetFlow-Attributes-ActivityNameAttribute 'JetFlow.Attributes.ActivityNameAttribute')
+  - [#ctor(name)](#M-JetFlow-Attributes-ActivityNameAttribute-#ctor-System-String- 'JetFlow.Attributes.ActivityNameAttribute.#ctor(System.String)')
+  - [Name](#P-JetFlow-Attributes-ActivityNameAttribute-Name 'JetFlow.Attributes.ActivityNameAttribute.Name')
 - [ActivityResult](#T-JetFlow-ActivityResult 'JetFlow.ActivityResult')
   - [#ctor(Index,Status,ErrorMessage)](#M-JetFlow-ActivityResult-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String- 'JetFlow.ActivityResult.#ctor(System.UInt64,JetFlow.ActivityResultStatus,System.String)')
   - [ErrorMessage](#P-JetFlow-ActivityResult-ErrorMessage 'JetFlow.ActivityResult.ErrorMessage')
@@ -92,6 +95,9 @@
   - [ArchiveThenPurge](#F-JetFlow-Configs-WorkflowCompletionActions-ArchiveThenPurge 'JetFlow.Configs.WorkflowCompletionActions.ArchiveThenPurge')
   - [None](#F-JetFlow-Configs-WorkflowCompletionActions-None 'JetFlow.Configs.WorkflowCompletionActions.None')
   - [Purge](#F-JetFlow-Configs-WorkflowCompletionActions-Purge 'JetFlow.Configs.WorkflowCompletionActions.Purge')
+- [WorkflowNameAttribute](#T-JetFlow-Attributes-WorkflowNameAttribute 'JetFlow.Attributes.WorkflowNameAttribute')
+  - [#ctor(name)](#M-JetFlow-Attributes-WorkflowNameAttribute-#ctor-System-String- 'JetFlow.Attributes.WorkflowNameAttribute.#ctor(System.String)')
+  - [Name](#P-JetFlow-Attributes-WorkflowNameAttribute-Name 'JetFlow.Attributes.WorkflowNameAttribute.Name')
 - [WorkflowOptions](#T-JetFlow-Configs-WorkflowOptions 'JetFlow.Configs.WorkflowOptions')
   - [CompletionAction](#P-JetFlow-Configs-WorkflowOptions-CompletionAction 'JetFlow.Configs.WorkflowOptions.CompletionAction')
   - [ErrorOnActivityFailure](#P-JetFlow-Configs-WorkflowOptions-ErrorOnActivityFailure 'JetFlow.Configs.WorkflowOptions.ErrorOnActivityFailure')
@@ -242,6 +248,43 @@ activity's requirements. |
 ##### Summary
 
 The input value to pass to the activity. May be null if the activity does not require input.
+
+<a name='T-JetFlow-Attributes-ActivityNameAttribute'></a>
+## ActivityNameAttribute `type`
+
+##### Namespace
+
+JetFlow.Attributes
+
+##### Summary
+
+Specifies a custom name for an activity class. This attribute can be applied to an activity class to provide a specific name that can be used for identification or display purposes, instead of relying on the default class name. The provided name can be used in logging, monitoring, or any other context where a human-readable identifier for the activity is needed.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| name | [T:JetFlow.Attributes.ActivityNameAttribute](#T-T-JetFlow-Attributes-ActivityNameAttribute 'T:JetFlow.Attributes.ActivityNameAttribute') | The custom name for the activity. |
+
+<a name='M-JetFlow-Attributes-ActivityNameAttribute-#ctor-System-String-'></a>
+### #ctor(name) `constructor`
+
+##### Summary
+
+Specifies a custom name for an activity class. This attribute can be applied to an activity class to provide a specific name that can be used for identification or display purposes, instead of relying on the default class name. The provided name can be used in logging, monitoring, or any other context where a human-readable identifier for the activity is needed.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The custom name for the activity. |
+
+<a name='P-JetFlow-Attributes-ActivityNameAttribute-Name'></a>
+### Name `property`
+
+##### Summary
+
+Gets the custom name specified for the activity class. This property returns the name provided when the attribute was applied, allowing for easy access to the activity's identifier in code or during runtime operations.
 
 <a name='T-JetFlow-ActivityResult'></a>
 ## ActivityResult `type`
@@ -1478,6 +1521,43 @@ Removes all items or data from the collection or resource, resetting it to an em
 
 Use this method to clear all contents. After calling this method, the collection or resource
 will contain no items. Any references to previously stored items will be released if applicable.
+
+<a name='T-JetFlow-Attributes-WorkflowNameAttribute'></a>
+## WorkflowNameAttribute `type`
+
+##### Namespace
+
+JetFlow.Attributes
+
+##### Summary
+
+Specifies a custom name for a workflow class. This attribute can be applied to a workflow class to provide a specific name that can be used for identification or display purposes, instead of relying on the default class name. The provided name can be used in logging, monitoring, or any other context where a human-readable identifier for the workflow is needed.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| name | [T:JetFlow.Attributes.WorkflowNameAttribute](#T-T-JetFlow-Attributes-WorkflowNameAttribute 'T:JetFlow.Attributes.WorkflowNameAttribute') | The custom name for the workflow. |
+
+<a name='M-JetFlow-Attributes-WorkflowNameAttribute-#ctor-System-String-'></a>
+### #ctor(name) `constructor`
+
+##### Summary
+
+Specifies a custom name for a workflow class. This attribute can be applied to a workflow class to provide a specific name that can be used for identification or display purposes, instead of relying on the default class name. The provided name can be used in logging, monitoring, or any other context where a human-readable identifier for the workflow is needed.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The custom name for the workflow. |
+
+<a name='P-JetFlow-Attributes-WorkflowNameAttribute-Name'></a>
+### Name `property`
+
+##### Summary
+
+Gets the custom name specified for the workflow class. This property returns the name provided when the attribute was applied, allowing for easy access to the workflow's identifier in code or during runtime operations.
 
 <a name='T-JetFlow-Configs-WorkflowOptions'></a>
 ## WorkflowOptions `type`

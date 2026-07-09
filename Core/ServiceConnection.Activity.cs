@@ -2,7 +2,6 @@
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Text;
 using static JetFlow.InternalNatsConnection;
 

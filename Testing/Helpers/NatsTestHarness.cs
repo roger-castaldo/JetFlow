@@ -22,5 +22,6 @@ internal class NatsTestHarness : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await container.StopAsync();
+        await container.DisposeAsync();
     }
 }
