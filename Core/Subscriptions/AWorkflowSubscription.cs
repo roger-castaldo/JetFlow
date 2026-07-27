@@ -1,6 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Serializers;
+using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.JetStream;
 using System.Diagnostics;
 
@@ -8,7 +9,7 @@ namespace JetFlow.Subscriptions;
 
 internal abstract class AWorkflowSubscription<TWorkflow>(
     ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
-    INatsJSConsumer consumer, CancellationToken cancellationToken)
+    INatsJSConsumer consumer, IServiceProvider? serviceProvider, CancellationToken cancellationToken)
     : ASubscription(serviceConnection, consumer, cancellationToken)
     where TWorkflow : class
 {
@@ -21,7 +22,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         WorkflowEventTypes.End,
         WorkflowEventTypes.Purge
     ];
-    protected TWorkflow Workflow = Activator.CreateInstance<TWorkflow>()!;
+    protected TWorkflow Workflow = (serviceProvider!=null ? ActivatorUtilities.CreateInstance<TWorkflow>(serviceProvider) : Activator.CreateInstance<TWorkflow>())!;
 
     protected MessageSerializer MessageSerializer => messageSerializer;
 

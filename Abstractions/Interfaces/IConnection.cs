@@ -56,6 +56,14 @@ namespace JetFlow.Interfaces
         ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivity;
         /// <summary>
+        /// Registers the specified workflow activity for execution within the workflow host.
+        /// </summary>
+        /// <typeparam name="TWorkflowActivity">The type of the workflow activity to register. Must implement the IActivity interface.</typeparam>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the registration operation.</param>
+        /// <returns>A ValueTask that represents the asynchronous registration operation.</returns>
+        ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity>(CancellationToken cancellationToken = default)
+            where TWorkflowActivity : class, IActivity;
+        /// <summary>
         /// Registers a workflow activity for execution within the workflow host.
         /// </summary>
         /// <typeparam name="TWorkflowActivity">The type of the workflow activity to register. Must implement IActivity&lt;TInput&gt;.</typeparam>
@@ -64,6 +72,15 @@ namespace JetFlow.Interfaces
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the registration operation.</param>
         /// <returns>A ValueTask that represents the asynchronous registration operation.</returns>
         ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
+            where TWorkflowActivity : class, IActivity<TInput>;
+        /// <summary>
+        /// Registers a workflow activity for execution within the workflow host.
+        /// </summary>
+        /// <typeparam name="TWorkflowActivity">The type of the workflow activity to register. Must implement IActivity&lt;TInput&gt;.</typeparam>
+        /// <typeparam name="TInput">The type of input accepted by the workflow activity.</typeparam>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the registration operation.</param>
+        /// <returns>A ValueTask that represents the asynchronous registration operation.</returns>
+        ValueTask RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivity<TInput>;
         /// <summary>
         /// Registers a workflow activity that produces a return value for execution within the workflow runtime.
@@ -76,6 +93,15 @@ namespace JetFlow.Interfaces
         ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivityWithReturn<TOutput>;
         /// <summary>
+        /// Registers a workflow activity that produces a return value for execution within the workflow runtime.
+        /// </summary>
+        /// <typeparam name="TWorkflowActivity">The type of the workflow activity to register. Must implement IActivityWithReturn&lt;TOutput&gt;.</typeparam>
+        /// <typeparam name="TOutput">The type of the value returned by the workflow activity.</typeparam>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the registration operation.</param>
+        /// <returns>A ValueTask that represents the asynchronous registration operation.</returns>
+        ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(CancellationToken cancellationToken = default)
+            where TWorkflowActivity : class, IActivityWithReturn<TOutput>;
+        /// <summary>
         /// Registers a workflow activity that produces a return value and accepts input for execution within the workflow runtime.
         /// </summary>
         /// <typeparam name="TWorkflowActivity">The type of the workflow activity to register. Must implement IActivityWithReturn&lt;TOutput, TInput&gt;.</typeparam>
@@ -85,6 +111,16 @@ namespace JetFlow.Interfaces
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken = default)
+            where TWorkflowActivity : class, IActivityWithReturn<TOutput, TInput>;
+        /// <summary>
+        /// Registers a workflow activity that produces a return value and accepts input for execution within the workflow runtime.
+        /// </summary>
+        /// <typeparam name="TWorkflowActivity">The type of the workflow activity to register. Must implement IActivityWithReturn&lt;TOutput, TInput&gt;.</typeparam>
+        /// <typeparam name="TOutput">The type of the value returned by the workflow activity.</typeparam>
+        /// <typeparam name="TInput">The type of input accepted by the workflow activity.</typeparam>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(CancellationToken cancellationToken = default)
             where TWorkflowActivity : class, IActivityWithReturn<TOutput, TInput>;
         /// <summary>
         /// Schedules a workflow of the specified type for execution according to the provided schedule.

@@ -6,8 +6,8 @@ namespace JetFlow.Subscriptions;
 
 internal class WorkflowSubscription<TWorkflow>
     (ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
-    INatsJSConsumer consumer, CancellationToken cancellationToken)
-    : AWorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
+    INatsJSConsumer consumer, IServiceProvider? serviceProvider, CancellationToken cancellationToken)
+    : AWorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, consumer, serviceProvider, cancellationToken)
      where TWorkflow : class, IWorkflow
 {
     protected override ValueTask HandleWorkflowEventAsync(WorkflowContext context)
@@ -16,8 +16,8 @@ internal class WorkflowSubscription<TWorkflow>
 
 internal class WorkflowSubscription<TWorkflow, TInput>
     (ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
-    INatsJSConsumer consumer, CancellationToken cancellationToken)
-    : AWorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
+    INatsJSConsumer consumer, IServiceProvider? serviceProvider, CancellationToken cancellationToken)
+    : AWorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, consumer, serviceProvider, cancellationToken)
      where TWorkflow : class, IWorkflow<TInput>
 {
     protected override async ValueTask HandleWorkflowEventAsync(WorkflowContext context)

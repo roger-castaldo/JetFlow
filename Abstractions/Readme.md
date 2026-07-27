@@ -60,9 +60,13 @@
   - [DelayStartWorkflowAsync\`\`1(delay,options,cancellationToken)](#M-JetFlow-Interfaces-IConnection-DelayStartWorkflowAsync``1-System-TimeSpan,JetFlow-Configs-WorkflowOptions,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.DelayStartWorkflowAsync``1(System.TimeSpan,JetFlow.Configs.WorkflowOptions,System.Threading.CancellationToken)')
   - [DelayStartWorkflowAsync\`\`2(input,delay,options,cancellationToken)](#M-JetFlow-Interfaces-IConnection-DelayStartWorkflowAsync``2-``1,System-TimeSpan,JetFlow-Configs-WorkflowOptions,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.DelayStartWorkflowAsync``2(``1,System.TimeSpan,JetFlow.Configs.WorkflowOptions,System.Threading.CancellationToken)')
   - [RegisterWorkflowActivityAsync\`\`1(activity,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``1-``0,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityAsync``1(``0,System.Threading.CancellationToken)')
+  - [RegisterWorkflowActivityAsync\`\`1(cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``1-System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityAsync``1(System.Threading.CancellationToken)')
   - [RegisterWorkflowActivityAsync\`\`2(activity,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``2-``0,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityAsync``2(``0,System.Threading.CancellationToken)')
+  - [RegisterWorkflowActivityAsync\`\`2(cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``2-System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityAsync``2(System.Threading.CancellationToken)')
   - [RegisterWorkflowActivityWithReturnAsync\`\`2(activity,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityWithReturnAsync``2-``0,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityWithReturnAsync``2(``0,System.Threading.CancellationToken)')
+  - [RegisterWorkflowActivityWithReturnAsync\`\`2(cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityWithReturnAsync``2-System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityWithReturnAsync``2(System.Threading.CancellationToken)')
   - [RegisterWorkflowActivityWithReturnAsync\`\`3(activity,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityWithReturnAsync``3-``0,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityWithReturnAsync``3(``0,System.Threading.CancellationToken)')
+  - [RegisterWorkflowActivityWithReturnAsync\`\`3(cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityWithReturnAsync``3-System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityWithReturnAsync``3(System.Threading.CancellationToken)')
   - [RegisterWorkflowAsync\`\`1(options,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowAsync``1-JetFlow-Configs-WorkflowOptions,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowAsync``1(JetFlow.Configs.WorkflowOptions,System.Threading.CancellationToken)')
   - [RegisterWorkflowAsync\`\`2(options,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowAsync``2-JetFlow-Configs-WorkflowOptions,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowAsync``2(JetFlow.Configs.WorkflowOptions,System.Threading.CancellationToken)')
   - [ScheduleWorkflowAsync\`\`1(schedule,options,cancellationToken)](#M-JetFlow-Interfaces-IConnection-ScheduleWorkflowAsync``1-JetFlow-Interfaces-IWorkflowSchedule,JetFlow-Configs-WorkflowOptions,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.ScheduleWorkflowAsync``1(JetFlow.Interfaces.IWorkflowSchedule,JetFlow.Configs.WorkflowOptions,System.Threading.CancellationToken)')
@@ -888,6 +892,29 @@ A ValueTask that represents the asynchronous registration operation.
 | ---- | ----------- |
 | TWorkflowActivity | The type of the workflow activity to register. Must implement the IActivity interface. |
 
+<a name='M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``1-System-Threading-CancellationToken-'></a>
+### RegisterWorkflowActivityAsync\`\`1(cancellationToken) `method`
+
+##### Summary
+
+Registers the specified workflow activity for execution within the workflow host.
+
+##### Returns
+
+A ValueTask that represents the asynchronous registration operation.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A cancellation token that can be used to cancel the registration operation. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflowActivity | The type of the workflow activity to register. Must implement the IActivity interface. |
+
 <a name='M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``2-``0,System-Threading-CancellationToken-'></a>
 ### RegisterWorkflowActivityAsync\`\`2(activity,cancellationToken) `method`
 
@@ -904,6 +931,30 @@ A ValueTask that represents the asynchronous registration operation.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | activity | [\`\`0](#T-``0 '``0') | The workflow activity instance to register. Cannot be null. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A cancellation token that can be used to cancel the registration operation. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflowActivity | The type of the workflow activity to register. Must implement IActivity<TInput>. |
+| TInput | The type of input accepted by the workflow activity. |
+
+<a name='M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``2-System-Threading-CancellationToken-'></a>
+### RegisterWorkflowActivityAsync\`\`2(cancellationToken) `method`
+
+##### Summary
+
+Registers a workflow activity for execution within the workflow host.
+
+##### Returns
+
+A ValueTask that represents the asynchronous registration operation.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
 | cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A cancellation token that can be used to cancel the registration operation. |
 
 ##### Generic Types
@@ -938,6 +989,30 @@ A ValueTask that represents the asynchronous registration operation.
 | TWorkflowActivity | The type of the workflow activity to register. Must implement IActivityWithReturn<TOutput>. |
 | TOutput | The type of the value returned by the workflow activity. |
 
+<a name='M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityWithReturnAsync``2-System-Threading-CancellationToken-'></a>
+### RegisterWorkflowActivityWithReturnAsync\`\`2(cancellationToken) `method`
+
+##### Summary
+
+Registers a workflow activity that produces a return value for execution within the workflow runtime.
+
+##### Returns
+
+A ValueTask that represents the asynchronous registration operation.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A cancellation token that can be used to cancel the registration operation. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflowActivity | The type of the workflow activity to register. Must implement IActivityWithReturn<TOutput>. |
+| TOutput | The type of the value returned by the workflow activity. |
+
 <a name='M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityWithReturnAsync``3-``0,System-Threading-CancellationToken-'></a>
 ### RegisterWorkflowActivityWithReturnAsync\`\`3(activity,cancellationToken) `method`
 
@@ -954,6 +1029,31 @@ Registers a workflow activity that produces a return value and accepts input for
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | activity | [\`\`0](#T-``0 '``0') | The workflow activity instance to register. Cannot be null. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') |  |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflowActivity | The type of the workflow activity to register. Must implement IActivityWithReturn<TOutput, TInput>. |
+| TOutput | The type of the value returned by the workflow activity. |
+| TInput | The type of input accepted by the workflow activity. |
+
+<a name='M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityWithReturnAsync``3-System-Threading-CancellationToken-'></a>
+### RegisterWorkflowActivityWithReturnAsync\`\`3(cancellationToken) `method`
+
+##### Summary
+
+Registers a workflow activity that produces a return value and accepts input for execution within the workflow runtime.
+
+##### Returns
+
+
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
 | cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') |  |
 
 ##### Generic Types

@@ -18,6 +18,7 @@
   - [DefaultWorkflowOptions](#P-JetFlow-Configs-ConnectionOptions-DefaultWorkflowOptions 'JetFlow.Configs.ConnectionOptions.DefaultWorkflowOptions')
   - [JsonTypeInfoResolver](#P-JetFlow-Configs-ConnectionOptions-JsonTypeInfoResolver 'JetFlow.Configs.ConnectionOptions.JsonTypeInfoResolver')
   - [Namespace](#P-JetFlow-Configs-ConnectionOptions-Namespace 'JetFlow.Configs.ConnectionOptions.Namespace')
+  - [ServiceProvider](#P-JetFlow-Configs-ConnectionOptions-ServiceProvider 'JetFlow.Configs.ConnectionOptions.ServiceProvider')
 - [InvalidContentTypeException](#T-JetFlow-InvalidContentTypeException 'JetFlow.InvalidContentTypeException')
 - [InvalidDelayStepException](#T-JetFlow-InvalidDelayStepException 'JetFlow.InvalidDelayStepException')
 - [InvalidStepException](#T-JetFlow-InvalidStepException 'JetFlow.InvalidStepException')
@@ -175,6 +176,13 @@ Uses the System.Text.Json source generator to generate serialization code at com
 ##### Summary
 
 Used to logically group related workflows and resources within JetFlow. By specifying a namespace, you can organize your workflows and resources in a way that makes it easier to manage and maintain them, especially in larger applications with multiple teams or modules. The Namespace property allows you to create a clear separation between different parts of your application, improving readability and reducing the likelihood of naming conflicts when working with NATS and JetStream.
+
+<a name='P-JetFlow-Configs-ConnectionOptions-ServiceProvider'></a>
+### ServiceProvider `property`
+
+##### Summary
+
+Specifies the IServiceProvider to be used for dependency injection when resolving services and dependencies within JetFlow. By providing a custom IServiceProvider, you can control how services are instantiated and managed, allowing for greater flexibility and customization of the dependency injection behavior in your application. The ServiceProvider property enables you to integrate JetFlow with your existing dependency injection framework, ensuring that all required services are properly resolved and available for use when executing workflows and interacting with NATS and JetStream.
 
 <a name='T-JetFlow-InvalidContentTypeException'></a>
 ## InvalidContentTypeException `type`
