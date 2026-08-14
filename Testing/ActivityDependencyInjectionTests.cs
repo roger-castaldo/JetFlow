@@ -1,8 +1,6 @@
 using JetFlow.Configs;
 using JetFlow.Testing.Helpers;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NATS.Client.Core;
-using NATS.Net;
 
 namespace JetFlow.Testing;
 
@@ -96,18 +94,14 @@ public class ActivityDependencyInjectionTests
         var connectionOptions = new ConnectionOptions(natsConnection) { ServiceProvider = sp };
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
 
-        try
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () =>
         {
             await connection.RegisterWorkflowActivityAsync<DependentActivity>(cancellationToken: CancellationToken.None);
-            Assert.Fail("Expected activity registration to throw when DI provider throws");
-        }
-        catch (Exception ex)
-        {
-            // Faulty provider throws InvalidOperationException by default; accept ActivityConstructionException as well
-            Assert.IsTrue(ex is InvalidOperationException || ex is JetFlow.ActivityConstructionException, $"Unexpected exception type: {ex.GetType().FullName}");
-        }
+        });
 
         await ((IAsyncDisposable)connection).DisposeAsync();
+
+        Assert.IsNotNull(ex);
     }
 
     [TestMethod]
@@ -178,18 +172,14 @@ public class ActivityDependencyInjectionTests
         var connectionOptions = new ConnectionOptions(natsConnection) { ServiceProvider = sp };
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
 
-        try
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () =>
         {
             await connection.RegisterWorkflowActivityAsync<DependentActivityWithInput, string>(cancellationToken: CancellationToken.None);
-            Assert.Fail("Expected activity registration to throw when dependency is missing");
-        }
-        catch (Exception ex)
-        {
-            // Accept either Activator failure or explicit construction exception
-            Assert.IsTrue(ex is InvalidOperationException || ex is JetFlow.ActivityConstructionException, $"Unexpected exception type: {ex.GetType().FullName}");
-        }
+        });
 
         await ((IAsyncDisposable)connection).DisposeAsync();
+
+        Assert.IsNotNull(ex);
     }
 
     [TestMethod]
@@ -203,17 +193,14 @@ public class ActivityDependencyInjectionTests
         var connectionOptions = new ConnectionOptions(natsConnection) { ServiceProvider = sp };
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
 
-        try
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () =>
         {
             await connection.RegisterWorkflowActivityWithReturnAsync<DependentActivityWithReturn, string>(cancellationToken: CancellationToken.None);
-            Assert.Fail("Expected activity registration to throw when dependency is missing");
-        }
-        catch (Exception ex)
-        {
-            Assert.IsTrue(ex is InvalidOperationException || ex is JetFlow.ActivityConstructionException, $"Unexpected exception type: {ex.GetType().FullName}");
-        }
+        });
 
         await ((IAsyncDisposable)connection).DisposeAsync();
+
+        Assert.IsNotNull(ex);
     }
 
     [TestMethod]
@@ -227,17 +214,14 @@ public class ActivityDependencyInjectionTests
         var connectionOptions = new ConnectionOptions(natsConnection) { ServiceProvider = sp };
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
 
-        try
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () =>
         {
             await connection.RegisterWorkflowActivityWithReturnAsync<DependentActivityWithReturnAndInput, string, string>(cancellationToken: CancellationToken.None);
-            Assert.Fail("Expected activity registration to throw when dependency is missing");
-        }
-        catch (Exception ex)
-        {
-            Assert.IsTrue(ex is InvalidOperationException || ex is JetFlow.ActivityConstructionException, $"Unexpected exception type: {ex.GetType().FullName}");
-        }
+        });
 
         await ((IAsyncDisposable)connection).DisposeAsync();
+
+        Assert.IsNotNull(ex);
     }
 
     [TestMethod]

@@ -1,4 +1,5 @@
-﻿using JetFlow.Interfaces;
+﻿using JetFlow.Helpers;
+using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using NATS.Client.JetStream;
 
@@ -7,8 +8,8 @@ namespace JetFlow.Subscriptions;
 internal abstract class AWorkflowActivitySubscriptionWithoutReturn<TWorkflowActivity>
     (TWorkflowActivity instance,
     ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
-    INatsJSConsumer consumer, CancellationToken cancellationToken)
-    : AWorkflowActivitySubscription<TWorkflowActivity>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
+    INatsJSConsumer consumer, MetricsHelper metricsHelper, CancellationToken cancellationToken)
+    : AWorkflowActivitySubscription<TWorkflowActivity>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, metricsHelper, cancellationToken)
 {
     protected override sealed async Task HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
     {

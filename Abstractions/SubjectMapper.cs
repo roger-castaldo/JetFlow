@@ -31,14 +31,14 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.end";
     public string WorkflowArchived(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.archived";
-    public string WorkflowPurge(string workflowName, string instance)
-        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.purge";
     public string WorkflowDelayStart(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.delaystart";
     public string WorkflowDelayEnd(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.delayend";
     public string WorkflowTimer(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.timer";
+    public string WorkflowPurged(string workflowName, string instance)
+        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.purged";
     public string WorkflowStepStart(string workflowName, string instance, string stepName)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepstart";
     public string WorkflowStepEnd(string workflowName, string instance, string stepName)
@@ -47,6 +47,16 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepretry";
     public string WorkflowPurgeFilter(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.>";
+
+    public string WorkflowPurgeEventsStreamName
+        => $"JETFLOW_{streamNamespace}WORKFLOW_PURGE";
+    public string WorkflowPurgeEventsFilter
+        => $"jetflow.{subjectNamespace}purge.>";
+    public string WorkflowPurge(string workflowName, string instance)
+        => $"jetflow.{subjectNamespace}purge.{workflowName}.{instance}";
+    public string DelayWorkflowPurge(string workflowName, string instance)
+        => $"jetflow.{subjectNamespace}purge.delay.{workflowName}.{instance}";
+
 
     public string ActivityQueueStream
         => $"JETFLOW_{streamNamespace}ACTIVITY_QUEUE";
@@ -66,7 +76,9 @@ internal class SubjectMapper
 
     public string WorkflowConfigKeystore
         => $"JETFLOW_{streamNamespace}WORKFLOW_CONFIGS";
-    
+    public string PerformanceSamplingKey
+        => "jetflow.performance.sampling";
+
     public string WorkflowArchiveObjectstore
         => $"JETFLOW_{streamNamespace}WORKFLOW_ARCHIVES";
 
@@ -83,4 +95,25 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}swf.{workflowName}.{instance}.start";
     public string ScheduledWorkflowTimer(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}swf.{workflowName}.{instance}.timer";
+
+    public string CountersStreamName
+        => $"JETFLOW_{streamNamespace}COUNTERS";
+    public string CountersFilter
+        => $"jetflow.{subjectNamespace}counter.>";
+    public string ActiveWorkflowsCounter
+        => $"jetflow.{subjectNamespace}counter.activeworkflows";
+    public string SuspendedWorkflowsCounter
+        => $"jetflow.{subjectNamespace}counter.suspendedworkflows";
+    public string ActiveActivitiesCounter
+        => $"jetflow.{subjectNamespace}counter.activeactivities";
+
+    public string PerformanceStreamName
+        => $"JETFLOW_{streamNamespace}METRICS";
+    public string PerformanceFilter
+        => $"jetflow.{subjectNamespace}performance.>";
+    public string ActivityPerformanceSubject
+        => $"jetflow.{subjectNamespace}performance.activity";
+    public string WorkflowPerformanceSubject
+        => $"jetflow.{subjectNamespace}performance.workflow";
+
 }

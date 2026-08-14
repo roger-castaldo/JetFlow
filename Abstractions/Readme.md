@@ -91,6 +91,20 @@
   - [GetActivityResultValueAsync\`\`2()](#M-JetFlow-Interfaces-IWorkflowState-GetActivityResultValueAsync``2 'JetFlow.Interfaces.IWorkflowState.GetActivityResultValueAsync``2')
 - [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1')
   - [ExecuteAsync(context,input)](#M-JetFlow-Interfaces-IWorkflow`1-ExecuteAsync-JetFlow-Interfaces-IWorkflowContext,`0- 'JetFlow.Interfaces.IWorkflow`1.ExecuteAsync(JetFlow.Interfaces.IWorkflowContext,`0)')
+- [ObservationJsonContext](#T-JetFlow-Data-ObservationJsonContext 'JetFlow.Data.ObservationJsonContext')
+  - [#ctor()](#M-JetFlow-Data-ObservationJsonContext-#ctor 'JetFlow.Data.ObservationJsonContext.#ctor')
+  - [#ctor()](#M-JetFlow-Data-ObservationJsonContext-#ctor-System-Text-Json-JsonSerializerOptions- 'JetFlow.Data.ObservationJsonContext.#ctor(System.Text.Json.JsonSerializerOptions)')
+  - [ActivityPerformanceRecord](#P-JetFlow-Data-ObservationJsonContext-ActivityPerformanceRecord 'JetFlow.Data.ObservationJsonContext.ActivityPerformanceRecord')
+  - [CounterValue](#P-JetFlow-Data-ObservationJsonContext-CounterValue 'JetFlow.Data.ObservationJsonContext.CounterValue')
+  - [DateTimeOffset](#P-JetFlow-Data-ObservationJsonContext-DateTimeOffset 'JetFlow.Data.ObservationJsonContext.DateTimeOffset')
+  - [Default](#P-JetFlow-Data-ObservationJsonContext-Default 'JetFlow.Data.ObservationJsonContext.Default')
+  - [GeneratedSerializerOptions](#P-JetFlow-Data-ObservationJsonContext-GeneratedSerializerOptions 'JetFlow.Data.ObservationJsonContext.GeneratedSerializerOptions')
+  - [IEnumerableTimeSpan](#P-JetFlow-Data-ObservationJsonContext-IEnumerableTimeSpan 'JetFlow.Data.ObservationJsonContext.IEnumerableTimeSpan')
+  - [Int64](#P-JetFlow-Data-ObservationJsonContext-Int64 'JetFlow.Data.ObservationJsonContext.Int64')
+  - [String](#P-JetFlow-Data-ObservationJsonContext-String 'JetFlow.Data.ObservationJsonContext.String')
+  - [TimeSpan](#P-JetFlow-Data-ObservationJsonContext-TimeSpan 'JetFlow.Data.ObservationJsonContext.TimeSpan')
+  - [WorkflowPerformanceRecord](#P-JetFlow-Data-ObservationJsonContext-WorkflowPerformanceRecord 'JetFlow.Data.ObservationJsonContext.WorkflowPerformanceRecord')
+  - [GetTypeInfo()](#M-JetFlow-Data-ObservationJsonContext-GetTypeInfo-System-Type- 'JetFlow.Data.ObservationJsonContext.GetTypeInfo(System.Type)')
 - [RetryTypes](#T-JetFlow-RetryTypes 'JetFlow.RetryTypes')
   - [Error](#F-JetFlow-RetryTypes-Error 'JetFlow.RetryTypes.Error')
   - [Timeout](#F-JetFlow-RetryTypes-Timeout 'JetFlow.RetryTypes.Timeout')
@@ -1547,6 +1561,116 @@ A ValueTask that represents the asynchronous execution of the workflow operation
 | ---- | ---- | ----------- |
 | context | [JetFlow.Interfaces.IWorkflowContext](#T-JetFlow-Interfaces-IWorkflowContext 'JetFlow.Interfaces.IWorkflowContext') | The workflow context that provides execution state and services for the operation. Cannot be null. |
 | input | [\`0](#T-`0 '`0') | The input data for the workflow operation. May be null if the operation does not require input. |
+
+<a name='T-JetFlow-Data-ObservationJsonContext'></a>
+## ObservationJsonContext `type`
+
+##### Namespace
+
+JetFlow.Data
+
+<a name='M-JetFlow-Data-ObservationJsonContext-#ctor'></a>
+### #ctor() `constructor`
+
+##### Summary
+
+*Inherit from parent.*
+
+##### Parameters
+
+This constructor has no parameters.
+
+<a name='M-JetFlow-Data-ObservationJsonContext-#ctor-System-Text-Json-JsonSerializerOptions-'></a>
+### #ctor() `constructor`
+
+##### Summary
+
+*Inherit from parent.*
+
+##### Parameters
+
+This constructor has no parameters.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-ActivityPerformanceRecord'></a>
+### ActivityPerformanceRecord `property`
+
+##### Summary
+
+Defines the source generated JSON serialization contract metadata for a given type.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-CounterValue'></a>
+### CounterValue `property`
+
+##### Summary
+
+Defines the source generated JSON serialization contract metadata for a given type.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-DateTimeOffset'></a>
+### DateTimeOffset `property`
+
+##### Summary
+
+Defines the source generated JSON serialization contract metadata for a given type.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-Default'></a>
+### Default `property`
+
+##### Summary
+
+The default [JsonSerializerContext](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Text.Json.Serialization.JsonSerializerContext 'System.Text.Json.Serialization.JsonSerializerContext') associated with a default [JsonSerializerOptions](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Text.Json.JsonSerializerOptions 'System.Text.Json.JsonSerializerOptions') instance.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-GeneratedSerializerOptions'></a>
+### GeneratedSerializerOptions `property`
+
+##### Summary
+
+The source-generated options associated with this context.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-IEnumerableTimeSpan'></a>
+### IEnumerableTimeSpan `property`
+
+##### Summary
+
+Defines the source generated JSON serialization contract metadata for a given type.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-Int64'></a>
+### Int64 `property`
+
+##### Summary
+
+Defines the source generated JSON serialization contract metadata for a given type.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-String'></a>
+### String `property`
+
+##### Summary
+
+Defines the source generated JSON serialization contract metadata for a given type.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-TimeSpan'></a>
+### TimeSpan `property`
+
+##### Summary
+
+Defines the source generated JSON serialization contract metadata for a given type.
+
+<a name='P-JetFlow-Data-ObservationJsonContext-WorkflowPerformanceRecord'></a>
+### WorkflowPerformanceRecord `property`
+
+##### Summary
+
+Defines the source generated JSON serialization contract metadata for a given type.
+
+<a name='M-JetFlow-Data-ObservationJsonContext-GetTypeInfo-System-Type-'></a>
+### GetTypeInfo() `method`
+
+##### Summary
+
+*Inherit from parent.*
+
+##### Parameters
+
+This method has no parameters.
 
 <a name='T-JetFlow-RetryTypes'></a>
 ## RetryTypes `type`

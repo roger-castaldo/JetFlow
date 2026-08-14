@@ -114,7 +114,7 @@ public class LargeMessageTests
             if (file.Name.StartsWith($"{NameHelper.GetWorkflowName<LargeMessageWorkflow>()}/{runId}/"))
             {
                 messageCount++;
-                var content = await JsonSerializer.DeserializeAsync<string>(new BrotliStream(new MemoryStream(await largeStore.GetBytesAsync(file.Name, TestContext.CancellationToken)), CompressionMode.Decompress));
+                var content = await JsonSerializer.DeserializeAsync<string>(new BrotliStream(new MemoryStream(await largeStore.GetBytesAsync(file.Name, TestContext.CancellationToken)), CompressionMode.Decompress), cancellationToken: TestContext.CancellationToken);
                 Assert.IsTrue(
                     Equals(content, LargeMessageWorkflow.InputMessage)
                     || Equals(content, LargeMessageWorkflow.IncomingMessage)

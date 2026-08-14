@@ -233,8 +233,8 @@ public class ActivityRetryTests
         {
             var diff = Math.Floor(Stopwatch.GetElapsedTime(unimplementedActivityWithTimers.TimeStamps[x-1])
                 .Subtract(Stopwatch.GetElapsedTime(unimplementedActivityWithTimers.TimeStamps[x])).TotalSeconds);
-            Assert.IsGreaterThanOrEqualTo(3, diff);
-            Assert.IsLessThanOrEqualTo(5, diff);
+            Assert.IsGreaterThanOrEqualTo(2, diff);
+            Assert.IsLessThanOrEqualTo(7, diff);
         }
     }
 

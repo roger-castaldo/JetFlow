@@ -1,5 +1,3 @@
-using System;
-
 namespace JetFlow.Testing.Helpers;
 
 internal sealed class FaultyServiceProvider : IServiceProvider

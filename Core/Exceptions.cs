@@ -29,13 +29,6 @@ internal class ActivityFailedException : Exception
         base($"Activity {activityName} has failed with error: {errorMessage}") { }
 }
 
-internal class ActivityConstructionException : ArgumentException
-{
-    internal ActivityConstructionException(Type activityType) :
-        base($"Activity {activityType.Name} could not be constructed")
-    { }
-}
-
 /// <summary>
 /// Thrown when an attempt is made to execute an activity on a workflow that has already completed.  This can occur when a workflow completes while an activity is executing, and the activity attempts to report completion after the workflow has already completed.  It can also occur if an activity is attempted to be executed on a workflow that has already completed, but the activity was not aware of the completion.
 /// </summary>

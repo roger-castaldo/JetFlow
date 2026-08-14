@@ -35,11 +35,4 @@ internal partial class ServiceConnection
         }
         return messageData;
     }
-
-    private Task PurgeWorkflowLargeFilesAsync(EventMessage message, CancellationToken cancellationToken)
-        => connection.PurgeObjectStoreAsync(
-                largeMessageStore.Bucket,
-                (file) => file!=null && file.Name.StartsWith($"{message.WorkflowName}/{message.WorkflowId}"),
-                cancellationToken
-           );
 }

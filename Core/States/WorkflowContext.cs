@@ -1,4 +1,5 @@
 ﻿using JetFlow.Configs;
+using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using NATS.Client.JetStream;
@@ -11,6 +12,7 @@ internal class WorkflowContext
     private readonly ServiceConnection serviceConnection;
     private readonly SubjectMapper subjectMapper;
     private readonly MessageSerializer messageSerializer;
+    private readonly MetricsHelper metricsHelper;
     private readonly EventMessage message;
     private readonly IReadOnlyCollection<INatsJSMsg<byte[]>> messages = [];
     private int index = 0;
@@ -19,11 +21,12 @@ internal class WorkflowContext
     public WorkflowOptions Options { get; private init; }
 
     private WorkflowContext(ServiceConnection serviceConnection, SubjectMapper subjectMapper, 
-        MessageSerializer messageSerializer, EventMessage message, IReadOnlyCollection<INatsJSMsg<byte[]>> messages, INatsJSMsg<byte[]> startMessage, WorkflowOptions options)
+        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, IReadOnlyCollection<INatsJSMsg<byte[]>> messages, INatsJSMsg<byte[]> startMessage, WorkflowOptions options)
     {
         this.serviceConnection=serviceConnection;
         this.subjectMapper=subjectMapper;
         this.messageSerializer=messageSerializer;
+        this.metricsHelper=metricsHelper;
         this.message=message;
         this.messages=messages;
         StartMessage=startMessage;
@@ -31,7 +34,7 @@ internal class WorkflowContext
     }
 
     internal static async ValueTask<WorkflowContext> LoadAsync(ServiceConnection serviceConnection, SubjectMapper subjectMapper,
-        MessageSerializer messageSerializer, EventMessage message)
+        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message)
     {
         await using var enumerable = await serviceConnection.QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName,
                 false,
@@ -58,7 +61,7 @@ internal class WorkflowContext
             if (Equals(msg.Metadata?.Sequence, message.Metadata?.Sequence))
                 break;
         }
-        return new(serviceConnection, subjectMapper, messageSerializer,
+        return new(serviceConnection, subjectMapper, messageSerializer, metricsHelper,
             message, msgs.ToArray(), startMessage!, options!);
     }
 
@@ -197,6 +200,7 @@ internal class WorkflowContext
             return;
         }
         await serviceConnection.StartWorkflowDelayAsync(message, delay, cancellationToken);
+        await metricsHelper.SuspendWorkflowAsync(cancellationToken);
         throw new WorkflowSuspendedException();
     }
 

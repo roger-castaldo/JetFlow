@@ -8,8 +8,8 @@ namespace JetFlow.Subscriptions;
 
 internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkflowActivity instance,
     ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
-    INatsJSConsumer consumer, CancellationToken cancellationToken)
-    : ASubscription(serviceConnection, consumer, cancellationToken)
+    INatsJSConsumer consumer, MetricsHelper metricsHelper, CancellationToken cancellationToken)
+    : AMetricSubscription(serviceConnection, consumer, metricsHelper, cancellationToken)
 {
     protected TWorkflowActivity Instance = instance;
     private readonly string ActivityName = NameHelper.GetActivityName<TWorkflowActivity>();
@@ -30,10 +30,10 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
             {
                 if (!Equals(ActivityEventTypes.Start, message.ActivityEventType))
                     throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");
-                var (canRun, aliveKey) = await ServiceConnection.CanActivityRun(message, CancellationToken.None);
+                var (canRun, aliveKey) = await ServiceConnection.CanActivityRun(message, CancellationToken);
                 if (canRun)
                 {
-                    var start = MetricsHelper.StartActivity(message);
+                    var start = await MetricsHelper.StartActivityAsync(message, CancellationToken);
                     activity = TraceHelper.StartActivity(message);
                     _ = Task.Run(async () =>
                     {
@@ -46,19 +46,20 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
                     });
                     await HandleActivityRunAsync(await WorkflowState.CreateAsync(ServiceConnection, messageSerializer, subjectMapper, message), message, linkedCts.Token)
                         .WaitAsync(linkedCts.Token);
-                    MetricsHelper.CompleteActivity(message, start);
+                    await MetricsHelper.CompleteActivityAsync(message, start, CancellationToken);
                     await ServiceConnection.MarkActivityDoneInStore(message, CancellationToken);
                 }
             }
             else
                 ackMessage=false;
         }
-        catch (WorkflowSuspendedException){ /* handle workflow suspension by doing nothing */}
+        catch (WorkflowSuspendedException) { /* handle workflow suspension by doing nothing */}
         catch (OperationCanceledException) when (timeoutCts?.IsCancellationRequested??false)
         {
             // timed out
             TraceHelper.AddActivityTimeout(message.ActivityTimeout!.Value);
             Activity.Current?.SetStatus(ActivityStatusCode.Error, "Activity execution timed out");
+            await MetricsHelper.TimeoutActivityAsync(message, CancellationToken);
             await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Timeout, message, ServiceConnection, CancellationToken);
         }
         catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
@@ -69,21 +70,19 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
         catch (Exception error)
         {
             Activity.Current?.SetStatus(ActivityStatusCode.Error, error.Message);
+            await MetricsHelper.FailActivityAsync(message, CancellationToken);
             await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Error, message, ServiceConnection, CancellationToken, error);
         }
-        finally
+        try
         {
-            try
-            {
-                await activityKeepaliveCTS.CancelAsync();
-            }
-            catch { /* burying error in case cancellation fails*/ }
-            activity?.Dispose();
-            if (ackMessage)
-                await message.AckAsync(CancellationToken);
-            else
-                await message.NakAsync();
+            await activityKeepaliveCTS.CancelAsync();
         }
+        catch { /* burying error in case cancellation fails*/ }
+        activity?.Dispose();
+        if (ackMessage)
+            await message.AckAsync(CancellationToken);
+        else
+            await message.NakAsync();
     }
     protected abstract Task HandleActivityRunAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken);
 }

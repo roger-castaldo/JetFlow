@@ -6,6 +6,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Sample;
 using Sample.Activities;
+using System.Text.Json;
 
 var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddSource(Connection.TraceProviderName)
@@ -45,8 +46,38 @@ Console.WriteLine("Registering activities...");
 await connection.RegisterWorkflowActivityWithReturnAsync<DefineUsername,string,User>(new(), CancellationToken.None);
 await connection.RegisterWorkflowActivityWithReturnAsync<IsUserUnique,bool>(new(), CancellationToken.None);
 
-Console.WriteLine("Starting workflow...");
-await connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob","Loblaw"), CancellationToken.None);
+var observer = await ObservationConnection.CreateInstanceAsync(new(
+    new NatsOpts
+    {
+        Url = "nats://localhost:4222"
+    }
+));
+await observer.AddDefaultNamespaceAsync();
+await observer.AddPerformanceMonitoringAsync(
+    1,
+    async (workflowRecord) => {
+        Console.WriteLine($"Workflow Performance: {JsonSerializer.Serialize(workflowRecord)}");
+        Console.WriteLine($"Active Workflows: {await observer.GetActiveWorkflowCountAsync(null)}");
+    },
+    async (activityRecord) =>
+    {
+        Console.WriteLine($"Activity Performance: {JsonSerializer.Serialize(activityRecord)}");
+        Console.WriteLine($"Active Activities: {await observer.GetActiveActivityCountAsync(null)}");
+    }
+);
+
+
+Console.WriteLine("Starting workflows...");
+await Task.WhenAll(new ValueTask<Guid>[]{
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob1","Loblaw1"), CancellationToken.None),
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob2", "Loblaw2"), CancellationToken.None),
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob3", "Loblaw3"), CancellationToken.None),
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob4", "Loblaw4"), CancellationToken.None),
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob5", "Loblaw5"), CancellationToken.None)
+}.Select(vtask=>vtask.AsTask()));
 
 Console.WriteLine("Hit enter to exit...");
 Console.ReadLine();
+
+await ((IAsyncDisposable)observer).DisposeAsync();
+await ((IAsyncDisposable)connection).DisposeAsync();

@@ -14,6 +14,8 @@ namespace JetFlow.Testing;
 [TestClass]
 public class WorkflowExecutionTests
 {
+    private const string TestNamespace = "WorkflowExecutionTests";
+
     private static NatsTestHarness? natsTestHarness;
 
     [ClassInitialize]
@@ -46,15 +48,20 @@ public class WorkflowExecutionTests
 
 
     [TestMethod]
-    public async Task ExecuteStepPostWorkflowEndFails()
+    [DataRow(null, DisplayName = "Default Namespace")]
+    [DataRow(TestNamespace, DisplayName ="Supplied Namespace")]
+    public async Task ExecuteStepPostWorkflowEndFails(string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
         var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
-        var subjectMapper = new SubjectMapper(null);
+        var subjectMapper = new SubjectMapper(namespaceValue);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
-        var connectionOptions = new ConnectionOptions(natsConnection);
+        var connectionOptions = new ConnectionOptions(natsConnection)
+        {
+            Namespace=namespaceValue
+        };
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<EmptyActivityWorkflow>(cancellationToken: TestContext.CancellationToken);
@@ -100,15 +107,20 @@ public class WorkflowExecutionTests
     }
 
     [TestMethod]
-    public async Task ExecuteWaitPostWorkflowEndFails()
+    [DataRow(null, DisplayName = "Default Namespace")]
+    [DataRow(TestNamespace, DisplayName = "Supplied Namespace")]
+    public async Task ExecuteWaitPostWorkflowEndFails(string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
         var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
-        var subjectMapper = new SubjectMapper(null);
+        var subjectMapper = new SubjectMapper(namespaceValue);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
-        var connectionOptions = new ConnectionOptions(natsConnection);
+        var connectionOptions = new ConnectionOptions(natsConnection)
+        {
+            Namespace=namespaceValue
+        };
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<DelayedWorkflow>(cancellationToken: TestContext.CancellationToken);
@@ -163,14 +175,19 @@ public class WorkflowExecutionTests
     }
 
     [TestMethod]
-    public async Task ExecuteActivitiesInDifferentOrderFails()
+    [DataRow(null, DisplayName = "Default Namespace")]
+    [DataRow(TestNamespace, DisplayName = "Supplied Namespace")]
+    public async Task ExecuteActivitiesInDifferentOrderFails(string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
-        var subjectMapper = new SubjectMapper(null);
+        var subjectMapper = new SubjectMapper(namespaceValue);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
-        var connectionOptions = new ConnectionOptions(natsConnection);
+        var connectionOptions = new ConnectionOptions(natsConnection)
+        {
+            Namespace=namespaceValue
+        };
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<InvokeMismatchedActivityWorkflow>(cancellationToken: TestContext.CancellationToken);
@@ -205,15 +222,20 @@ public class WorkflowExecutionTests
     }
 
     [TestMethod]
-    public async Task ExecuteWaitWithInvalidStepFails()
+    [DataRow(null, DisplayName = "Default Namespace")]
+    [DataRow(TestNamespace, DisplayName = "Supplied Namespace")]
+    public async Task ExecuteWaitWithInvalidStepFails(string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
         var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
-        var subjectMapper = new SubjectMapper(null);
+        var subjectMapper = new SubjectMapper(namespaceValue);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
-        var connectionOptions = new ConnectionOptions(natsConnection);
+        var connectionOptions = new ConnectionOptions(natsConnection)
+        {
+            Namespace=namespaceValue
+        };
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<InvalidDelayStepWorkflow>(cancellationToken: TestContext.CancellationToken);
@@ -347,7 +369,9 @@ public class WorkflowExecutionTests
     }
 
     [TestMethod]
-    public async Task ExecuteWorkflowWithAllActivityTypes()
+    [DataRow(null, DisplayName = "Default Namespace")]
+    [DataRow(TestNamespace, DisplayName = "Supplied Namespace")]
+    public async Task ExecuteWorkflowWithAllActivityTypes(string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -356,10 +380,13 @@ public class WorkflowExecutionTests
         var noActWithInput = new NoActionActivityWithInput();
         var noActWithInputWithReturn = new NoActionActivityWithInputWithReturn();
         var timeoutActWithReturn = new TimeoutActivityWithReturn();
-        var subjectMapper = new SubjectMapper(null);
+        var subjectMapper = new SubjectMapper(namespaceValue);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
-        var connectionOptions = new ConnectionOptions(natsConnection);
+        var connectionOptions = new ConnectionOptions(natsConnection)
+        {
+            Namespace=namespaceValue
+        };
         var messageSerializer = new MessageSerializer(connectionOptions);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(cancellationToken: TestContext.CancellationToken);
@@ -421,9 +448,11 @@ public class WorkflowExecutionTests
     }
 
     [TestMethod]
-    [DataRow(WorkflowCompletionActions.Purge)]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge)]
-    public async Task ExecuteWorkflowWithPurgeOnCompletion(WorkflowCompletionActions action)
+    [DataRow(WorkflowCompletionActions.Purge, null)]
+    [DataRow(WorkflowCompletionActions.Purge, TestNamespace)]
+    [DataRow(WorkflowCompletionActions.ArchiveThenPurge, null)]
+    [DataRow(WorkflowCompletionActions.ArchiveThenPurge, TestNamespace)]
+    public async Task ExecuteWorkflowWithPurgeOnCompletion(WorkflowCompletionActions action, string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -433,11 +462,14 @@ public class WorkflowExecutionTests
         var noActWithInputWithReturn = new NoActionActivityWithInputWithReturn();
         var errorActWithReturn = new ErrorActivityWithReturn();
         var timeoutActWithReturn = new TimeoutActivityWithReturn();
-        var subjectMapper = new SubjectMapper(null);
+        var subjectMapper = new SubjectMapper(namespaceValue);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var jsContext = new NatsJSContext(natsConnection);
-        var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
+        var connectionOptions = new ConnectionOptions(natsConnection, jsContext)
+        {
+            Namespace=namespaceValue
+        };
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
         {
@@ -490,9 +522,11 @@ public class WorkflowExecutionTests
     }
 
     [TestMethod]
-    [DataRow(WorkflowCompletionActions.ArchiveThenNothing)]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge)]
-    public async Task ExecuteWorkflowWithArchiveOnCompletion(WorkflowCompletionActions action)
+    [DataRow(WorkflowCompletionActions.ArchiveThenNothing, null)]
+    [DataRow(WorkflowCompletionActions.ArchiveThenNothing, TestNamespace)]
+    [DataRow(WorkflowCompletionActions.ArchiveThenPurge, null)]
+    [DataRow(WorkflowCompletionActions.ArchiveThenPurge, TestNamespace)]
+    public async Task ExecuteWorkflowWithArchiveOnCompletion(WorkflowCompletionActions action, string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -502,12 +536,15 @@ public class WorkflowExecutionTests
         var noActWithInput = new NoActionActivityWithInput();
         var noActWithInputWithReturn = new NoActionActivityWithInputWithReturn();
         var timeoutActWithReturn = new TimeoutActivityWithReturn();
-        var subjectMapper = new SubjectMapper(null);
+        var subjectMapper = new SubjectMapper(namespaceValue);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var jsContext = new NatsJSContext(natsConnection);
         var objContext = jsContext.CreateObjectStoreContext();
-        var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
+        var connectionOptions = new ConnectionOptions(natsConnection, jsContext)
+        {
+            Namespace = namespaceValue
+        };
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
         {

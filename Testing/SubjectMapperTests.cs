@@ -29,7 +29,7 @@ public class SubjectMapperTests
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.start", subjectMapper.WorkflowStart(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.end", subjectMapper.WorkflowEnd(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.archived", subjectMapper.WorkflowArchived(workflowName, instance));
-        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.purge", subjectMapper.WorkflowPurge(workflowName, instance));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.purged", subjectMapper.WorkflowPurged(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.delaystart", subjectMapper.WorkflowDelayStart(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.delayend", subjectMapper.WorkflowDelayEnd(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.timer", subjectMapper.WorkflowTimer(workflowName, instance));
@@ -45,7 +45,11 @@ public class SubjectMapperTests
         Assert.AreEqual($"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{instance}.{activityInstance}.timeout", subjectMapper.ActivityTimeout(activityName, workflowName, instance, activityInstance));
         Assert.AreEqual($"jetflow.{subjectNamespace}act.*.{workflowName}.{instance}.>", subjectMapper.WorkflowActivityPurgeFilter(workflowName, instance));
 
-        
+        Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_PURGE", subjectMapper.WorkflowPurgeEventsStreamName);
+        Assert.AreEqual($"jetflow.{subjectNamespace}purge.>", subjectMapper.WorkflowPurgeEventsFilter);
+        Assert.AreEqual($"jetflow.{subjectNamespace}purge.{workflowName}.{instance}", subjectMapper.WorkflowPurge(workflowName, instance));
+        Assert.AreEqual($"jetflow.{subjectNamespace}purge.delay.{workflowName}.{instance}", subjectMapper.DelayWorkflowPurge(workflowName, instance));
+
         Assert.AreEqual($"JETFLOW_{streamStart}ACTIVITY_LOCKS", subjectMapper.ActivityLocksKeystore);
         Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_CONFIGS", subjectMapper.WorkflowConfigKeystore);
         Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_ARCHIVES", subjectMapper.WorkflowArchiveObjectstore);
@@ -56,6 +60,17 @@ public class SubjectMapperTests
         Assert.AreEqual($"jetflow.{subjectNamespace}swf.{workflowName}.{instance}.config", subjectMapper.ScheduledWorkflowConfigure(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}swf.{workflowName}.{instance}.start", subjectMapper.ScheduledWorkflowStart(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}swf.{workflowName}.{instance}.timer", subjectMapper.ScheduledWorkflowTimer(workflowName, instance));
+
+        Assert.AreEqual($"JETFLOW_{streamStart}COUNTERS", subjectMapper.CountersStreamName);
+        Assert.AreEqual($"jetflow.{subjectNamespace}counter.>", subjectMapper.CountersFilter);
+        Assert.AreEqual($"jetflow.{subjectNamespace}counter.activeworkflows", subjectMapper.ActiveWorkflowsCounter);
+        Assert.AreEqual($"jetflow.{subjectNamespace}counter.suspendedworkflows", subjectMapper.SuspendedWorkflowsCounter);
+        Assert.AreEqual($"jetflow.{subjectNamespace}counter.activeactivities", subjectMapper.ActiveActivitiesCounter);
+
+        Assert.AreEqual($"JETFLOW_{streamStart}METRICS", subjectMapper.PerformanceStreamName);
+        Assert.AreEqual($"jetflow.{subjectNamespace}performance.>", subjectMapper.PerformanceFilter);
+        Assert.AreEqual($"jetflow.{subjectNamespace}performance.activity", subjectMapper.ActivityPerformanceSubject);
+        Assert.AreEqual($"jetflow.{subjectNamespace}performance.workflow", subjectMapper.WorkflowPerformanceSubject);
     }
 
     [TestMethod]

@@ -3,10 +3,10 @@ using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using JetFlow.Subscriptions;
+using JetFlow.Subscriptions.Default;
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
-using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using NATS.Client.ObjectStore;
 using NATS.Net;
@@ -36,7 +36,7 @@ public static class Connection
         => ConnectionInstance.CreateAsync(options);
 
     private sealed record ConnectionStores(INatsKVStore TimerStore, INatsKVStore ConfigurationStore, INatsObjStore ArchiveStore, INatsObjStore LargeMessageStore,
-            INatsJSConsumer ActivityTimeoutsConsumer, INatsJSConsumer ScheduledWorkflowConsumer);
+            INatsJSConsumer ActivityTimeoutsConsumer, INatsJSConsumer ScheduledWorkflowConsumer, INatsJSConsumer PurgeWorkflowConsumer);
 
     internal class ConnectionInstance : IConnection, IAsyncDisposable
     {
@@ -48,6 +48,7 @@ public static class Connection
         private readonly IServiceProvider? serviceProvider;
         private readonly CancellationTokenSource cancellationTokenSource = new();
         private readonly ConcurrentBag<ASubscription> subscriptions = new();
+        private readonly MetricsHelper metricsHelper;
 
         private ConnectionInstance(INatsConnection connection, INatsJSContext natsJSContext, MessageSerializer messageSerializer, 
             SubjectMapper subjectMapper, IServiceProvider? serviceProvider, ConnectionStores stores)
@@ -58,8 +59,10 @@ public static class Connection
             serverVersion = (connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version));
             internalConnection = new(connection, natsJSContext, serverVersion);
             serviceConnection = new(internalConnection, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, stores.LargeMessageStore, subjectMapper, messageSerializer);
-            subscriptions.Add(new ActivityTimeoutsSubscription(serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
+            metricsHelper = new MetricsHelper(internalConnection, subjectMapper);
+            subscriptions.Add(new ActivityTimeoutsSubscription(metricsHelper, serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
             subscriptions.Add(new ScheduledWorkflowsSubscription(subjectMapper, serviceConnection, stores.ScheduledWorkflowConsumer, cancellationTokenSource.Token));
+            subscriptions.Add(new PurgeWorkflowSubscription(metricsHelper, serviceConnection, stores.PurgeWorkflowConsumer, cancellationTokenSource.Token));
         }
 
         public static async ValueTask<IConnection> CreateAsync(ConnectionOptions options)
@@ -81,31 +84,7 @@ public static class Connection
                 throw new UnableToConnectException();
             var serverVersion = (connection.ServerInfo==null ? new Version("0.0.0.0") : new Version(connection.ServerInfo.Version));
             var subjectMapper = new SubjectMapper(options.Namespace);
-            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.WorkflowEventsStreamsName, [subjectMapper.WorkflowEventsFilter])
-            {
-                DuplicateWindow = TimeSpan.FromMinutes(10),
-                AllowDirect = true,
-                AllowMsgSchedules = true,
-                AllowMsgTTL=true,
-                AllowAtomicPublish = serverVersion>=new Version("2.12")
-            });
-            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ActivityQueueStream, [subjectMapper.ActivityEventsFilter])
-            {
-                DuplicateWindow = TimeSpan.FromMinutes(10),
-                AllowDirect = true,
-                AllowMsgSchedules = true,
-                AllowMsgTTL=true,
-                Retention = StreamConfigRetention.Workqueue,
-                AllowAtomicPublish = serverVersion>=new Version("2.12")
-            });
-            await jsContext.CreateOrUpdateStreamAsync(new(subjectMapper.ScheduledWorkflowStreamsName, [subjectMapper.ScheduledWorkflowsFilter])
-            {
-                DuplicateWindow = TimeSpan.FromMinutes(10),
-                AllowDirect = true,
-                AllowMsgSchedules = true,
-                AllowMsgTTL=true,
-                AllowAtomicPublish = serverVersion>=new Version("2.12")
-            });
+            await StreamsHelper.EstablishStreamsAsync(jsContext, subjectMapper, serverVersion);
             var kc = jsContext.CreateKeyValueStoreContext();
             var timerStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.ActivityLocksKeystore)
             {
@@ -123,28 +102,9 @@ public static class Connection
             var objContext = jsContext.CreateObjectStoreContext();
             var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore);
             var largeMessageStore = await objContext.CreateObjectStoreAsync(subjectMapper.LargeMessageObjectstore);
-            var activityTimeoutsConsumer = await jsContext.CreateOrUpdateConsumerAsync(
-                    subjectMapper.ActivityQueueStream,
-                    new($"jetflow_activity_timeouts")
-                    {
-                        DurableName = $"jetflow_activity_timeouts",
-                        FilterSubject= subjectMapper.ActivityTimeout("*", "*", "*", "*"),
-                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
-                    },
-                    CancellationToken.None
-                );
-            var scheduledWorkflowConsumer = await jsContext.CreateOrUpdateConsumerAsync(
-                    subjectMapper.ScheduledWorkflowStreamsName,
-                    new($"jetflow_scheduled_workflows")
-                    {
-                        DurableName = $"jetflow_scheduled_workflows",
-                        FilterSubject= subjectMapper.ScheduledWorkflowStart("*", "*"),
-                        AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
-                    },
-                    CancellationToken.None
-                );
+            var (activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer)= await StreamsHelper.EstablishBaseConsumersAsync(jsContext, subjectMapper);
             return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, options.ServiceProvider,
-                new(timerStore, configurationStore, archiveStore, largeMessageStore, activityTimeoutsConsumer, scheduledWorkflowConsumer)
+                new(timerStore, configurationStore, archiveStore, largeMessageStore, activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer)
             );
         }
 
@@ -161,28 +121,27 @@ public static class Connection
                 );
 
         private TWorkflowActivity ProduceInstance<TWorkflowActivity>()
-            => (serviceProvider!=null ? ActivatorUtilities.CreateInstance<TWorkflowActivity>(serviceProvider) : Activator.CreateInstance<TWorkflowActivity>())
-            ?? throw new ActivityConstructionException(typeof(TWorkflowActivity));
+            => (serviceProvider!=null ? ActivatorUtilities.CreateInstance<TWorkflowActivity>(serviceProvider) : Activator.CreateInstance<TWorkflowActivity>());
 
         async ValueTask IConnection.RegisterWorkflowActivityAsync<TWorkflowActivity>(TWorkflowActivity activity, CancellationToken cancellationToken)
-            => subscriptions.Add(new WorkflowActivitySubscription<TWorkflowActivity>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
+            => subscriptions.Add(new WorkflowActivitySubscription<TWorkflowActivity>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), metricsHelper, cancellationTokenSource.Token));
 
         ValueTask IConnection.RegisterWorkflowActivityAsync<TWorkflowActivity>(CancellationToken cancellationToken)
             => ((IConnection)this).RegisterWorkflowActivityAsync<TWorkflowActivity>(ProduceInstance<TWorkflowActivity>(), cancellationToken);
 
         async ValueTask IConnection.RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken)
-            => subscriptions.Add(new WorkflowActivitySubscription<TWorkflowActivity, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
+            => subscriptions.Add(new WorkflowActivitySubscription<TWorkflowActivity, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), metricsHelper, cancellationTokenSource.Token));
 
         ValueTask IConnection.RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(CancellationToken cancellationToken)
             => ((IConnection)this).RegisterWorkflowActivityAsync<TWorkflowActivity, TInput>(ProduceInstance<TWorkflowActivity>(), cancellationToken);
         async ValueTask IConnection.RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(TWorkflowActivity activity, CancellationToken cancellationToken)
-            => subscriptions.Add(new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
+            => subscriptions.Add(new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), metricsHelper, cancellationTokenSource.Token));
 
         ValueTask IConnection.RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(CancellationToken cancellationToken)
             => ((IConnection)this).RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput>(ProduceInstance<TWorkflowActivity>(), cancellationToken);
 
         async ValueTask IConnection.RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(TWorkflowActivity activity, CancellationToken cancellationToken)
-            => subscriptions.Add(new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), cancellationTokenSource.Token));
+            => subscriptions.Add(new WorkflowSubscriptionActivityWithReturn<TWorkflowActivity, TOutput, TInput>(activity, serviceConnection, subjectMapper, messageSerializer, await CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(cancellationToken), metricsHelper, cancellationTokenSource.Token));
 
         ValueTask IConnection.RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(CancellationToken cancellationToken)
             => ((IConnection)this).RegisterWorkflowActivityWithReturnAsync<TWorkflowActivity, TOutput, TInput>(ProduceInstance<TWorkflowActivity>(), cancellationToken);
@@ -206,18 +165,21 @@ public static class Connection
                     cancellationToken
                 );
 
+        private ValueTask RegisterWorkflowBaseAsync<TWorkflow>(WorkflowOptions? options)
+            => serviceConnection.RegisterWorkflowConfigAsync<TWorkflow>(options);
+
         async ValueTask IConnection.RegisterWorkflowAsync<TWorkflow>(WorkflowOptions? options, CancellationToken cancellationToken)
         {
-            await serviceConnection.RegisterWorkflowConfigAsync<TWorkflow>(options);
+            await RegisterWorkflowBaseAsync<TWorkflow>(options);
             subscriptions.Add(new WorkflowSubscription<TWorkflow>(serviceConnection, subjectMapper, messageSerializer, 
-                await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), serviceProvider, cancellationTokenSource.Token));
+                await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), metricsHelper, serviceProvider, cancellationTokenSource.Token));
         }
 
         async ValueTask IConnection.RegisterWorkflowAsync<TWorkflow, TInput>(WorkflowOptions? options, CancellationToken cancellationToken)
         {
-            await serviceConnection.RegisterWorkflowConfigAsync<TWorkflow>(options);
-            subscriptions.Add(new WorkflowSubscription<TWorkflow, TInput>(serviceConnection, subjectMapper, messageSerializer, 
-                await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), serviceProvider, cancellationTokenSource.Token));
+            await RegisterWorkflowBaseAsync<TWorkflow>(options);
+            subscriptions.Add(new WorkflowSubscription<TWorkflow, TInput>(serviceConnection, subjectMapper, messageSerializer,
+                await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), metricsHelper, serviceProvider, cancellationTokenSource.Token));
         }
         ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
             => serviceConnection.StartWorkflowAsync<TWorkflow>(cancellationToken);
@@ -256,6 +218,7 @@ public static class Connection
                     subscriptions.Select(s => s.AwaitClose())
                 );
                 subscriptions.Clear();
+                await ((IAsyncDisposable)metricsHelper).DisposeAsync();
             }
         }
     }

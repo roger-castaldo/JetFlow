@@ -1,8 +1,6 @@
 using JetFlow.Configs;
 using JetFlow.Testing.Helpers;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NATS.Client.Core;
-using NATS.Net;
 
 namespace JetFlow.Testing;
 
@@ -69,17 +67,11 @@ public class WorkflowDependencyInjectionTests
         var connectionOptions = new ConnectionOptions(natsConnection) { ServiceProvider = sp };
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
 
-        try
-        {
-            await connection.RegisterWorkflowAsync<DependentWorkflow>(cancellationToken: CancellationToken.None);
-            Assert.Fail("Expected workflow registration to throw when DI provider throws");
-        }
-        catch (Exception ex)
-        {
-            Assert.IsTrue(ex is InvalidOperationException || ex is JetFlow.ActivityConstructionException || ex is JetFlow.WorkflowEndedException, $"Unexpected exception type: {ex.GetType().FullName}");
-        }
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () => await connection.RegisterWorkflowAsync<DependentWorkflow>(cancellationToken: TestContext.CancellationToken));
 
         await ((IAsyncDisposable)connection).DisposeAsync();
+
+        Assert.IsNotNull(ex);
     }
 
     [TestMethod]
@@ -112,17 +104,11 @@ public class WorkflowDependencyInjectionTests
         var connectionOptions = new ConnectionOptions(natsConnection) { ServiceProvider = sp };
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
 
-        try
-        {
-            await connection.RegisterWorkflowAsync<DependentWorkflowWithInput, string>(cancellationToken: CancellationToken.None);
-            Assert.Fail("Expected workflow registration to throw when dependency is missing");
-        }
-        catch (Exception ex)
-        {
-            Assert.IsTrue(ex is InvalidOperationException || ex is JetFlow.ActivityConstructionException || ex is JetFlow.WorkflowEndedException, $"Unexpected exception type: {ex.GetType().FullName}");
-        }
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () => await connection.RegisterWorkflowAsync<DependentWorkflowWithInput, string>(cancellationToken: CancellationToken.None));
 
         await ((IAsyncDisposable)connection).DisposeAsync();
+
+        Assert.IsNotNull(ex);
     }
 
     [TestMethod]
@@ -143,4 +129,6 @@ public class WorkflowDependencyInjectionTests
 
         await ((IAsyncDisposable)connection).DisposeAsync();
     }
+
+    public TestContext TestContext { get; set; }
 }

@@ -210,9 +210,9 @@ public class WorkflowOptionTests
         StartMessageListener(
             natsConnection,
             subjectMapper.WorkflowEventsStreamsName,
-            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
             purge,
-            (subject) => Equals(subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            (subject) => Equals(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
             cancellationTokenSource.Token
         );
 

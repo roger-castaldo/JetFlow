@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="Abstractions/Abstractions.csproj" />
   <Project Path="Core/Core.csproj" />
+  <Project Path="Observability/Observability.csproj" Id="5d1bdb0a-d9d7-454a-882c-e600382d5715" />
   <Project Path="Sample/Sample.csproj" Id="7a8e6f6d-656e-4040-9909-4f75149cf527" />
   <Project Path="Testing/JetFlow.Testing.csproj" Id="3e2218b2-6de3-4047-bd7f-52a4c10af586" />
 </Solution>

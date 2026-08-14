@@ -242,32 +242,34 @@ public class ParallelActivityTests
         ));
     }
 
-    private sealed class EmptyActivityWithProblems : IActivity<string>
+    private sealed record EmptyActivityInput(int Index, string Input);
+
+    private sealed class EmptyActivityWithProblems : IActivity<EmptyActivityInput>
     {
         private readonly List<string?> inputs = [];
         public List<string?> Inputs => inputs;
-        async Task IActivity<string>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
+        async Task IActivity<EmptyActivityInput>.ExecuteAsync(EmptyActivityInput? input, IWorkflowState state, CancellationToken cancellationToken)
         {
-            inputs.Add(input);
-            if (inputs.Count == 3 || inputs.Count==5)
+            inputs.Add(input?.Input);
+            if (input?.Index == 3 || input?.Index==5)
                 await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
-            else if (inputs.Count==4 || inputs.Count==6)
+            else if (input?.Index==4 || input?.Index==6)
                 throw new InvalidDataException("Simulated error occured");
         }
     }
     private sealed class ParallelActivityWorkflowWithProblems : IWorkflow
     {
         private const int ParallelActivityCount = 10;
-        private static readonly List<string> inputs = [];
-        public static List<string> Inputs => inputs;
+        private static readonly List<EmptyActivityInput> inputs = [];
+        public static IEnumerable<string> Inputs => inputs.Select(i=>i.Input);
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
             if (inputs.Count==0)
             {
                 for (var x = 0; x<ParallelActivityCount; x++)
-                    inputs.Add(TestsHelper.GenerateRandomString(32));
+                    inputs.Add(new(x+1,TestsHelper.GenerateRandomString(32)));
             }
-            var results = await context.ExecuteActivitiesAsync<EmptyActivityWithProblems, string>(new(inputs)
+            var results = await context.ExecuteActivitiesAsync<EmptyActivityWithProblems, EmptyActivityInput>(new(inputs)
             {
                 Timeouts = new(AttemptTimeout: TimeSpan.FromSeconds(3))
             });
@@ -296,7 +298,7 @@ public class ParallelActivityTests
             ErrorOnActivityTimeout=errorOnTimeout,
             ErrorOnActivityFailure=errorOnFailure
         }, TestContext.CancellationToken);
-        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithProblems, string>(emptyActivityToTimeout, TestContext.CancellationToken);
+        await connection.RegisterWorkflowActivityAsync<EmptyActivityWithProblems, EmptyActivityInput>(emptyActivityToTimeout, TestContext.CancellationToken);
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithProblems>(
@@ -317,7 +319,7 @@ public class ParallelActivityTests
             Assert.AreEqual($"Activity {NameHelper.GetActivityName<EmptyActivityWithProblems>()} has timed out: 2: Activity timed out; 4: Activity timed out", endMessage.ErrorMessage);
 
         //Verify
-        Assert.HasCount(ParallelActivityWorkflowWithProblems.Inputs.Count, emptyActivityToTimeout.Inputs);
+        Assert.HasCount(ParallelActivityWorkflowWithProblems.Inputs.Count(), emptyActivityToTimeout.Inputs);
         foreach (var input in ParallelActivityWorkflowWithProblems.Inputs)
             Assert.Contains(input, emptyActivityToTimeout.Inputs);
     }

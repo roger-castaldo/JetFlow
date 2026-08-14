@@ -85,11 +85,11 @@ internal static class WorkflowsHelper
 
     public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForPurge<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid?>> startCall)
     {
-        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
+        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
         return await StartWorkflowAndWait(consumer, close, startCall,
             (runId, subject) => (runId.HasValue ?
-                Equals(subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), runId.Value.ToString()))
-                : IsMatch(subject, subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), "*"))
+                Equals(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>(), runId.Value.ToString()))
+                : IsMatch(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>(), "*"))
              ));
     }
 

@@ -13,8 +13,9 @@ internal record EventMessage
         TraceHelper.WorkflowTraceHeaderKey,
         TraceHelper.WorkflowTraceSpanHeaderKey
     ];
-    private static readonly Regex workflowSubjectRegex = new(@"^(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|purge|config|stepstart|stepend|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
-    private static readonly Regex activitySubjectRegex = new(@"^(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    private static readonly Regex workflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|config|stepstart|stepend|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    private static readonly Regex activitySubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    private static readonly Regex purgeWorkflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?purge\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 
     public static async ValueTask<EventMessage> CreateMessageAsync(ServiceConnection connection, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
         => new(
@@ -56,21 +57,29 @@ internal record EventMessage
         else
         {
             match = activitySubjectRegex.Match(subject);
-            if (!match.Success)
-                throw new ArgumentException($"Invalid event subject {subject}");
-            ActivityName = match.Groups["activityName"].Value;
-            ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
-            ActivityInstanceID = match.Groups["activityInstance"].Value;
-            ActivityTimeout = ExtractHeader<TimeSpan>(headers, Constants.ActivityTimeoutHeader, value => (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var timeSpan) ? timeSpan : (TimeSpan?)null));
-            ActivityAttempt = ExtractHeader<ushort>(headers, Constants.ActivityAttemptHeader, value => ushort.TryParse(value, out var attempt) ? attempt : (ushort)0)??0;
-            if (headers?.TryGetValue(Constants.ActivityMaximumAttemptsHeader, out _)??false)
-                RetryConfiguration = new(
-                    ExtractHeader<ushort>(headers, Constants.ActivityMaximumAttemptsHeader, value => ushort.TryParse(value, out var maxAttempt) ? maxAttempt : (ushort)0)??0,
-                    ExtractHeader<TimeSpan>(headers, Constants.ActiviyRetryDelayBetweenHeader, value => (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var timeSpan) ? timeSpan : (TimeSpan?)null)),
-                    ExtractHeader<bool>(headers, Constants.ActivityRetryOnTimeoutHeader, value => !bool.TryParse(value, out var retryOnTimeout)||retryOnTimeout)??false,
-                    ExtractHeader<bool>(headers, Constants.ActivityRetryOnErrorHeader, value => !bool.TryParse(value, out var retryOnError)||retryOnError)??false,
-                    ExtractHeaders(headers, Constants.ActivityRetryBlockedErrorsHeader, value => [.. value.Where(s => !string.IsNullOrWhiteSpace(s)).OfType<string>()])
-                );
+            if (match.Success)
+            {
+
+                ActivityName = match.Groups["activityName"].Value;
+                ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
+                ActivityInstanceID = match.Groups["activityInstance"].Value;
+                ActivityTimeout = ExtractHeader<TimeSpan>(headers, Constants.ActivityTimeoutHeader, value => (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var timeSpan) ? timeSpan : (TimeSpan?)null));
+                ActivityAttempt = ExtractHeader<ushort>(headers, Constants.ActivityAttemptHeader, value => ushort.TryParse(value, out var attempt) ? attempt : (ushort)0)??0;
+                if (headers?.TryGetValue(Constants.ActivityMaximumAttemptsHeader, out _)??false)
+                    RetryConfiguration = new(
+                        ExtractHeader<ushort>(headers, Constants.ActivityMaximumAttemptsHeader, value => ushort.TryParse(value, out var maxAttempt) ? maxAttempt : (ushort)0)??0,
+                        ExtractHeader<TimeSpan>(headers, Constants.ActiviyRetryDelayBetweenHeader, value => (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var timeSpan) ? timeSpan : (TimeSpan?)null)),
+                        ExtractHeader<bool>(headers, Constants.ActivityRetryOnTimeoutHeader, value => !bool.TryParse(value, out var retryOnTimeout)||retryOnTimeout)??false,
+                        ExtractHeader<bool>(headers, Constants.ActivityRetryOnErrorHeader, value => !bool.TryParse(value, out var retryOnError)||retryOnError)??false,
+                        ExtractHeaders(headers, Constants.ActivityRetryBlockedErrorsHeader, value => [.. value.Where(s => !string.IsNullOrWhiteSpace(s)).OfType<string>()])
+                    );
+            }
+            else
+            {
+                match = purgeWorkflowSubjectRegex.Match(subject);
+                if (!match.Success)
+                    throw new ArgumentException($"Invalid subject format: {subject}", nameof(subject));
+            }
         }
         ActivityID = ExtractHeader<uint>(headers, Constants.ActivityIDHeader, value => uint.Parse(value));
         WorkflowStepResultStatus = ExtractHeader<ActivityResultStatus>(headers, Constants.ActivityResultHeader, value => Enum.Parse<ActivityResultStatus>(value, true));

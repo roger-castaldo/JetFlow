@@ -87,7 +87,7 @@ internal partial class ServiceConnection
         => (purgeDelay.HasValue ?
            connection.PublishScheduledMessageAsync(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                     [],
-                    subjectMapper.WorkflowTimer(message.WorkflowName, message.WorkflowId),
+                    subjectMapper.DelayWorkflowPurge(message.WorkflowName, message.WorkflowId),
                     message.InjectHeaders(null),
                     $"{message.WorkflowName}-{message.WorkflowId}-purge", 
                    purgeDelay.Value,

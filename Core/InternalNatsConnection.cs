@@ -2,14 +2,14 @@
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
-using NATS.Client.ObjectStore.Models;
-using NATS.Net;
 
 namespace JetFlow;
 
 internal class InternalNatsConnection(INatsConnection connection, INatsJSContext jsContext, Version? serverVersion)
 {
     public int MaxMessagePayload => connection.ServerInfo?.MaxPayload??1_048_576;
+
+    public INatsJSContext JSContext => jsContext;
 
     public record PublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, TimeSpan? Timeout = null);
     public record ScheduledPublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, string DelayString, string DestinationSubject, TimeSpan? Timeout = null)
@@ -28,6 +28,7 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
     private const string BatchIdHeader = "Nats-Batch-Id";
     private const string BatchSequenceHeader = "Nats-Batch-Sequence";
     private const string BatchCommitHeader = "Nats-Batch-Commit";
+    private const string NatsCounterHeader = "Nats-Incr";
 
     private readonly bool allowsBatching = (serverVersion??new Version("0.0.0.0"))>=new Version("2.12");
 
@@ -118,6 +119,10 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
     }
     public ValueTask PublishMessageAsync(PublishMessage message, CancellationToken cancellationToken = default)
         => PublishMessageAsync(message.Subject, message.Data, AppendDefaultHeaders(message.Headers, message.Id, message.Timeout), cancellationToken);
+    public ValueTask IncrementCounterAsync(string counterSubject, CancellationToken cancellationToken = default)
+        => PublishMessageAsync(counterSubject, Array.Empty<byte>(), new NatsHeaders() { { NatsCounterHeader, "+1" } }, cancellationToken);
+    public ValueTask DecrementCounterAsync(string counterSubject, CancellationToken cancellationToken = default)
+        => PublishMessageAsync(counterSubject, Array.Empty<byte>(), new NatsHeaders() { { NatsCounterHeader, "-1" } }, cancellationToken);
     public ValueTask PublishScheduledMessageAsync(ScheduledPublishMessage message, CancellationToken cancellationToken = default)
         => PublishMessageAsync(message.Subject,
             message.Data,
@@ -175,22 +180,9 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
         => jsContext.CreateOrUpdateConsumerAsync(stream, config, cancellationToken);
 
     internal async Task PurgeStreamAsync(string stream, StreamPurgeRequest request, CancellationToken cancellationToken)
-        => _ = await jsContext.PurgeStreamAsync(stream, request, cancellationToken);
-
-    internal async Task PurgeObjectStoreAsync(string bucketName, Func<ObjectMetadata?, bool> filter, CancellationToken cancellationToken)
     {
-        var objectStore = await jsContext.CreateObjectStoreContext().GetObjectStoreAsync(bucketName, cancellationToken);
-        if (objectStore != null)
-        {
-            var tasks = new List<Task>();
-            await foreach (var file in objectStore.ListAsync(cancellationToken: cancellationToken))
-            {
-                if (filter(file))
-                    tasks.Add(objectStore.DeleteAsync(file.Name, cancellationToken: cancellationToken).AsTask());
-            }
-            if (tasks.Count>0)
-                await Task.WhenAll(tasks);
-        }
+        var result = await jsContext.PurgeStreamAsync(stream, request, cancellationToken);
+        System.Diagnostics.Debug.WriteLine($"PurgeStreamAsync: Stream={stream}, Filter={request.Filter}, Purged={result.Purged}, Success={result.Success}");
     }
 
     internal ValueTask<bool> DeleteConsumerAsync(string streamName, string consumerName)

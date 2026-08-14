@@ -9,7 +9,7 @@ namespace Sample.Activities
         {
             await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
             var username = await state.GetActivityResultValueAsync<DefineUsername, string>();
-            Console.WriteLine($"Username generated is:{username}");
+            Console.WriteLine($"Username generated is:{username?.FirstOrDefault()??string.Empty}");
             return RandomNumberGenerator.GetInt32(2) == 1;
         }
     }

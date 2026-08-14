@@ -9,8 +9,8 @@ namespace JetFlow.Subscriptions;
 
 internal abstract class AWorkflowSubscription<TWorkflow>(
     ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
-    INatsJSConsumer consumer, IServiceProvider? serviceProvider, CancellationToken cancellationToken)
-    : ASubscription(serviceConnection, consumer, cancellationToken)
+    INatsJSConsumer consumer, MetricsHelper metricsHelper, IServiceProvider? serviceProvider, CancellationToken cancellationToken)
+    : AMetricSubscription(serviceConnection, consumer, metricsHelper, cancellationToken)
     where TWorkflow : class
 {
     private static readonly WorkflowEventTypes[] ValidOperations = [
@@ -19,8 +19,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         WorkflowEventTypes.DelayEnd
     ];
     private static readonly WorkflowEventTypes[] EndOperations = [
-        WorkflowEventTypes.End,
-        WorkflowEventTypes.Purge
+        WorkflowEventTypes.End
     ];
     protected TWorkflow Workflow = (serviceProvider!=null ? ActivatorUtilities.CreateInstance<TWorkflow>(serviceProvider) : Activator.CreateInstance<TWorkflow>())!;
 
@@ -29,7 +28,17 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
         if (EndOperations.Any(m => Equals(m, message.WorkflowEventType)))
-            await ProcessEndOperation(message);
+        {
+            try
+            {
+                await ProcessEndOperation(message);
+                await message.AckAsync(CancellationToken);
+            }
+            catch
+            {
+                await message.NakAsync(CancellationToken);
+            }
+        }
         else
         {
             bool isCompleted = false;
@@ -37,8 +46,8 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             {
                 if (!ValidOperations.Any(m => Equals(m, message.WorkflowEventType)))
                     throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
-                MetricsHelper.ProcessWorkflowMessage(message);
-                var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, message);
+                await MetricsHelper.ProcessWorkflowMessageAsync(message, CancellationToken);
+                var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, MetricsHelper, message);
                 var activityResultStatus = message.WorkflowStepResultStatus;
                 var errorMessage = (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Data) : null);
                 string? timeoutMessage = null;
@@ -70,16 +79,13 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             catch (Exception ex)
             {
                 Activity.Current?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                MetricsHelper.EndWorkflow(message.WorkflowName);
+                await MetricsHelper.EndWorkflowAsync(message.WorkflowName, false, CancellationToken);
                 await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, ex.Message), CancellationToken);
             }
-            finally
-            {
-                await message.AckAsync(CancellationToken);
-            }
+            await message.AckAsync(CancellationToken);
             if (isCompleted)
             {
-                MetricsHelper.EndWorkflow(message.WorkflowName);
+                await MetricsHelper.EndWorkflowAsync(message.WorkflowName, true, CancellationToken);
                 await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, null), CancellationToken);
             }
         }
@@ -87,12 +93,6 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
 
     private async Task ProcessEndOperation(EventMessage message)
     {
-        if (Equals(message.WorkflowEventType, WorkflowEventTypes.Purge))
-        {
-            await message.AckAsync(CancellationToken);
-            await ServiceConnection.PurgeWorkflowAsync(message, CancellationToken);
-            return;
-        }
         INatsJSMsg<byte[]>? config = null;
         await using var configQuery = await ServiceConnection.QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName, false, subjectMapper.WorkflowConfigure(message.WorkflowName, message.WorkflowId));
         await foreach(var msg in configQuery)
@@ -110,7 +110,6 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         }
         if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge) || Equals(options.CompletionAction, WorkflowCompletionActions.Purge))
             await ServiceConnection.MarkWorkflowForPurge(message, options.PurgeDelay, CancellationToken);
-        await message.AckAsync(CancellationToken);
     }
 
     protected abstract ValueTask HandleWorkflowEventAsync(WorkflowContext context);

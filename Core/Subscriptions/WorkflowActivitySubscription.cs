@@ -1,4 +1,5 @@
-﻿using JetFlow.Interfaces;
+﻿using JetFlow.Helpers;
+using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using NATS.Client.JetStream;
 
@@ -7,8 +8,8 @@ namespace JetFlow.Subscriptions;
 internal class WorkflowActivitySubscription<TWorkflowActivity>
     (TWorkflowActivity instance,
     ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
-    INatsJSConsumer consumer, CancellationToken cancellationToken)
-    : AWorkflowActivitySubscriptionWithoutReturn<TWorkflowActivity>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
+    INatsJSConsumer consumer, MetricsHelper metricsHelper, CancellationToken cancellationToken)
+    : AWorkflowActivitySubscriptionWithoutReturn<TWorkflowActivity>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, metricsHelper, cancellationToken)
      where TWorkflowActivity : IActivity
 {
     protected override Task HandleActivityRunWithoutReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)
@@ -18,8 +19,8 @@ internal class WorkflowActivitySubscription<TWorkflowActivity>
 internal class WorkflowActivitySubscription<TWorkflowActivity, TInput>
     (TWorkflowActivity instance,
     ServiceConnection serviceConnection, SubjectMapper subjectMapper, MessageSerializer messageSerializer,
-    INatsJSConsumer consumer, CancellationToken cancellationToken)
-    : AWorkflowActivitySubscriptionWithoutReturn<TWorkflowActivity>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, cancellationToken)
+    INatsJSConsumer consumer, MetricsHelper metricsHelper, CancellationToken cancellationToken)
+    : AWorkflowActivitySubscriptionWithoutReturn<TWorkflowActivity>(instance, serviceConnection, subjectMapper, messageSerializer, consumer, metricsHelper, cancellationToken)
      where TWorkflowActivity : IActivity<TInput>
 {
     protected async override Task HandleActivityRunWithoutReturnAsync(IWorkflowState workflowState, EventMessage message, CancellationToken cancellationToken)

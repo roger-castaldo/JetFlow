@@ -1,7 +1,7 @@
 ﻿using NATS.Client.Core;
 using NATS.Client.JetStream;
 
-namespace JetFlow.Subscriptions
+namespace JetFlow.Subscriptions.Default
 {
     internal class ScheduledWorkflowsSubscription(SubjectMapper subjectMapper, ServiceConnection serviceConnection, INatsJSConsumer consumer, CancellationToken cancellationToken)
     : ASubscription(serviceConnection, consumer, cancellationToken)

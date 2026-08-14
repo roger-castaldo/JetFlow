@@ -11,7 +11,6 @@ internal enum WorkflowEventTypes
     StepEnd,
     StepRetry,
     Archived,
-    Purge,
     Config
 }
 

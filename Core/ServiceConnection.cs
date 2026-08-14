@@ -4,6 +4,7 @@ using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using NATS.Client.ObjectStore;
+using System.Text;
 
 namespace JetFlow;
 
@@ -26,11 +27,28 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
             ), connection);
 
     public async ValueTask PurgeWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
-        => await Task.WhenAll(
+    {
+        await using var query = await QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName, false, subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId));
+        var tasks = new List<Task>();
+        await foreach (var msg in query)
+        {
+            if (msg.Data!=null && msg.Data.Length>LargeMessageMagicByte.Length && msg.Data.Take(LargeMessageMagicByte.Length).SequenceEqual(LargeMessageMagicByte))
+            {
+                var messageId = UTF8Encoding.UTF8.GetString([.. msg.Data.Skip(LargeMessageMagicByte.Length)]);
+                tasks.Add(largeMessageStore.DeleteAsync(messageId, cancellationToken).AsTask());
+            }
+        }
+        await Task.WhenAll(
+        [
+            .. tasks,
             connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken),
-            connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken),
-            PurgeWorkflowLargeFilesAsync(message, cancellationToken)
+            connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken)
+        ]);
+        await connection.PublishMessageAsync(
+            new(Array.Empty<byte>(), subjectMapper.WorkflowPurged(message.WorkflowName, message.WorkflowId), new(), $"{message.WorkflowName}-{message.WorkflowId}-purged", Timeout: TimeSpan.FromHours(6)),
+            cancellationToken: cancellationToken
         );
+    }
 
     private sealed class JetstreamQuery(INatsJSConsumer consumer, InternalNatsConnection connection) : IJetstreamQuery
     {

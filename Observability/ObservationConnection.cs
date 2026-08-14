@@ -1,0 +1,222 @@
+﻿using JetFlow.Configs;
+using JetFlow.Data;
+using JetFlow.Interfaces;
+using NATS.Client.Core;
+using NATS.Client.JetStream;
+using NATS.Client.JetStream.Models;
+using NATS.Net;
+using System.Collections.Concurrent;
+using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace JetFlow;
+
+public static class ObservationConnection
+{
+    public static ValueTask<IObservationConnection> CreateInstanceAsync(ObservationConnectionOptions options)
+        => ConnectionInstance.CreateAsync(options);
+
+    private class ConnectionInstance(INatsConnection connection, INatsJSContext jsContext, string groupName) : IObservationConnection, IAsyncDisposable
+    {
+        private readonly JsonSerializerOptions jsonOptions = new()
+        {
+            WriteIndented=false,
+            AllowTrailingCommas=true,
+            PropertyNameCaseInsensitive=true,
+            ReadCommentHandling=JsonCommentHandling.Skip,
+            DefaultIgnoreCondition=JsonIgnoreCondition.WhenWritingNull,
+            TypeInfoResolver = ObservationJsonContext.Default
+        };
+        public static async ValueTask<IObservationConnection> CreateAsync(ObservationConnectionOptions options)
+        {
+            var connection = options.Connection;
+            if (connection.ConnectionState != NatsConnectionState.Open)
+            {
+                try
+                {
+                    await connection.ConnectAsync();
+                }
+                catch
+                {
+                    //burying connection errors
+                }
+            }
+            if (connection.ConnectionState != NatsConnectionState.Open)
+                throw new ObservationConnectionFailedException();
+            return new ConnectionInstance(connection, new NatsJSContext(connection), options.GroupName);
+        }
+
+        private readonly ConcurrentDictionary<string,SubjectMapper> namespaces = [];
+        private short samplingDurationMinutes = 5;
+        private Func<WorkflowPerformanceRecord, ValueTask>? workflowRecordReceived;
+        private Func<ActivityPerformanceRecord, ValueTask>? activityRecordReceived;
+        private CancellationTokenSource cancellationTokenSource = new();
+        private readonly ConcurrentBag<PerformanceSubscription> subscriptions = new();
+        private readonly SemaphoreSlim semaphoreSlim = new(1, 1);
+
+
+        private async ValueTask RefreshNamespacesAsync() {
+            await semaphoreSlim.WaitAsync();
+            await cancellationTokenSource.CancelAsync();
+            await Task.WhenAll(
+                subscriptions.Select(s => s.AwaitClose())
+            );
+            subscriptions.Clear();
+            cancellationTokenSource = new();
+            if (workflowRecordReceived!=null && activityRecordReceived!=null)
+                await Task.WhenAll(namespaces.Select(async pair =>
+                {
+                    await jsContext.CreateOrUpdateStreamAsync(new(pair.Value.PerformanceStreamName, [pair.Value.PerformanceFilter])
+                    {
+                        Retention = StreamConfigRetention.Limits,
+                        Discard = StreamConfigDiscard.Old,
+                        MaxAge = TimeSpan.FromDays(1)
+                    });
+                    var kc = jsContext.CreateKeyValueStoreContext();
+                    var configStore = await kc.GetStoreAsync(pair.Value.WorkflowConfigKeystore);
+                    var createResult = await configStore.TryCreateAsync<short>(pair.Value.PerformanceSamplingKey, samplingDurationMinutes, cancellationToken: cancellationTokenSource.Token);
+                    if (!createResult.Success)
+                    {
+                        var getEntryResult = await configStore.TryGetEntryAsync<short>(pair.Value.PerformanceSamplingKey, cancellationToken: cancellationTokenSource.Token);
+                        if(getEntryResult.Success && getEntryResult.Value.Value!= samplingDurationMinutes)
+                            await configStore.UpdateAsync<short>(pair.Value.PerformanceSamplingKey, samplingDurationMinutes, getEntryResult.Value.Revision, cancellationToken: cancellationTokenSource.Token);
+                    }
+                    var consumer = await jsContext.CreateConsumerAsync(
+                            pair.Value.PerformanceStreamName,
+                            new(groupName)
+                            {
+                                DurableName=groupName,
+                                FilterSubjects=new[] { pair.Value.WorkflowPerformanceSubject, pair.Value.ActivityPerformanceSubject },
+                                AckPolicy=NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
+                            }, cancellationTokenSource.Token
+                        );
+                    subscriptions.Add(new PerformanceSubscription(consumer, pair.Value, jsonOptions, workflowRecordReceived!, activityRecordReceived!, cancellationTokenSource.Token));
+                }));
+            semaphoreSlim.Release();
+        }
+
+        async ValueTask IObservationConnection.AddDefaultNamespaceAsync()
+        {
+            if (namespaces.TryAdd(string.Empty, new(null)))
+                await RefreshNamespacesAsync();
+        }
+
+        async ValueTask IObservationConnection.AddNamespaceAsync(string workflowNamespace)
+        {
+            if (namespaces.TryAdd(workflowNamespace, new(workflowNamespace)))
+                await RefreshNamespacesAsync();
+        }
+
+        async ValueTask IObservationConnection.AddNamespacesAsync(IEnumerable<string> workflowNamespaces)
+        {
+            var added = false;
+            foreach (var ns in workflowNamespaces)
+                added |= namespaces.TryAdd(ns, new(ns));
+            if (added)
+                await RefreshNamespacesAsync();
+        }
+
+        ValueTask IObservationConnection.AddPerformanceMonitoringAsync(byte sampleDurationMinutes, Func<WorkflowPerformanceRecord, ValueTask> workflowRecordReceived, Func<ActivityPerformanceRecord, ValueTask> activityRecordReceived)
+        {
+            if (this.workflowRecordReceived!= null || this.activityRecordReceived != null)
+                throw new InvalidOperationException("Performance monitoring has already been added.");
+            this.samplingDurationMinutes = sampleDurationMinutes;
+            this.workflowRecordReceived = workflowRecordReceived;
+            this.activityRecordReceived = activityRecordReceived;
+            return RefreshNamespacesAsync();
+        }
+
+        private record struct SubjectStreamPair(string? Namespace, string Stream, string Subject);
+        private async ValueTask<IEnumerable<PerformanceCounter>> GetPerformanceCountersAsync(IEnumerable<SubjectStreamPair> pairs)
+            => await Task.WhenAll(pairs.Select(
+                async (p) =>
+                {
+                    var stream = await jsContext.GetStreamAsync(p.Stream);
+                    try
+                    {
+                        var msg = await stream.GetAsync(new() { LastBySubj = p.Subject });
+                        var value = JsonSerializer.Deserialize<CounterValue>(msg.Message.Data.ToArray(), jsonOptions);
+                        return new PerformanceCounter(string.IsNullOrWhiteSpace(p.Namespace) ? null : p.Namespace, BigInteger.Parse(value?.Val??"0"));
+                    }
+                    catch (NatsJSApiException ex) when (ex.Error.Code == 404)
+                    {
+                        //no counters available yet
+                        return new PerformanceCounter(string.IsNullOrWhiteSpace(p.Namespace) ? null : p.Namespace, BigInteger.Zero);
+                    }
+                }
+            ));
+
+        private async ValueTask<BigInteger> GetPerformanceCounterAsync(string? workflowNamespace, string streamName, string subject)
+        {
+            var results = await GetPerformanceCountersAsync([new SubjectStreamPair(workflowNamespace, streamName, subject)]);
+            return results.First().Value;
+        }
+
+        ValueTask<IEnumerable<PerformanceCounter>> IObservationConnection.GetActiveActivityCountAsync()
+            => GetPerformanceCountersAsync(namespaces.Select(pair => new SubjectStreamPair(pair.Key, pair.Value.CountersStreamName, pair.Value.ActiveActivitiesCounter)));
+
+        async ValueTask<BigInteger> IObservationConnection.GetActiveActivityCountAsync(string? workflowNamespace)
+        {
+            if (namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
+                return await GetPerformanceCounterAsync(workflowNamespace, mapper.CountersStreamName, mapper.ActiveActivitiesCounter);
+            return BigInteger.Zero;
+        }
+
+        ValueTask<IEnumerable<PerformanceCounter>> IObservationConnection.GetActiveWorkflowCountAsync()
+            => GetPerformanceCountersAsync(namespaces.Select(pair => new SubjectStreamPair(pair.Key, pair.Value.CountersStreamName, pair.Value.ActiveWorkflowsCounter)));
+
+        async ValueTask<BigInteger> IObservationConnection.GetActiveWorkflowCountAsync(string? workflowNamespace)
+        {
+            if (namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
+                return await GetPerformanceCounterAsync(workflowNamespace, mapper.CountersStreamName, mapper.ActiveWorkflowsCounter);
+            return BigInteger.Zero;
+        }
+
+        ValueTask<IEnumerable<PerformanceCounter>> IObservationConnection.GetSuspendedWorkflowCountAsync()
+            => GetPerformanceCountersAsync(namespaces.Select(pair => new SubjectStreamPair(pair.Key, pair.Value.CountersStreamName, pair.Value.SuspendedWorkflowsCounter)));
+
+        async ValueTask<BigInteger> IObservationConnection.GetSuspendedWorkflowCountAsync(string? workflowNamespace)
+        {
+            if (namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
+                return await GetPerformanceCounterAsync(workflowNamespace, mapper.CountersStreamName, mapper.SuspendedWorkflowsCounter);
+            return BigInteger.Zero;
+        }
+
+        async ValueTask IObservationConnection.RemoveNamespaceAsync(string workflowNamespace)
+        {
+            if (namespaces.TryRemove(workflowNamespace, out _))
+                await RefreshNamespacesAsync();
+        }
+
+        async ValueTask IObservationConnection.RemoveNamespacesAsync(IEnumerable<string> workflowNamespaces)
+        {
+            var removed = false;
+            foreach (var ns in workflowNamespaces)
+                removed |= namespaces.TryRemove(ns, out _);
+            if (removed)
+                await RefreshNamespacesAsync();
+        }
+
+        async ValueTask IObservationConnection.RemoveDefaultNamespaceAsync()
+        {
+            if (namespaces.TryRemove(string.Empty, out _))
+                await RefreshNamespacesAsync();
+        }
+
+        async ValueTask IAsyncDisposable.DisposeAsync()
+        {
+            if (!cancellationTokenSource.IsCancellationRequested)
+            {
+                await semaphoreSlim.WaitAsync();
+                await cancellationTokenSource.CancelAsync();
+                await Task.WhenAll(
+                    subscriptions.Select(s => s.AwaitClose())
+                );
+                namespaces.Clear();
+                subscriptions.Clear();
+                semaphoreSlim.Release();
+            }
+        }
+    }
+}

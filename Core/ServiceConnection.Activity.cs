@@ -46,7 +46,8 @@ internal partial class ServiceConnection
                 data,
                 subjectMapper.ActivityStart(activityName, message.WorkflowName, message.WorkflowId, activityInstanceId),
                 message.InjectHeaders(headers),
-                $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-start{idx}"
+                $"{message.WorkflowName}-{message.WorkflowId}-{activityName}-{stepIndex}-start{idx}", 
+                Timeout:timeout
             )
         ];
         if (timeout.HasValue)

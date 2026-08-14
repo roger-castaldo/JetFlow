@@ -74,6 +74,14 @@ public class ConnectionTests
         Assert.IsTrue(activityStream.Info.Config.AllowAtomicPublish);
         Assert.AreEqual(TimeSpan.FromMinutes(10), activityStream.Info.Config.DuplicateWindow);
         Assert.AreEqual(StreamConfigRetention.Workqueue, activityStream.Info.Config.Retention);
+        var counterStream = await jsContext.GetStreamAsync(subjectMapper.CountersStreamName, cancellationToken: TestContext.CancellationToken);
+        Assert.IsNotNull(counterStream);
+        Assert.IsNotNull(counterStream.Info.Config.Subjects);
+        Assert.IsTrue(CollectionsHelper.CollectionsMatchIgnoreOrder<string>(counterStream.Info.Config.Subjects, [
+            subjectMapper.CountersFilter
+        ]));
+        Assert.IsTrue(counterStream.Info.Config.AllowDirect);
+        Assert.IsTrue(counterStream.Info.Config.AllowMsgCounter);
         var activityLocksStore = await jsContext.GetStreamAsync($"KV_{subjectMapper.ActivityLocksKeystore}", cancellationToken: TestContext.CancellationToken);
         Assert.IsNotNull(activityLocksStore);
         Assert.IsNotNull(activityLocksStore.Info.Config);
