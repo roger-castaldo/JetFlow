@@ -1,6 +1,6 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Interfaces;
-using JetFlow.Messages;
+using JetFlow.Data;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -67,7 +67,7 @@ public class ActivityExecutionTests
     {
         public static string? FinalResult { get; private set; } = string.Empty;
 
-        async ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string? input)
+        async ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string input)
         {
             _ = await context.ExecuteActivityAsync<BasicActivity>(new());
             _ = await context.ExecuteActivityAsync<BasicActivityWithInput, string>(new(input));
@@ -101,7 +101,7 @@ public class ActivityExecutionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<BasicWorkflow>(natsConnection, subjectMapper,
-            async () => await connection.StartWorkflowAsync<BasicWorkflow, string>(input, CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<BasicWorkflow, string>(new(input), CancellationToken.None)
         );
 
         // Assert
@@ -181,7 +181,7 @@ public class ActivityExecutionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ActivityContextWorkflow>(natsConnection, subjectMapper,
-            async () => await connection.StartWorkflowAsync<ActivityContextWorkflow>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<ActivityContextWorkflow>()
         );
 
         // Assert
@@ -254,7 +254,7 @@ public class ActivityExecutionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityContextWorkflow>(natsConnection, subjectMapper,
-            async () => await connection.StartWorkflowAsync<ParallelActivityContextWorkflow>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<ParallelActivityContextWorkflow>()
         );
 
         // Assert

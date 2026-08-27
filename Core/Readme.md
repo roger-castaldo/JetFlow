@@ -24,11 +24,6 @@
 - [InvalidStepException](#T-JetFlow-InvalidStepException 'JetFlow.InvalidStepException')
 - [InvalidWorkflowEventMessage](#T-JetFlow-InvalidWorkflowEventMessage 'JetFlow.InvalidWorkflowEventMessage')
 - [UnableToConnectException](#T-JetFlow-UnableToConnectException 'JetFlow.UnableToConnectException')
-- [WorkflowEnd](#T-JetFlow-Messages-WorkflowEnd 'JetFlow.Messages.WorkflowEnd')
-  - [#ctor(EndTime,ErrorMessage)](#M-JetFlow-Messages-WorkflowEnd-#ctor-System-DateTime,System-String- 'JetFlow.Messages.WorkflowEnd.#ctor(System.DateTime,System.String)')
-  - [EndTime](#P-JetFlow-Messages-WorkflowEnd-EndTime 'JetFlow.Messages.WorkflowEnd.EndTime')
-  - [ErrorMessage](#P-JetFlow-Messages-WorkflowEnd-ErrorMessage 'JetFlow.Messages.WorkflowEnd.ErrorMessage')
-  - [IsSuccess](#P-JetFlow-Messages-WorkflowEnd-IsSuccess 'JetFlow.Messages.WorkflowEnd.IsSuccess')
 - [WorkflowEndedException](#T-JetFlow-WorkflowEndedException 'JetFlow.WorkflowEndedException')
 
 <a name='T-JetFlow-Configs-CompressionTypes'></a>
@@ -239,58 +234,6 @@ JetFlow
 
 Thrown when an error occurs attempting to connect to the NATS server.  
 Specifically this will be thrown when the Ping that is executed on each initial connection fails.
-
-<a name='T-JetFlow-Messages-WorkflowEnd'></a>
-## WorkflowEnd `type`
-
-##### Namespace
-
-JetFlow.Messages
-
-##### Summary
-
-Houses the information about the end of a workflow, including the time it ended and any error message if it failed.
-
-##### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| EndTime | [T:JetFlow.Messages.WorkflowEnd](#T-T-JetFlow-Messages-WorkflowEnd 'T:JetFlow.Messages.WorkflowEnd') | The time the workflow ended. |
-
-<a name='M-JetFlow-Messages-WorkflowEnd-#ctor-System-DateTime,System-String-'></a>
-### #ctor(EndTime,ErrorMessage) `constructor`
-
-##### Summary
-
-Houses the information about the end of a workflow, including the time it ended and any error message if it failed.
-
-##### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| EndTime | [System.DateTime](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTime 'System.DateTime') | The time the workflow ended. |
-| ErrorMessage | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The error message if the workflow failed, otherwise null. |
-
-<a name='P-JetFlow-Messages-WorkflowEnd-EndTime'></a>
-### EndTime `property`
-
-##### Summary
-
-The time the workflow ended.
-
-<a name='P-JetFlow-Messages-WorkflowEnd-ErrorMessage'></a>
-### ErrorMessage `property`
-
-##### Summary
-
-The error message if the workflow failed, otherwise null.
-
-<a name='P-JetFlow-Messages-WorkflowEnd-IsSuccess'></a>
-### IsSuccess `property`
-
-##### Summary
-
-Indicates whether the workflow ended successfully, which is true if there is no error message.
 
 <a name='T-JetFlow-WorkflowEndedException'></a>
 ## WorkflowEndedException `type`

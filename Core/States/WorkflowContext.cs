@@ -19,6 +19,7 @@ internal class WorkflowContext
     private uint activityIndex = 0;
     public INatsJSMsg<byte[]> StartMessage {  get; private init; }
     public WorkflowOptions Options { get; private init; }
+    public IReadOnlyDictionary<string, string[]>? MetaData { get; private init; }
 
     private WorkflowContext(ServiceConnection serviceConnection, SubjectMapper subjectMapper, 
         MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, IReadOnlyCollection<INatsJSMsg<byte[]>> messages, INatsJSMsg<byte[]> startMessage, WorkflowOptions options)
@@ -31,6 +32,7 @@ internal class WorkflowContext
         this.messages=messages;
         StartMessage=startMessage;
         Options=options;
+        MetaData = MetaDataHelper.ExtractMetaData(startMessage.Headers);
     }
 
     internal static async ValueTask<WorkflowContext> LoadAsync(ServiceConnection serviceConnection, SubjectMapper subjectMapper,
@@ -200,6 +202,27 @@ internal class WorkflowContext
             return;
         }
         await serviceConnection.StartWorkflowDelayAsync(message, delay, cancellationToken);
+        await metricsHelper.SuspendWorkflowAsync(cancellationToken);
+        throw new WorkflowSuspendedException();
+    }
+
+    async ValueTask IWorkflowContext.SuspendAsync(CancellationToken cancellationToken)
+    {
+        var msg = GetNextMessage();
+        if (msg!=null)
+        {
+            var eventMessage = await EventMessage.CreateMessageAsync(serviceConnection, msg, cancellationToken);
+            if (!Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.Suspended))
+                throw new Exception();
+            msg = GetNextMessage();
+            if (msg!=null)
+            {
+                eventMessage = await EventMessage.CreateMessageAsync(serviceConnection, msg, cancellationToken);
+                if (!Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.Resumed))
+                    throw new Exception();
+            }
+        }
+        await serviceConnection.SuspendWorkflowAsync(message, index, cancellationToken);
         await metricsHelper.SuspendWorkflowAsync(cancellationToken);
         throw new WorkflowSuspendedException();
     }

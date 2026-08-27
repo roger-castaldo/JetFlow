@@ -1,7 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
-using JetFlow.Messages;
+using JetFlow.Data;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -74,7 +74,7 @@ public class ActivityRetryTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithActivityTimeout>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<WorkflowWithActivityTimeout>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithActivityTimeout>()
         );
 
         // Assert
@@ -151,7 +151,7 @@ public class ActivityRetryTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithUnimplmentedActivity>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<WorkflowWithUnimplmentedActivity>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithUnimplmentedActivity>()
         );
 
         // Assert
@@ -216,7 +216,7 @@ public class ActivityRetryTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithUnimplementedActivityWithTimers>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<WorkflowWithUnimplementedActivityWithTimers>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithUnimplementedActivityWithTimers>()
         );
 
         // Assert
@@ -296,7 +296,7 @@ public class ActivityRetryTests
             subjectMapper,
             async () =>
             {
-                runId = await connection.StartWorkflowAsync<WorkflowWithRetryForArchiving>(CancellationToken.None);
+                runId = await connection.StartWorkflowAsync<WorkflowWithRetryForArchiving>();
                 return runId;
             }
         );

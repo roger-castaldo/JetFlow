@@ -2,14 +2,11 @@
 using JetFlow.Data;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
-using JetFlow.Messages;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
-using System.Diagnostics.Metrics;
 using System.Numerics;
-using System.Reflection;
 
 namespace JetFlow.Testing.Observation;
 
@@ -96,7 +93,7 @@ public class CounterTests
             subjectMapper,
             async () =>
             {
-                instance = await connection.StartWorkflowAsync<EmptyWorkflow, string?>(namespaceValue, cancellationToken: CancellationToken.None);
+                instance = await connection.StartWorkflowAsync<EmptyWorkflow, string?>(new(namespaceValue));
                 return instance;
             }
         );
@@ -242,7 +239,7 @@ public class CounterTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<EmptyActivityWorkflow>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<EmptyActivityWorkflow, string?>(namespaceValue, cancellationToken: CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<EmptyActivityWorkflow, string?>(new(namespaceValue))
         );
 
         // Assert

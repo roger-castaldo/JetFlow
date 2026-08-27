@@ -1,7 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
-using JetFlow.Messages;
+using JetFlow.Data;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -79,7 +79,7 @@ public class ParallelActivityTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithoutOutput>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithoutOutput>(TestContext.CancellationToken)
+            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithoutOutput>(cancellationToken:TestContext.CancellationToken)
         );
 
         // Assert
@@ -159,7 +159,7 @@ public class ParallelActivityTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithOutput>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithOutput>(TestContext.CancellationToken)
+            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithOutput>(cancellationToken: TestContext.CancellationToken)
         );
 
         // Assert
@@ -203,7 +203,7 @@ public class ParallelActivityTests
             subjectMapper,
             async () =>
             {
-                runId = await connection.StartWorkflowAsync<ParallelActivityWorkflowWithOutput>(CancellationToken.None);
+                runId = await connection.StartWorkflowAsync<ParallelActivityWorkflowWithOutput>(cancellationToken:TestContext.CancellationToken);
                 return runId;
             }
         );
@@ -304,7 +304,7 @@ public class ParallelActivityTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithProblems>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithProblems>(TestContext.CancellationToken)
+            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithProblems>(cancellationToken: TestContext.CancellationToken)
         );
 
         // Assert
@@ -363,7 +363,7 @@ public class ParallelActivityTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<ParallelActivityWorkflowWithLargeNumberOfCalls>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>(TestContext.CancellationToken)
+            async () => await connection.StartWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>(cancellationToken: TestContext.CancellationToken)
         );
 
         // Assert

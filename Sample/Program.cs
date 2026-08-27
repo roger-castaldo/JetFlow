@@ -69,11 +69,11 @@ await observer.AddPerformanceMonitoringAsync(
 
 Console.WriteLine("Starting workflows...");
 await Task.WhenAll(new ValueTask<Guid>[]{
-    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob1","Loblaw1"), CancellationToken.None),
-    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob2", "Loblaw2"), CancellationToken.None),
-    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob3", "Loblaw3"), CancellationToken.None),
-    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob4", "Loblaw4"), CancellationToken.None),
-    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new("Bob5", "Loblaw5"), CancellationToken.None)
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new(new("Bob1","Loblaw1")), CancellationToken.None),
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new(new("Bob2", "Loblaw2")), CancellationToken.None),
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new(new("Bob3", "Loblaw3")), CancellationToken.None),
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new(new("Bob4", "Loblaw4")), CancellationToken.None),
+    connection.StartWorkflowAsync<CreateUserWorkflow, User>(new(new("Bob5", "Loblaw5")), CancellationToken.None)
 }.Select(vtask=>vtask.AsTask()));
 
 Console.WriteLine("Hit enter to exit...");

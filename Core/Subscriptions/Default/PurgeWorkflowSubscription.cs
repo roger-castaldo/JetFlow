@@ -4,7 +4,7 @@ using NATS.Client.JetStream;
 namespace JetFlow.Subscriptions.Default;
 
 internal class PurgeWorkflowSubscription(MetricsHelper metricsHelper, ServiceConnection serviceConnection, INatsJSConsumer consumer, CancellationToken cancellationToken)
-    : ASubscription(serviceConnection, consumer, cancellationToken)
+    : ACoreSubscription(serviceConnection, consumer, cancellationToken)
 {
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {

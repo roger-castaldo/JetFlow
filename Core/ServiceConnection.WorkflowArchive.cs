@@ -1,5 +1,6 @@
 ﻿using JetFlow.Configs;
-using JetFlow.Messages;
+using JetFlow.Helpers;
+using JetFlow.Data;
 using JetFlow.Serializers;
 using System.Text;
 
@@ -17,6 +18,7 @@ internal partial class ServiceConnection
         List<EventMessage> events = [];
         object? arguments = null;
         List<WorkflowStep> steps = [];
+        Dictionary<string, string[]>? metaData = null;
         await using var query = await QueryStreamAsync(
             subjectMapper.WorkflowEventsStreamsName,
             false,
@@ -42,6 +44,7 @@ internal partial class ServiceConnection
                     arguments = await messageSerializer.DecodeAsync(eventMessage.Data, eventMessage.Headers);
                     if ((eventMessage.Headers?.TryGetValue(Constants.SchedulerSourceID, out var scheduleIdString)??false) && Guid.TryParse(scheduleIdString.ToString(), out var schedId))
                         schedulerId = schedId;
+                    metaData = MetaDataHelper.ExtractMetaData(eventMessage.Headers);
                     break;
                 case WorkflowEventTypes.End:
                     end = eventMessage.Metadata?.Timestamp;
@@ -50,6 +53,7 @@ internal partial class ServiceConnection
                 case WorkflowEventTypes.DelayStart:
                 case WorkflowEventTypes.StepStart:
                 case WorkflowEventTypes.StepRetry:
+                case WorkflowEventTypes.Suspended:
                     events.Add(eventMessage);
                     break;
                 case WorkflowEventTypes.DelayEnd:
@@ -65,6 +69,21 @@ internal partial class ServiceConnection
                         null,
                         null,
                         null
+                    ));
+                    break;
+                case WorkflowEventTypes.Resumed:
+                    var suspendMessage = FindMatchingMessages(eventMessage, ref events).FirstOrDefault(e => Equals(e.WorkflowEventType, WorkflowEventTypes.Suspended));
+                    steps.Add(new(
+                        WorkflowStepTypes.Suspended,
+                        null,
+                        null,
+                        suspendMessage!.Metadata!.Value.Timestamp,
+                        suspendMessage!.Metadata!.Value.Timestamp,
+                        null,
+                        null,
+                        null,
+                        null,
+                        (eventMessage.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Data, eventMessage.Headers) : null
                     ));
                     break;
                 case WorkflowEventTypes.StepEnd:
@@ -87,6 +106,7 @@ internal partial class ServiceConnection
                 workflowEnd!.IsSuccess,
                 workflowEnd!.ErrorMessage,
                 arguments,
+                metaData,
                 [.. steps]
             )),
             cancellationToken

@@ -66,7 +66,7 @@ internal class MetricsHelper(InternalNatsConnection natsConnection, SubjectMappe
         else
         {
             observationMetricsCollector.RecordWorkflowLatency(message.WorkflowName, message.RecievedTimestamp.Subtract(message.Metadata?.Timestamp ?? message.RecievedTimestamp));
-            if (Equals(message.WorkflowEventType, WorkflowEventTypes.DelayEnd))
+            if (Equals(message.WorkflowEventType, WorkflowEventTypes.DelayEnd) || Equals(message.WorkflowEventType, WorkflowEventTypes.Resumed))
                 await natsConnection.DecrementCounterAsync(subjectMapper.SuspendedWorkflowsCounter, cancellationToken);
         }
         

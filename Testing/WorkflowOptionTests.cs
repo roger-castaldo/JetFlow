@@ -1,7 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
-using JetFlow.Messages;
+using JetFlow.Data;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -58,7 +58,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithUnregisteredActivity>(natsConnection, subjectMapper,
-            async () => await connection.StartWorkflowAsync<WorkflowWithUnregisteredActivity>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithUnregisteredActivity>()
         );
 
         // Assert
@@ -104,7 +104,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithSlowActivity>(natsConnection, subjectMapper,
-            async () => await connection.StartWorkflowAsync<WorkflowWithSlowActivity>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithSlowActivity>()
         );
 
         // Assert
@@ -150,7 +150,7 @@ public class WorkflowOptionTests
 
         //Act
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<WorkflowWithActivityError>(natsConnection, subjectMapper,
-            async () => await connection.StartWorkflowAsync<WorkflowWithActivityError>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<WorkflowWithActivityError>()
         );
 
         // Assert
@@ -217,7 +217,7 @@ public class WorkflowOptionTests
         );
 
         //Act
-        runId = await connection.StartWorkflowAsync<WorkflowWithNoSteps>(cancellationTokenSource.Token);
+        runId = await connection.StartWorkflowAsync<WorkflowWithNoSteps>(cancellationToken: cancellationTokenSource.Token);
 
         //Assert
         var completionResult = await completion.Task;

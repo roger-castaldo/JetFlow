@@ -7,7 +7,7 @@ namespace JetFlow;
 
 internal partial class ServiceConnection
 {
-    public async ValueTask<Guid> StartWorkflowAsync(string name, Guid id, byte[] data, NatsHeaders? headers, byte[]? configData, CancellationToken cancellationToken)
+    public async ValueTask<Guid> StartWorkflowAsync(string name, Guid id, byte[] data, NatsHeaders? headers, Dictionary<string, string[]>? metaData, byte[]? configData, CancellationToken cancellationToken)
     {
         headers ??= new();
         using var activity = TraceHelper.StartWorkflow(name, id.ToString());
@@ -22,31 +22,45 @@ internal partial class ServiceConnection
             new InternalNatsConnection.PublishMessage(
                 data,
                 subjectMapper.WorkflowStart(name, id.ToString()),
-                new(headers.ToDictionary()),
+                new(MetaDataHelper.EncodeMetaData(metaData, headers).ToDictionary()),
                 $"{name}-{id}-start"
             )
         ], cancellationToken);
         return id;
     }
-    private async ValueTask<Guid> StartWorkflowAsync<TWorkflow>(Guid id, byte[] data, NatsHeaders? headers, CancellationToken cancellationToken)
+    private async ValueTask<Guid> StartWorkflowAsync<TWorkflow>(Guid id, byte[] data, WorkflowExecutionRequest? executionRequest, NatsHeaders? headers, CancellationToken cancellationToken)
     {
         var name = NameHelper.GetWorkflowName<TWorkflow>();
-        var configData = InternalsSerializer.SerializeWorkflowOptions(await GetWorkflowOptions(name));
-        return await StartWorkflowAsync(name, id, data, headers, configData, cancellationToken);
+        var configData = InternalsSerializer.SerializeWorkflowOptions(executionRequest?.Options??await GetWorkflowOptions(name));
+        return await StartWorkflowAsync(name, id, data, headers, executionRequest?.MetaData, configData, cancellationToken);
     }
-    public ValueTask<Guid> StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
+    public ValueTask<Guid> StartWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
-        => StartWorkflowAsync<TWorkflow>(Guid.NewGuid(), [], null, cancellationToken);
-    public async ValueTask<Guid> StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
+        => StartWorkflowAsync<TWorkflow>(Guid.NewGuid(), [], executionRequest, null, cancellationToken);
+    public async ValueTask<Guid> StartWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow<TInput>
     {
         var id = Guid.NewGuid();
-        var (data, headers) = await EncodeMessageAsync<TInput>(input, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
-        return await StartWorkflowAsync<TWorkflow>(id, data, headers, cancellationToken);
+        var (data, headers) = await EncodeMessageAsync<TInput>(executionRequest.Input, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
+        return await StartWorkflowAsync<TWorkflow>(id, data, executionRequest, headers, cancellationToken);
     }
-    public async ValueTask EndWorkflowAsync(EventMessage message, Messages.WorkflowEnd workflowEnd, CancellationToken cancellationToken)
+
+    public async ValueTask ResumeWorkflowAsync<TWorkflow>(Guid id,string? message, CancellationToken cancellationToken)
     {
-        var (data, headers) = await EncodeMessageAsync<Messages.WorkflowEnd>(workflowEnd, message.WorkflowName, message.WorkflowId, cancellationToken);
+        var name = NameHelper.GetWorkflowName<TWorkflow>();
+        var (data, headers) = await EncodeMessageAsync<string?>(message, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
+        await connection.PublishMessageAsync(new(
+            data,
+            subjectMapper.WorkflowResumed(name, id.ToString()),
+            headers,
+            $"{name}-{id}-resume-{Guid.NewGuid()}"
+            ), 
+            cancellationToken);
+    }
+
+    public async ValueTask EndWorkflowAsync(EventMessage message, Data.WorkflowEnd workflowEnd, CancellationToken cancellationToken)
+    {
+        var (data, headers) = await EncodeMessageAsync<Data.WorkflowEnd>(workflowEnd, message.WorkflowName, message.WorkflowId, cancellationToken);
         await connection.PublishMessageAsync(new(
                 data,
                 subjectMapper.WorkflowEnd(message.WorkflowName, message.WorkflowId),
@@ -75,6 +89,14 @@ internal partial class ServiceConnection
             )
         ], cancellationToken);
     }
+    public ValueTask SuspendWorkflowAsync(EventMessage message,int index, CancellationToken cancellationToken)
+        => connection.PublishMessageAsync(new(
+                [],
+                subjectMapper.WorkflowSuspended(message.WorkflowName, message.WorkflowId),
+                message.InjectHeaders(null),
+                $"{message.WorkflowName}-{message.WorkflowId}-suspended-{index}"
+            ), cancellationToken: cancellationToken
+        );
     public ValueTask MarkWorkflowArchived(EventMessage message, CancellationToken cancellationToken)
         => connection.PublishMessageAsync(new(
                 [],

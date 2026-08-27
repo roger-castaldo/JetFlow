@@ -23,7 +23,7 @@ public interface IWorkflow<in TInput>
     /// Executes the workflow operation asynchronously using the specified context and input.
     /// </summary>
     /// <param name="context">The workflow context that provides execution state and services for the operation. Cannot be null.</param>
-    /// <param name="input">The input data for the workflow operation. May be null if the operation does not require input.</param>
+    /// <param name="input">The input data for the workflow operation.</param>
     /// <returns>A ValueTask that represents the asynchronous execution of the workflow operation.</returns>
-    ValueTask ExecuteAsync(IWorkflowContext context, TInput? input);
+    ValueTask ExecuteAsync(IWorkflowContext context, TInput input);
 }

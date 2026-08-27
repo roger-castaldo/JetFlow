@@ -16,7 +16,8 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
     private static readonly WorkflowEventTypes[] ValidOperations = [
         WorkflowEventTypes.Start,
         WorkflowEventTypes.StepEnd,
-        WorkflowEventTypes.DelayEnd
+        WorkflowEventTypes.DelayEnd,
+        WorkflowEventTypes.Resumed
     ];
     private static readonly WorkflowEventTypes[] EndOperations = [
         WorkflowEventTypes.End

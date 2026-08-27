@@ -12,7 +12,9 @@ public sealed class ObservationConnectionOptions
     /// </summary>
     /// <param name="options">The NatsOpts object containing the configuration options for the NATS connection.</param>
     public ObservationConnectionOptions(NatsOpts options)
-        : this(new NatsConnection(options)) { }
+        : this(new NatsConnection(options)) { 
+        CanDisposeConnection = true;
+    }
 
     /// <summary>
     /// Constructs a new instance of the ObservationConnectionOptions class using the provided NATS connection. This constructor initializes the JetStream context based on the specified NATS connection, allowing for easy configuration of the connection settings for interacting with NATS and JetStream.
@@ -24,5 +26,6 @@ public sealed class ObservationConnectionOptions
     }
 
     internal INatsConnection Connection { get; private init; }
+    internal bool CanDisposeConnection { get; private init; } = false;
     public string GroupName { get; init; } = "JETFLOW_OBSERVATION";
 }

@@ -1,5 +1,7 @@
-﻿using System.Text.Json;
+﻿using JetFlow.Data;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace JetFlow;
 
@@ -27,6 +29,7 @@ internal static class Constants
         AllowTrailingCommas=true,
         PropertyNameCaseInsensitive=true,
         ReadCommentHandling=JsonCommentHandling.Skip,
-        DefaultIgnoreCondition=JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition=JsonIgnoreCondition.WhenWritingNull,
+        TypeInfoResolver = JsonTypeInfoResolver.Combine(InternalsJsonContext.Default, ObservationJsonContext.Default, new DefaultJsonTypeInfoResolver())
     };
 }

@@ -1,7 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
-using JetFlow.Messages;
+using JetFlow.Data;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -115,7 +115,7 @@ public class ScheduledWorkflowTests
                     completion.TrySetResult(msg);
             }
         }, TestContext.CancellationToken);
-        await connection.ScheduleWorkflowAsync<CronWorkflowWithInput, string>(input, new WorkflowScheduleBuilder().Build(), cancellationToken: TestContext.CancellationToken);
+        await connection.ScheduleWorkflowAsync<CronWorkflowWithInput, string>(new(input), new WorkflowScheduleBuilder().Build(), cancellationToken: TestContext.CancellationToken);
         var result = await completion.Task;
 
         // Assert
@@ -212,7 +212,7 @@ public class ScheduledWorkflowTests
             subjectMapper,
             async () => {
                 startTime = Stopwatch.GetTimestamp();
-                _ = await connection.DelayStartWorkflowAsync<DelayedWorkflowWithInput, string>(input, TimeSpan.FromSeconds(60), cancellationToken: TestContext.CancellationToken);
+                _ = await connection.DelayStartWorkflowAsync<DelayedWorkflowWithInput, string>(new(input), TimeSpan.FromSeconds(60), cancellationToken: TestContext.CancellationToken);
                 return null;
             }
         );
@@ -244,6 +244,10 @@ public class ScheduledWorkflowTests
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
+        var metaData = new Dictionary<string, string[]>(){
+            { "key1",["value1","value2"] },
+            {"key2",["value3"] }
+        };
         var input = TestsHelper.GenerateRandomString(32);
         var completion = new TaskCompletionSource<NatsMsg<byte[]>?>();
         var subjectMapper = new SubjectMapper(null);
@@ -263,7 +267,11 @@ public class ScheduledWorkflowTests
                 completion.TrySetResult(msg);
             }
         }, TestContext.CancellationToken);
-        var scheduleId = await connection.DelayStartWorkflowAsync<DelayedWorkflowWithInput, string>(input, TimeSpan.FromSeconds(30), options: new() { CompletionAction = WorkflowCompletionActions.ArchiveThenPurge}, TestContext.CancellationToken);
+        var scheduleId = await connection.DelayStartWorkflowAsync<DelayedWorkflowWithInput, string>(new(input)
+        {
+            Options = new() { CompletionAction = WorkflowCompletionActions.ArchiveThenPurge },
+            MetaData = metaData
+        }, TimeSpan.FromSeconds(30), TestContext.CancellationToken);
         var result = await completion.Task;
         
         // Assert
@@ -281,6 +289,9 @@ public class ScheduledWorkflowTests
         Assert.AreEqual(NameHelper.GetWorkflowName<DelayedWorkflowWithInput>(), archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.ArchiveThenPurge, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
+        Assert.IsNotNull(archive.MetaData);
+        Assert.IsTrue(metaData.All(pair => archive.MetaData.TryGetValue(pair.Key, out var value) && pair.Value.SequenceEqual(value)));
+        Assert.AreEqual(metaData.Count, archive.MetaData.Count);
     }
 
     public TestContext TestContext { get; set; }

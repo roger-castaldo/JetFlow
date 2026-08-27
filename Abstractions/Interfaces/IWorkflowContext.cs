@@ -6,6 +6,16 @@
 public interface IWorkflowContext
 {
     /// <summary>
+    /// Houses the MetaData values that were supplied at the start of the workflow execution, if any.
+    /// </summary>
+    IReadOnlyDictionary<string, string[]>? MetaData {get;}
+    /// <summary>
+    /// Called to suspend the current workflow and it will resume once a resume call has been received for this workflow
+    /// </summary>
+    /// <param name="cancellationToken">A token that can be used to cancel the activity execution. Optional.</param>
+    /// <returns>A ValueTask that represents the asynchronous wait operation.</returns>
+    ValueTask SuspendAsync(CancellationToken cancellationToken = default);
+    /// <summary>
     /// Asynchronously waits for the specified time interval before completing.
     /// </summary>
     /// <param name="delay">The amount of time to wait before the operation completes. Must be a non-negative time span.</param>

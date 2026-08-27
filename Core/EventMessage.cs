@@ -13,7 +13,7 @@ internal record EventMessage
         TraceHelper.WorkflowTraceHeaderKey,
         TraceHelper.WorkflowTraceSpanHeaderKey
     ];
-    private static readonly Regex workflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|config|stepstart|stepend|stepretry)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    private static readonly Regex workflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|config|stepstart|stepend|stepretry|suspended|resumed)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex purgeWorkflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?purge\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 

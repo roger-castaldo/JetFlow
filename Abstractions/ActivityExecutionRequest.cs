@@ -53,4 +53,4 @@ public record ActivityExecutionRequest()
 /// <typeparam name="TInput">The type of the input parameter provided to the activity. Can be any serializable type appropriate for the
 /// activity's requirements.</typeparam>
 /// <param name="Input">The input value to pass to the activity. May be null if the activity does not require input.</param>
-public record ActivityExecutionRequest<TInput>(TInput? Input) : ActivityExecutionRequest;
+public record ActivityExecutionRequest<TInput>(TInput Input) : ActivityExecutionRequest;

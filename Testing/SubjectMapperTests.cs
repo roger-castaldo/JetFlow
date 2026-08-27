@@ -32,6 +32,8 @@ public class SubjectMapperTests
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.purged", subjectMapper.WorkflowPurged(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.delaystart", subjectMapper.WorkflowDelayStart(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.delayend", subjectMapper.WorkflowDelayEnd(workflowName, instance));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.suspended", subjectMapper.WorkflowSuspended(workflowName, instance));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.resumed", subjectMapper.WorkflowResumed(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.timer", subjectMapper.WorkflowTimer(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepstart", subjectMapper.WorkflowStepStart(workflowName, instance, stepName));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepend", subjectMapper.WorkflowStepEnd(workflowName, instance, stepName));

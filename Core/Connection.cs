@@ -47,15 +47,17 @@ public static class Connection
         private readonly SubjectMapper subjectMapper;
         private readonly IServiceProvider? serviceProvider;
         private readonly CancellationTokenSource cancellationTokenSource = new();
-        private readonly ConcurrentBag<ASubscription> subscriptions = new();
+        private readonly ConcurrentBag<ACoreSubscription> subscriptions = new();
         private readonly MetricsHelper metricsHelper;
+        private readonly bool canDisposeConnection;
 
         private ConnectionInstance(INatsConnection connection, INatsJSContext natsJSContext, MessageSerializer messageSerializer, 
-            SubjectMapper subjectMapper, IServiceProvider? serviceProvider, ConnectionStores stores)
+            SubjectMapper subjectMapper, IServiceProvider? serviceProvider, ConnectionStores stores, bool canDisposeConnection)
         {
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
             this.serviceProvider = serviceProvider;
+            this.canDisposeConnection = canDisposeConnection;
             serverVersion = (connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version));
             internalConnection = new(connection, natsJSContext, serverVersion);
             serviceConnection = new(internalConnection, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, stores.LargeMessageStore, subjectMapper, messageSerializer);
@@ -104,7 +106,8 @@ public static class Connection
             var largeMessageStore = await objContext.CreateObjectStoreAsync(subjectMapper.LargeMessageObjectstore);
             var (activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer)= await StreamsHelper.EstablishBaseConsumersAsync(jsContext, subjectMapper);
             return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, options.ServiceProvider,
-                new(timerStore, configurationStore, archiveStore, largeMessageStore, activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer)
+                new(timerStore, configurationStore, archiveStore, largeMessageStore, activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer),
+                options.CanDisposeConnection
             );
         }
 
@@ -157,7 +160,8 @@ public static class Connection
                             subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
                             subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
                             subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
-                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*")
+                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
+                            subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<TWorkflow>(), "*")
                         ],
                         DeliverPolicy = NATS.Client.JetStream.Models.ConsumerConfigDeliverPolicy.New,
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
@@ -181,33 +185,39 @@ public static class Connection
             subscriptions.Add(new WorkflowSubscription<TWorkflow, TInput>(serviceConnection, subjectMapper, messageSerializer,
                 await CreateWorkflowConsumerAsync<TWorkflow>(cancellationToken), metricsHelper, serviceProvider, cancellationTokenSource.Token));
         }
-        ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow>(CancellationToken cancellationToken)
-            => serviceConnection.StartWorkflowAsync<TWorkflow>(cancellationToken);
+        ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
+            => serviceConnection.StartWorkflowAsync<TWorkflow>(executionRequest, cancellationToken);
 
-        ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow, TInput>(TInput input, CancellationToken cancellationToken)
-            => serviceConnection.StartWorkflowAsync<TWorkflow, TInput>(input, cancellationToken);
+        ValueTask<Guid> IConnection.StartWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
+            => serviceConnection.StartWorkflowAsync<TWorkflow, TInput>(executionRequest, cancellationToken);
+
+        ValueTask IConnection.ResumeWorkflowAsync<TWorkflow>(Guid instance,string? message, CancellationToken cancellationToken)
+            => serviceConnection.ResumeWorkflowAsync<TWorkflow>(instance, message, cancellationToken);
+
+        ValueTask IConnection.ResumeWorkflowAsync<TWorkflow, TInput>(Guid instance,string? message, CancellationToken cancellationToken)
+            => serviceConnection.ResumeWorkflowAsync<TWorkflow>(instance, message, cancellationToken);
 
         private static readonly Version minScheduleVersionRequired = new("2.14");
 
-        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
+        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
         {
             if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
                 throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
-            return serviceConnection.ScheduleWorkflowAsync<TWorkflow>(schedule, options, cancellationToken);
+            return serviceConnection.ScheduleWorkflowAsync<TWorkflow>(schedule, executionRequest, cancellationToken);
         }
 
-        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(TInput input, IWorkflowSchedule schedule, WorkflowOptions? options, CancellationToken cancellationToken)
+        ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, IWorkflowSchedule schedule, CancellationToken cancellationToken)
         {
             if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
                 throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
-            return serviceConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(input, schedule, options, cancellationToken);
+            return serviceConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(schedule, executionRequest, cancellationToken);
         }
 
-        ValueTask<Guid> IConnection.DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowOptions? options, CancellationToken cancellationToken)
-            => serviceConnection.DelayStartWorkflowAsync<TWorkflow>(delay, options, cancellationToken);
+        ValueTask<Guid> IConnection.DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
+            => serviceConnection.DelayStartWorkflowAsync<TWorkflow>(delay, executionRequest, cancellationToken);
 
-        ValueTask<Guid> IConnection.DelayStartWorkflowAsync<TWorkflow, TInput>(TInput input, TimeSpan delay, WorkflowOptions? options, CancellationToken cancellationToken)
-            => serviceConnection.DelayStartWorkflowAsync<TWorkflow, TInput>(input, delay, options, cancellationToken);
+        ValueTask<Guid> IConnection.DelayStartWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, TimeSpan delay, CancellationToken cancellationToken)
+            => serviceConnection.DelayStartWorkflowAsync<TWorkflow, TInput>(delay, executionRequest, cancellationToken);
 
         async ValueTask IAsyncDisposable.DisposeAsync()
         {
@@ -219,6 +229,8 @@ public static class Connection
                 );
                 subscriptions.Clear();
                 await ((IAsyncDisposable)metricsHelper).DisposeAsync();
+                if (canDisposeConnection)
+                    await internalConnection.DisposeAsync();
             }
         }
     }

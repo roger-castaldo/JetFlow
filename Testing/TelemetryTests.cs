@@ -88,7 +88,7 @@ public class TelemetryTests
             subjectMapper,
             async () =>
             {
-                runId = await connection.StartWorkflowAsync<WorkflowForTelemetry>(CancellationToken.None);
+                runId = await connection.StartWorkflowAsync<WorkflowForTelemetry>();
                 return runId;
             }
         );

@@ -73,7 +73,7 @@ public class PerformanceRecordTests
         var connection = await Connection.CreateInstanceAsync(new(natsConnection, jsContext));
         await connection.RegisterWorkflowAsync<TestRecordedWorkflowSuccess>(options: new() { CompletionAction = Configs.WorkflowCompletionActions.Purge}, TestContext.CancellationToken);
         await connection.RegisterWorkflowAsync<TestRecordedWorkflowFailure>(options: new() { CompletionAction = Configs.WorkflowCompletionActions.None, ErrorOnActivityFailure = true, ErrorOnActivityTimeout=true }, TestContext.CancellationToken);
-        await connection.RegisterWorkflowActivityAsync<TestRecordedActivity>(TestContext.CancellationToken);
+        await connection.RegisterWorkflowActivityAsync<TestRecordedActivity>(cancellationToken: TestContext.CancellationToken);
         var observationConnection = await ObservationConnection.CreateInstanceAsync(new(natsConnection));
         await observationConnection.AddDefaultNamespaceAsync();
 
@@ -90,9 +90,9 @@ public class PerformanceRecordTests
             await Task.CompletedTask;
         });
         // Act
-        _ = await WorkflowsHelper.StartWorkflowAndWaitForPurge<TestRecordedWorkflowSuccess>(natsConnection, subjectMapper, async () => await connection.StartWorkflowAsync<TestRecordedWorkflowSuccess>(TestContext.CancellationToken));
-        _ = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<TestRecordedWorkflowFailure>(natsConnection, subjectMapper, async () => await connection.StartWorkflowAsync<TestRecordedWorkflowFailure>(TestContext.CancellationToken));
-        _ = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<TestRecordedWorkflowFailure>(natsConnection, subjectMapper, async () => await connection.StartWorkflowAsync<TestRecordedWorkflowFailure>(TestContext.CancellationToken));
+        _ = await WorkflowsHelper.StartWorkflowAndWaitForPurge<TestRecordedWorkflowSuccess>(natsConnection, subjectMapper, async () => await connection.StartWorkflowAsync<TestRecordedWorkflowSuccess>(cancellationToken: TestContext.CancellationToken));
+        _ = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<TestRecordedWorkflowFailure>(natsConnection, subjectMapper, async () => await connection.StartWorkflowAsync<TestRecordedWorkflowFailure>(cancellationToken: TestContext.CancellationToken));
+        _ = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<TestRecordedWorkflowFailure>(natsConnection, subjectMapper, async () => await connection.StartWorkflowAsync<TestRecordedWorkflowFailure>(cancellationToken: TestContext.CancellationToken));
 
         // Assert
         await Task.Delay(TimeSpan.FromMinutes(1), TestContext.CancellationToken);

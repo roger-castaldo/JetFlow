@@ -1,6 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Data;
 using JetFlow.Interfaces;
+using JetFlow.Subscriptions;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
@@ -17,7 +18,7 @@ public static class ObservationConnection
     public static ValueTask<IObservationConnection> CreateInstanceAsync(ObservationConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 
-    private class ConnectionInstance(INatsConnection connection, INatsJSContext jsContext, string groupName) : IObservationConnection, IAsyncDisposable
+    private class ConnectionInstance(INatsConnection connection, INatsJSContext jsContext, string groupName, bool canDisposeConnection) : IObservationConnection, IAsyncDisposable
     {
         private readonly JsonSerializerOptions jsonOptions = new()
         {
@@ -44,7 +45,7 @@ public static class ObservationConnection
             }
             if (connection.ConnectionState != NatsConnectionState.Open)
                 throw new ObservationConnectionFailedException();
-            return new ConnectionInstance(connection, new NatsJSContext(connection), options.GroupName);
+            return new ConnectionInstance(connection, new NatsJSContext(connection), options.GroupName, options.CanDisposeConnection);
         }
 
         private readonly ConcurrentDictionary<string,SubjectMapper> namespaces = [];
@@ -96,23 +97,17 @@ public static class ObservationConnection
             semaphoreSlim.Release();
         }
 
-        async ValueTask IObservationConnection.AddDefaultNamespaceAsync()
-        {
-            if (namespaces.TryAdd(string.Empty, new(null)))
-                await RefreshNamespacesAsync();
-        }
+        ValueTask IObservationConnection.AddDefaultNamespaceAsync()
+            => ((IObservationConnection)this).AddNamespaceAsync(string.Empty);
 
-        async ValueTask IObservationConnection.AddNamespaceAsync(string workflowNamespace)
-        {
-            if (namespaces.TryAdd(workflowNamespace, new(workflowNamespace)))
-                await RefreshNamespacesAsync();
-        }
+        ValueTask IObservationConnection.AddNamespaceAsync(string workflowNamespace)
+            => ((IObservationConnection)this).AddNamespacesAsync([workflowNamespace]);
 
         async ValueTask IObservationConnection.AddNamespacesAsync(IEnumerable<string> workflowNamespaces)
         {
             var added = false;
             foreach (var ns in workflowNamespaces)
-                added |= namespaces.TryAdd(ns, new(ns));
+                added |= namespaces.TryAdd(ns, new(Equals(string.Empty,ns) ? null : ns));
             if (added)
                 await RefreshNamespacesAsync();
         }
@@ -121,7 +116,9 @@ public static class ObservationConnection
         {
             if (this.workflowRecordReceived!= null || this.activityRecordReceived != null)
                 throw new InvalidOperationException("Performance monitoring has already been added.");
-            this.samplingDurationMinutes = sampleDurationMinutes;
+            if (sampleDurationMinutes<1 || sampleDurationMinutes>10)
+                throw new ArgumentOutOfRangeException(nameof(sampleDurationMinutes), "The sampling minutes must be between 1 and 10");
+            samplingDurationMinutes = sampleDurationMinutes;
             this.workflowRecordReceived = workflowRecordReceived;
             this.activityRecordReceived = activityRecordReceived;
             return RefreshNamespacesAsync();
@@ -183,11 +180,8 @@ public static class ObservationConnection
             return BigInteger.Zero;
         }
 
-        async ValueTask IObservationConnection.RemoveNamespaceAsync(string workflowNamespace)
-        {
-            if (namespaces.TryRemove(workflowNamespace, out _))
-                await RefreshNamespacesAsync();
-        }
+        ValueTask IObservationConnection.RemoveNamespaceAsync(string workflowNamespace)
+            => ((IObservationConnection)this).RemoveNamespacesAsync([workflowNamespace]);
 
         async ValueTask IObservationConnection.RemoveNamespacesAsync(IEnumerable<string> workflowNamespaces)
         {
@@ -198,11 +192,8 @@ public static class ObservationConnection
                 await RefreshNamespacesAsync();
         }
 
-        async ValueTask IObservationConnection.RemoveDefaultNamespaceAsync()
-        {
-            if (namespaces.TryRemove(string.Empty, out _))
-                await RefreshNamespacesAsync();
-        }
+        ValueTask IObservationConnection.RemoveDefaultNamespaceAsync()
+            => ((IObservationConnection)this).RemoveNamespaceAsync(string.Empty);
 
         async ValueTask IAsyncDisposable.DisposeAsync()
         {
@@ -215,6 +206,8 @@ public static class ObservationConnection
                 );
                 namespaces.Clear();
                 subscriptions.Clear();
+                if (canDisposeConnection)
+                    await connection.DisposeAsync();
                 semaphoreSlim.Release();
             }
         }

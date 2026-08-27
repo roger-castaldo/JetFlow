@@ -4,7 +4,7 @@ using NATS.Client.JetStream;
 namespace JetFlow.Subscriptions.Default
 {
     internal class ScheduledWorkflowsSubscription(SubjectMapper subjectMapper, ServiceConnection serviceConnection, INatsJSConsumer consumer, CancellationToken cancellationToken)
-    : ASubscription(serviceConnection, consumer, cancellationToken)
+    : ACoreSubscription(serviceConnection, consumer, cancellationToken)
     {
         protected override async ValueTask ProcessMessageAsync(EventMessage message)
         {
@@ -21,7 +21,8 @@ namespace JetFlow.Subscriptions.Default
                 message.WorkflowName,
                 id,
                 data,
-                headers, 
+                headers,
+                null,
                 configMessage?.Data, 
                 CancellationToken);
             await message.AckAsync(CancellationToken);

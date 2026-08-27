@@ -29,7 +29,9 @@ public sealed class ConnectionOptions
     /// </summary>
     /// <param name="options">The NatsOpts object containing the configuration options for the NATS connection.</param>
     public ConnectionOptions(NatsOpts options)
-        : this(new NatsConnection(options)) { }
+        : this(new NatsConnection(options)) {
+        CanDisposeConnection = true;
+    }
 
     /// <summary>
     /// Constructs a new instance of the ConnectionOptions class using the provided NATS connection. This constructor initializes the JetStream context based on the specified NATS connection, allowing for easy configuration of the connection settings for interacting with NATS and JetStream.
@@ -51,6 +53,7 @@ public sealed class ConnectionOptions
 
     internal INatsConnection Connection { get; private init; }
     internal INatsJSContext NatsJSContext { get; private init; }
+    internal bool CanDisposeConnection { get; private init; } = false;
     /// <summary>
     /// Uses the System.Text.Json source generator to generate serialization code at compile time, improving performance and reducing memory allocations when serializing and deserializing JSON data. By providing a custom IJsonTypeInfoResolver, you can control how types are serialized and deserialized, allowing for customization of the JSON output and input when working with NATS messages.
     /// </summary>

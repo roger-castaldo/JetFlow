@@ -11,7 +11,9 @@ internal enum WorkflowEventTypes
     StepEnd,
     StepRetry,
     Archived,
-    Config
+    Config,
+    Suspended,
+    Resumed
 }
 
 internal enum ActivityEventTypes

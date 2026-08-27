@@ -5,15 +5,13 @@ namespace JetFlow.Subscriptions;
 internal abstract class ASubscription
 {
     protected CancellationToken CancellationToken { get; private init; }
-    protected ServiceConnection ServiceConnection { get; private init; }
     private readonly INatsJSConsumer consumer;
     private readonly Task runningTask;
 
-    protected ASubscription(ServiceConnection serviceConnection, INatsJSConsumer consumer, CancellationToken cancellationToken)
+    protected ASubscription(INatsJSConsumer consumer, CancellationToken cancellationToken)
     {
-        ServiceConnection = serviceConnection;
-        this.consumer = consumer;
         CancellationToken = cancellationToken;
+        this.consumer = consumer;
         runningTask = StartStream();
     }
 
@@ -25,10 +23,7 @@ internal abstract class ASubscription
             {
                 await consumer.RefreshAsync(CancellationToken); // or try to recreate consumer
                 await foreach (var msg in consumer.ConsumeAsync<byte[]>(cancellationToken: CancellationToken))
-                {
-                    var message = await EventMessage.CreateMessageAsync(ServiceConnection, msg, CancellationToken);
-                    await ProcessMessageAsync(message);
-                }
+                    await ProcessMessageAsync(msg);
             }
             catch (NatsJSProtocolException)
             {
@@ -46,8 +41,7 @@ internal abstract class ASubscription
         }
     }
 
-    protected abstract ValueTask ProcessMessageAsync(EventMessage message);
-
+    protected abstract ValueTask ProcessMessageAsync(INatsJSMsg<byte[]> msg);
     public async Task AwaitClose()
         => await (runningTask.IsCompleted ? Task.CompletedTask : runningTask);
 }

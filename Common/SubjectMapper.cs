@@ -35,6 +35,10 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.delaystart";
     public string WorkflowDelayEnd(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.delayend";
+    public string WorkflowSuspended(string workflowName, string instance)
+        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.suspended";
+    public string WorkflowResumed(string workflowName, string instance)
+        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.resumed";
     public string WorkflowTimer(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.timer";
     public string WorkflowPurged(string workflowName, string instance)

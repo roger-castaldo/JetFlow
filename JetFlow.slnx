@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Abstractions/Abstractions.csproj" />
+  <Project Path="Common/Common.csproj" Id="dd63676d-090f-4735-8b5f-497dfcd4a433" />
   <Project Path="Core/Core.csproj" />
   <Project Path="Observability/Observability.csproj" Id="5d1bdb0a-d9d7-454a-882c-e600382d5715" />
   <Project Path="Sample/Sample.csproj" Id="7a8e6f6d-656e-4040-9909-4f75149cf527" />

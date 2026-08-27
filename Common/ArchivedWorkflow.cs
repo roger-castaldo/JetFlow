@@ -13,9 +13,13 @@ public enum WorkflowStepTypes
     /// </summary>
     Action,
     /// <summary>
-    /// Gets or sets the delay interval before the operation is executed.
+    /// Represents a Delay called within the workflow
     /// </summary>
-    Delay
+    Delay,
+    /// <summary>
+    /// Represents a suspension of the workflow
+    /// </summary>
+    Suspended
 }
 
 /// <summary>
@@ -39,7 +43,7 @@ public enum RetryTypes
 /// <param name="RetryType">The type of retry performed for the workflow step.</param>
 /// <param name="Timestamp">The date and time, in UTC, when the retry action was executed.</param>
 public record struct WorkflowStepRetry(
-    [property: JsonConverter(typeof(JsonStringEnumConverter))]
+    [property: JsonConverter(typeof(JsonStringEnumConverter<RetryTypes>))]
     RetryTypes RetryType,
     DateTimeOffset Timestamp
 );
@@ -58,7 +62,7 @@ public record struct WorkflowStepRetry(
 /// <param name="ErrorMessage">The error message associated with the step if it failed, or null if no error occurred.</param>
 /// <param name="Result">The result produced by the step, or null if there is no result.</param>
 public record struct WorkflowStep(
-    [property: JsonConverter(typeof(JsonStringEnumConverter))]
+    [property: JsonConverter(typeof(JsonStringEnumConverter<WorkflowStepTypes>))]
     WorkflowStepTypes Type,
     uint? Index,
     string? Name,
@@ -66,7 +70,7 @@ public record struct WorkflowStep(
     DateTimeOffset EndTime,
     WorkflowStepRetry[]? Retries,
     object? Input,
-    [property: JsonConverter(typeof(JsonStringEnumConverter))]
+    [property: JsonConverter(typeof(JsonStringEnumConverter<ActivityResultStatus>))]
     ActivityResultStatus? Status,
     string? ErrorMessage,
     object? Result
@@ -85,6 +89,7 @@ public record struct WorkflowStep(
 /// <param name="IsSuccessful">true if the workflow completed successfully; otherwise, false.</param>
 /// <param name="ErrorMessage">The error message if the workflow failed; otherwise, null.</param>
 /// <param name="Arguments">The arguments provided to the workflow at the time of execution, or null if none.</param>
+/// <param name="MetaData">The metadata provided to the workflow at the time of execution, or null if none.</param>
 /// <param name="Steps">An array containing the steps executed as part of the workflow, in order.</param>
 public record struct ArchivedWorkflow(
     Guid ID,
@@ -96,5 +101,6 @@ public record struct ArchivedWorkflow(
     bool IsSuccessful,
     string? ErrorMessage,
     object? Arguments,
+    Dictionary<string, string[]>? MetaData,
     WorkflowStep[] Steps
 );

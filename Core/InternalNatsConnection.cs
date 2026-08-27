@@ -187,4 +187,7 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
 
     internal ValueTask<bool> DeleteConsumerAsync(string streamName, string consumerName)
         => jsContext.DeleteConsumerAsync(streamName, consumerName);
+
+    public ValueTask DisposeAsync()
+        => connection.DisposeAsync();
 }

@@ -88,7 +88,7 @@ public class MetricsTests
         var result = await WorkflowsHelper.StartWorkflowAndWaitForCompletion<MetricsWorkflow>(
             natsConnection,
             subjectMapper,
-            async () => await connection.StartWorkflowAsync<MetricsWorkflow>(CancellationToken.None)
+            async () => await connection.StartWorkflowAsync<MetricsWorkflow>()
         );
 
         // Assert

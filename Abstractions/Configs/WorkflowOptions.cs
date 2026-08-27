@@ -41,7 +41,7 @@ public sealed record WorkflowOptions
     /// <summary>
     /// Gets the action to perform when the workflow completes.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<WorkflowCompletionActions>))]
     public WorkflowCompletionActions CompletionAction { get; init; } = WorkflowCompletionActions.None;
     /// <summary>
     /// Gets the optional delay before purging items.

@@ -1,7 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
-using JetFlow.Messages;
+using JetFlow.Data;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -88,7 +88,7 @@ public class LargeMessageTests
             async () =>
             {
                 start = TestsHelper.GenerateRandomString((natsConnection.ServerInfo?.MaxPayload??1_048_576)*3);
-                runId = await connection.StartWorkflowAsync<LargeMessageWorkflow, string>(start, TestContext.CancellationToken);
+                runId = await connection.StartWorkflowAsync<LargeMessageWorkflow, string>(new(start), TestContext.CancellationToken);
                 return runId;
             }
         );
@@ -152,7 +152,7 @@ public class LargeMessageTests
             async () =>
             {
                 start = TestsHelper.GenerateRandomString((natsConnection.ServerInfo?.MaxPayload??1_048_576)*3);
-                runId = await connection.StartWorkflowAsync<LargeMessageWorkflow, string>(start, TestContext.CancellationToken);
+                runId = await connection.StartWorkflowAsync<LargeMessageWorkflow, string>(new(start), TestContext.CancellationToken);
                 return runId;
             }
         );
@@ -214,7 +214,7 @@ public class LargeMessageTests
             async () =>
             {
                 start = TestsHelper.GenerateRandomString((natsConnection.ServerInfo?.MaxPayload??1_048_576)*3);
-                runId = await connection.StartWorkflowAsync<LargeMessageWorkflow, string>(start, TestContext.CancellationToken);
+                runId = await connection.StartWorkflowAsync<LargeMessageWorkflow, string>(new(start), TestContext.CancellationToken);
                 return runId;
             }
         );
