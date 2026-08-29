@@ -185,7 +185,6 @@ namespace JetFlow.Interfaces
         /// <typeparam name="TInput">The type of input required by the workflow.</typeparam>
         /// <param name="exectionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
         /// <param name="delay">The amount of time to wait before starting the workflow.</param>
-        /// <param name="options">Optional configuration options for the workflow execution. If null, default options are used.</param>
         /// <param name="cancellationToken">A token that can be used to cancel the scheduling operation.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The result contains the unique identifier of the
         /// scheduled workflow instance.</returns>

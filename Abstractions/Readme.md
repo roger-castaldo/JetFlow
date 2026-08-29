@@ -46,7 +46,7 @@
   - [ExecuteAsync(input,state,cancellationToken)](#M-JetFlow-Interfaces-IActivity`1-ExecuteAsync-`0,JetFlow-Interfaces-IWorkflowState,System-Threading-CancellationToken- 'JetFlow.Interfaces.IActivity`1.ExecuteAsync(`0,JetFlow.Interfaces.IWorkflowState,System.Threading.CancellationToken)')
 - [IConnection](#T-JetFlow-Interfaces-IConnection 'JetFlow.Interfaces.IConnection')
   - [DelayStartWorkflowAsync\`\`1(delay,exectionRequest,cancellationToken)](#M-JetFlow-Interfaces-IConnection-DelayStartWorkflowAsync``1-System-TimeSpan,JetFlow-WorkflowExecutionRequest,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.DelayStartWorkflowAsync``1(System.TimeSpan,JetFlow.WorkflowExecutionRequest,System.Threading.CancellationToken)')
-  - [DelayStartWorkflowAsync\`\`2(exectionRequest,delay,options,cancellationToken)](#M-JetFlow-Interfaces-IConnection-DelayStartWorkflowAsync``2-JetFlow-WorkflowExecutionRequest{``1},System-TimeSpan,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.DelayStartWorkflowAsync``2(JetFlow.WorkflowExecutionRequest{``1},System.TimeSpan,System.Threading.CancellationToken)')
+  - [DelayStartWorkflowAsync\`\`2(exectionRequest,delay,cancellationToken)](#M-JetFlow-Interfaces-IConnection-DelayStartWorkflowAsync``2-JetFlow-WorkflowExecutionRequest{``1},System-TimeSpan,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.DelayStartWorkflowAsync``2(JetFlow.WorkflowExecutionRequest{``1},System.TimeSpan,System.Threading.CancellationToken)')
   - [RegisterWorkflowActivityAsync\`\`1(activity,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``1-``0,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityAsync``1(``0,System.Threading.CancellationToken)')
   - [RegisterWorkflowActivityAsync\`\`1(cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``1-System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityAsync``1(System.Threading.CancellationToken)')
   - [RegisterWorkflowActivityAsync\`\`2(activity,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityAsync``2-``0,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityAsync``2(``0,System.Threading.CancellationToken)')
@@ -88,6 +88,12 @@
   - [ArchiveThenPurge](#F-JetFlow-Configs-WorkflowCompletionActions-ArchiveThenPurge 'JetFlow.Configs.WorkflowCompletionActions.ArchiveThenPurge')
   - [None](#F-JetFlow-Configs-WorkflowCompletionActions-None 'JetFlow.Configs.WorkflowCompletionActions.None')
   - [Purge](#F-JetFlow-Configs-WorkflowCompletionActions-Purge 'JetFlow.Configs.WorkflowCompletionActions.Purge')
+- [WorkflowExecutionRequest](#T-JetFlow-WorkflowExecutionRequest 'JetFlow.WorkflowExecutionRequest')
+  - [MetaData](#P-JetFlow-WorkflowExecutionRequest-MetaData 'JetFlow.WorkflowExecutionRequest.MetaData')
+  - [Options](#P-JetFlow-WorkflowExecutionRequest-Options 'JetFlow.WorkflowExecutionRequest.Options')
+- [WorkflowExecutionRequest\`1](#T-JetFlow-WorkflowExecutionRequest`1 'JetFlow.WorkflowExecutionRequest`1')
+  - [#ctor(Input)](#M-JetFlow-WorkflowExecutionRequest`1-#ctor-`0- 'JetFlow.WorkflowExecutionRequest`1.#ctor(`0)')
+  - [Input](#P-JetFlow-WorkflowExecutionRequest`1-Input 'JetFlow.WorkflowExecutionRequest`1.Input')
 - [WorkflowNameAttribute](#T-JetFlow-Attributes-WorkflowNameAttribute 'JetFlow.Attributes.WorkflowNameAttribute')
   - [#ctor(name)](#M-JetFlow-Attributes-WorkflowNameAttribute-#ctor-System-String- 'JetFlow.Attributes.WorkflowNameAttribute.#ctor(System.String)')
   - [Name](#P-JetFlow-Attributes-WorkflowNameAttribute-Name 'JetFlow.Attributes.WorkflowNameAttribute.Name')
@@ -700,7 +706,7 @@ scheduled workflow instance.
 | TWorkflow | The type of workflow to start. Must implement the IWorkflow interface. |
 
 <a name='M-JetFlow-Interfaces-IConnection-DelayStartWorkflowAsync``2-JetFlow-WorkflowExecutionRequest{``1},System-TimeSpan,System-Threading-CancellationToken-'></a>
-### DelayStartWorkflowAsync\`\`2(exectionRequest,delay,options,cancellationToken) `method`
+### DelayStartWorkflowAsync\`\`2(exectionRequest,delay,cancellationToken) `method`
 
 ##### Summary
 
@@ -717,7 +723,7 @@ scheduled workflow instance.
 | ---- | ---- | ----------- |
 | exectionRequest | [JetFlow.WorkflowExecutionRequest{\`\`1}](#T-JetFlow-WorkflowExecutionRequest{``1} 'JetFlow.WorkflowExecutionRequest{``1}') | The request containing additional information to execute the workflow with, as well as the input. |
 | delay | [System.TimeSpan](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.TimeSpan 'System.TimeSpan') | The amount of time to wait before starting the workflow. |
-| options | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | Optional configuration options for the workflow execution. If null, default options are used. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token that can be used to cancel the scheduling operation. |
 
 ##### Generic Types
 
@@ -1529,6 +1535,83 @@ Removes all items or data from the collection or resource, resetting it to an em
 
 Use this method to clear all contents. After calling this method, the collection or resource
 will contain no items. Any references to previously stored items will be released if applicable.
+
+<a name='T-JetFlow-WorkflowExecutionRequest'></a>
+## WorkflowExecutionRequest `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Represents optional parameters and metadata used when starting, scheduling,
+or delaying the execution of a workflow. Use [Options](#P-JetFlow-WorkflowExecutionRequest-Options 'JetFlow.WorkflowExecutionRequest.Options') to
+control execution behavior and [MetaData](#P-JetFlow-WorkflowExecutionRequest-MetaData 'JetFlow.WorkflowExecutionRequest.MetaData') to attach arbitrary
+key/value metadata to the execution request.
+
+<a name='P-JetFlow-WorkflowExecutionRequest-MetaData'></a>
+### MetaData `property`
+
+##### Summary
+
+Arbitrary metadata to associate with the workflow execution. Keys map to one or more values.
+
+<a name='P-JetFlow-WorkflowExecutionRequest-Options'></a>
+### Options `property`
+
+##### Summary
+
+Optional workflow execution options such as priority, timeout, or retry settings.
+
+<a name='T-JetFlow-WorkflowExecutionRequest`1'></a>
+## WorkflowExecutionRequest\`1 `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+A workflow execution request that carries a strongly-typed input payload.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Input | [T:JetFlow.WorkflowExecutionRequest\`1](#T-T-JetFlow-WorkflowExecutionRequest`1 'T:JetFlow.WorkflowExecutionRequest`1') | The input value to provide to the workflow at start time. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TInput | The type of the input payload to pass to the workflow. |
+
+<a name='M-JetFlow-WorkflowExecutionRequest`1-#ctor-`0-'></a>
+### #ctor(Input) `constructor`
+
+##### Summary
+
+A workflow execution request that carries a strongly-typed input payload.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Input | [\`0](#T-`0 '`0') | The input value to provide to the workflow at start time. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TInput | The type of the input payload to pass to the workflow. |
+
+<a name='P-JetFlow-WorkflowExecutionRequest`1-Input'></a>
+### Input `property`
+
+##### Summary
+
+The input value to provide to the workflow at start time.
 
 <a name='T-JetFlow-Attributes-WorkflowNameAttribute'></a>
 ## WorkflowNameAttribute `type`

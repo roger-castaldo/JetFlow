@@ -27,5 +27,8 @@ public sealed class ObservationConnectionOptions
 
     internal INatsConnection Connection { get; private init; }
     internal bool CanDisposeConnection { get; private init; } = false;
+    /// <summary>
+    /// Identifies the connection to listen under a group name, this is used if multiple instances of a given service are being used to share load.
+    /// </summary>
     public string GroupName { get; init; } = "JETFLOW_OBSERVATION";
 }

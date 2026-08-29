@@ -13,8 +13,19 @@ using System.Text.Json.Serialization;
 
 namespace JetFlow;
 
+/// <summary>
+/// Factory methods for creating <see cref="IObservationConnection"/> instances.
+/// Use <see cref="CreateInstanceAsync(ObservationConnectionOptions)"/> to obtain
+/// a runtime connection for observing workflow and activity performance data.
+/// </summary>
 public static class ObservationConnection
 {
+    /// <summary>
+    /// Creates an <see cref="IObservationConnection"/> based on the provided options.
+    /// This method performs any necessary connection setup and validation asynchronously.
+    /// </summary>
+    /// <param name="options">Configuration options used to establish the observation connection.</param>
+    /// <returns>A task that resolves to an <see cref="IObservationConnection"/> instance.</returns>
     public static ValueTask<IObservationConnection> CreateInstanceAsync(ObservationConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 
