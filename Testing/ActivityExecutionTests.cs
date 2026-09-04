@@ -90,7 +90,7 @@ public class ActivityExecutionTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<BasicWorkflow, string>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<BasicActivity>(basicActivity, CancellationToken.None);
@@ -172,7 +172,7 @@ public class ActivityExecutionTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<ActivityContextWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<GenerateRandomString, string>(generateRandomString, CancellationToken.None);
@@ -245,7 +245,7 @@ public class ActivityExecutionTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<ParallelActivityContextWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<GenerateRandomStringAtLength, string, int>(generateRandomString, CancellationToken.None);

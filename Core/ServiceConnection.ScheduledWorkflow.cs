@@ -32,22 +32,22 @@ namespace JetFlow
 
         public ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
-            => ScheduleWorkflowAsync<TWorkflow>(schedule.AsString, executionRequest, Guid.NewGuid(), [], null, cancellationToken);
+            => ScheduleWorkflowAsync<TWorkflow>(schedule.AsString, executionRequest, Guid.CreateVersion7(), [], null, cancellationToken);
         public async ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow, TInput>(IWorkflowSchedule schedule, WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
             where TWorkflow : IWorkflow<TInput>
         {
-            var id = Guid.NewGuid();
+            var id = Guid.CreateVersion7();
             var (data, headers) = await EncodeMessageAsync<TInput>(executionRequest.Input, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
             return await ScheduleWorkflowAsync<TWorkflow>(schedule.AsString, executionRequest, id, data, headers, cancellationToken);
         }
 
         public ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
-            => ScheduleWorkflowAsync<TWorkflow>(InternalNatsConnection.CreateScheduledString(delay), executionRequest, Guid.NewGuid(), [], null, cancellationToken);
+            => ScheduleWorkflowAsync<TWorkflow>(InternalNatsConnection.CreateScheduledString(delay), executionRequest, Guid.CreateVersion7(), [], null, cancellationToken);
         public async ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow, TInput>(TimeSpan delay, WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
             where TWorkflow : IWorkflow<TInput>
         {
-            var id = Guid.NewGuid();
+            var id = Guid.CreateVersion7();
             var (data, headers) = await EncodeMessageAsync<TInput>(executionRequest.Input, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
             return await ScheduleWorkflowAsync<TWorkflow>(InternalNatsConnection.CreateScheduledString(delay), executionRequest, id, data, headers, cancellationToken);
         }

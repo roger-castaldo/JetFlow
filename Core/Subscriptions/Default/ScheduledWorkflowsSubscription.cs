@@ -1,4 +1,5 @@
-﻿using NATS.Client.Core;
+﻿using JetFlow.Helpers;
+using NATS.Client.Core;
 using NATS.Client.JetStream;
 
 namespace JetFlow.Subscriptions.Default
@@ -14,8 +15,8 @@ namespace JetFlow.Subscriptions.Default
                 configMessage = msg;
             }
             var headers = new NatsHeaders(message.Headers?.Where(pair => pair.Key.StartsWith(Constants.HeaderBase)).ToDictionary() ?? []);
-            var id = Guid.NewGuid();
-            var data = await ServiceConnection.EncodeLargeMessageAsync(message.Data?? [], message.WorkflowName, id.ToString(), CancellationToken);
+            var id = Guid.CreateVersion7();
+            var data = await MessagesHelper.EncodeLargeMessageAsync(ServiceConnection.MaxMessagePayload, ServiceConnection.LargeMessageStore, message.Data?? [], message.WorkflowName, id.ToString(), CancellationToken);
             headers.Add(Constants.SchedulerSourceID, message.WorkflowId);
             _ = await ServiceConnection.StartWorkflowAsync(
                 message.WorkflowName,

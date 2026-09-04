@@ -46,9 +46,9 @@ public interface IObservationConnection
     /// <summary>
     /// Gets the current active activity count for the specified workflow name.
     /// </summary>
-    /// <param name="workflowName">The workflow name to filter activity counts by, or <c>null</c> to use all workflows.</param>
+    /// <param name="workflowNamespace">The workflow namespace to filter by, or <c>null</c> to use the default namespace.</param>
     /// <returns>The number of active activities for the specified workflow.</returns>
-    ValueTask<BigInteger> GetActiveActivityCountAsync(string? workflowName);
+    ValueTask<BigInteger> GetActiveActivityCountAsync(string? workflowNamespace);
 
     /// <summary>
     /// Adds the default namespace to the set of namespaces being observed.
@@ -93,4 +93,70 @@ public interface IObservationConnection
     /// <param name="workflowRecordReceived">Callback invoked when a <see cref="WorkflowPerformanceRecord"/> is available.</param>
     /// <param name="activityRecordReceived">Callback invoked when an <see cref="ActivityPerformanceRecord"/> is available.</param>
     ValueTask AddPerformanceMonitoringAsync(byte sampleDurationMinutes, Func<WorkflowPerformanceRecord, ValueTask> workflowRecordReceived, Func<ActivityPerformanceRecord, ValueTask> activityRecordReceived);
+    /// <summary>
+    /// Creates a query that enumerates active workflows of the specified workflow type within the
+    /// optionally provided namespace. The returned <see cref="IWorkflowQuery"/> can be consumed
+    /// asynchronously to iterate matching <see cref="ActiveWorkflow"/> instances.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow"/>.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
+    /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
+    ValueTask<IWorkflowQuery> QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null)
+        where TWorkflow : class, IWorkflow;
+
+    /// <summary>
+    /// Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow{TInput}"/>.</typeparam>
+    /// <typeparam name="TInput">The workflow input type used to apply an optional argument filter.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
+    /// <param name="checkArguement">Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned.</param>
+    /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
+    ValueTask<IWorkflowQuery> QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<TInput, bool>? checkArguement = null)
+        where TWorkflow : class, IWorkflow<TInput>;
+
+    /// <summary>
+    /// Loads all active workflows of the specified workflow type in the optional namespace into a materialized collection.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow"/>.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the load. Use <c>null</c> to load from the default namespace.</param>
+    /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
+    /// <returns>A collection of <see cref="ActiveWorkflow"/> instances that match the filters.</returns>
+    ValueTask<IEnumerable<ActiveWorkflow>> LoadWorkflowsAsync<TWorkflow>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null)
+        where TWorkflow : class, IWorkflow;
+
+    /// <summary>
+    /// Loads all active workflows of the specified workflow type with a strongly-typed input into a materialized collection.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow{TInput}"/>.</typeparam>
+    /// <typeparam name="TInput">The workflow input type used to apply an optional argument filter.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the load. Use <c>null</c> to load from the default namespace.</param>
+    /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
+    /// <param name="checkArguement">Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned.</param>
+    /// <returns>A collection of <see cref="ActiveWorkflow"/> instances that match the filters.</returns>
+    ValueTask<IEnumerable<ActiveWorkflow>> LoadWorkflowsAsync<TWorkflow, TInput>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<TInput, bool>? checkArguement = null)
+        where TWorkflow : class, IWorkflow<TInput>;
+
+    /// <summary>
+    /// Loads a single active workflow by its identifier, scoped to the given workflow type and optional namespace.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow"/>.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the lookup. Use <c>null</c> to search the default namespace.</param>
+    /// <param name="workflowId">The unique identifier of the workflow instance to load.</param>
+    /// <returns>The matching <see cref="ActiveWorkflow"/> if found; otherwise <c>null</c>.</returns>
+    ValueTask<ActiveWorkflow?> LoadWorkflowAsync<TWorkflow>(string? workflowNamespace, Guid workflowId)
+        where TWorkflow : class, IWorkflow;
+
+    /// <summary>
+    /// Loads a single active workflow by its identifier for workflows that accept a strongly-typed input.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow{TInput}"/>.</typeparam>
+    /// <typeparam name="TInput">The workflow input type.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the lookup. Use <c>null</c> to search the default namespace.</param>
+    /// <param name="workflowId">The unique identifier of the workflow instance to load.</param>
+    /// <returns>The matching <see cref="ActiveWorkflow"/> if found; otherwise <c>null</c>.</returns>
+    ValueTask<ActiveWorkflow?> LoadWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, Guid workflowId)
+        where TWorkflow : class, IWorkflow<TInput>;
 }

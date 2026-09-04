@@ -84,7 +84,7 @@ internal class WorkflowContext
         var msg = GetNextMessage();
         if (msg == null)
             return null;
-        var result = await EventMessage.CreateMessageAsync(serviceConnection, msg, cancellationToken);
+        var result = await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, msg, cancellationToken);
         if (!Equals(result.ActivityName, name))    
             throw new InvalidStepException(name, result.ActivityName??string.Empty);
         activityIndex++;
@@ -196,7 +196,7 @@ internal class WorkflowContext
         var msg = GetNextMessage();
         if (msg!=null)
         {
-            var eventMessage = await EventMessage.CreateMessageAsync(serviceConnection, msg, cancellationToken);
+            var eventMessage = await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, msg, cancellationToken);
             if (!Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.DelayEnd))
                 throw new InvalidDelayStepException(eventMessage.Subject);
             return;
@@ -211,13 +211,13 @@ internal class WorkflowContext
         var msg = GetNextMessage();
         if (msg!=null)
         {
-            var eventMessage = await EventMessage.CreateMessageAsync(serviceConnection, msg, cancellationToken);
+            var eventMessage = await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, msg, cancellationToken);
             if (!Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.Suspended))
                 throw new Exception();
             msg = GetNextMessage();
             if (msg!=null)
             {
-                eventMessage = await EventMessage.CreateMessageAsync(serviceConnection, msg, cancellationToken);
+                eventMessage = await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, msg, cancellationToken);
                 if (!Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.Resumed))
                     throw new Exception();
             }

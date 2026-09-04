@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Primitives;
-
-namespace JetFlow;
+﻿namespace JetFlow;
 
 /// <summary>
 /// Thrown when an error occurs attempting to connect to the NATS server.  
@@ -54,15 +52,6 @@ public class InvalidWorkflowEventMessage : InvalidCastException
 {
     internal InvalidWorkflowEventMessage(string subject, string id) :
         base($"The message with subject {subject} and id {id} is not a valid workflow event message") { }
-}
-
-/// <summary>
-/// Thrown when a workflow event message is received with a content type that is not recognized or supported by the system.  This can occur when a message is received with a content type that is not registered in the system, or when a message is received with a content type that is registered but does not have a corresponding decoder or handler.  This can also occur if a message is received with a content type that is registered but is not properly formatted or contains invalid values.
-/// </summary>
-public class InvalidContentTypeException : NotImplementedException
-{
-    internal InvalidContentTypeException(StringValues contentType)
-        : base($"Content type: {contentType} is unknown, unable to decode") { }
 }
 
 /// <summary>

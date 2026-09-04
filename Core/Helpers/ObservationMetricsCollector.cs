@@ -104,7 +104,7 @@ internal class ObservationMetricsCollector : IAsyncDisposable
                         ), options: jsonOptions),
                         subjectMapper.ActivityPerformanceSubject,
                         new(),
-                        Guid.NewGuid().ToString()
+                        Guid.CreateVersion7().ToString()
                     ), cancellationToken: cancellationToken);
                 else
                     await natsConnection.PublishMessageAsync(
@@ -119,7 +119,7 @@ internal class ObservationMetricsCollector : IAsyncDisposable
                         ), options: jsonOptions),
                         subjectMapper.WorkflowPerformanceSubject,
                         new(),
-                        Guid.NewGuid().ToString()
+                        Guid.CreateVersion7().ToString()
                     ), cancellationToken: cancellationToken);
             }
         }

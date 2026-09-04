@@ -75,7 +75,7 @@ public class LargeMessageTests
         var jsContext = new NatsJSContext(natsConnection);
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         var largeIOActivity = new LargeIOActivity(natsConnection.ServerInfo);
         await connection.RegisterWorkflowAsync<LargeMessageWorkflow,string>(cancellationToken: TestContext.CancellationToken);

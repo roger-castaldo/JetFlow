@@ -4,24 +4,25 @@ using System.Text.RegularExpressions;
 using NATS.Client.JetStream;
 using Microsoft.Extensions.Primitives;
 using System.Globalization;
+using NATS.Client.ObjectStore;
 
 namespace JetFlow;
 
 internal record EventMessage
 {
     private static readonly string[] SharedHeaders = [
-        TraceHelper.WorkflowTraceHeaderKey,
-        TraceHelper.WorkflowTraceSpanHeaderKey
+        Constants.WorkflowTraceHeaderKey,
+        Constants.WorkflowTraceSpanHeaderKey
     ];
     private static readonly Regex workflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|config|stepstart|stepend|stepretry|suspended|resumed)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex purgeWorkflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?purge\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 
-    public static async ValueTask<EventMessage> CreateMessageAsync(ServiceConnection connection, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
+    public static async ValueTask<EventMessage> CreateMessageAsync(INatsObjStore largeMessageStore, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
         => new(
             msg.Subject, 
             msg.Headers, 
-            await connection.RetrieveMessageDataAsync(msg.Data, cancellationToken), 
+            await MessagesHelper.RetrieveMessageDataAsync(largeMessageStore, msg.Data, cancellationToken), 
             msg.Metadata,
             async(token)=>await msg.AckAsync(cancellationToken: token),
             async (token) => await msg.NakAsync(cancellationToken: token)

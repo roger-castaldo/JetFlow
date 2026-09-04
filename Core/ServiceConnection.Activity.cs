@@ -41,7 +41,7 @@ internal partial class ServiceConnection
 
     private IEnumerable<PublishMessage> CreateActivityStartMessages(string activityName, uint stepIndex, ActivityExecutionRequest options, byte[] data, NatsHeaders headers, EventMessage message, TimeSpan? timeout, uint? idx = null)
     {
-        var activityInstanceId = Guid.NewGuid().ToString();
+        var activityInstanceId = Guid.CreateVersion7().ToString();
         IEnumerable<PublishMessage> messages = [new InternalNatsConnection.PublishMessage(
                 data,
                 subjectMapper.ActivityStart(activityName, message.WorkflowName, message.WorkflowId, activityInstanceId),
@@ -92,7 +92,7 @@ internal partial class ServiceConnection
             .Append(new(Constants.ActivityAttemptHeader, (message.ActivityAttempt + 1).ToString()));
         var timeout = (message.Headers?.TryGetValue(Constants.ActivityOverallTimeoutHeader, out var timeoutStr)??false) && TimeSpan.TryParse(timeoutStr, CultureInfo.InvariantCulture, out var timeoutVal) ? timeoutVal : (TimeSpan?)null;
         List<PublishMessage> messages = [];
-        var activityInstanceId = Guid.NewGuid().ToString();
+        var activityInstanceId = Guid.CreateVersion7().ToString();
         if (message.RetryConfiguration?.DelayBetween!=null)
             messages.Add(InternalNatsConnection.ScheduledPublishMessage.CreateDelayedMessage(
                         message.Data?? [],

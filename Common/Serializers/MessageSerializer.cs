@@ -3,6 +3,7 @@ using JetFlow.Helpers;
 using NATS.Client.Core;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 
 namespace JetFlow.Serializers;
@@ -18,21 +19,18 @@ internal class MessageSerializer
 
     private readonly JsonSerializerOptions options;
     private readonly CompressionTypes compressionType;
+    private readonly Action<string> decodedEventCall;
 
-    public MessageSerializer(ConnectionOptions connectionOptions)
+    public MessageSerializer(CompressionTypes compressionType, IJsonTypeInfoResolver? jsonTypeInfoResolver, Action<string>? decodedEventCall = null)
     {
-        options = new(JsonSerializerDefaults.Web)
-        {
-            WriteIndented=false,
-            AllowTrailingCommas=true,
-            PropertyNameCaseInsensitive=true,
-            ReadCommentHandling=JsonCommentHandling.Skip,
-            TypeInfoResolver = connectionOptions.JsonTypeInfoResolver
-        };
-        compressionType = connectionOptions.CompressionType;
+        options = Constants.JsonOptions;
+        if (jsonTypeInfoResolver!=null)
+            options.TypeInfoResolver = JsonTypeInfoResolver.Combine(jsonTypeInfoResolver, Constants.JsonOptions.TypeInfoResolver);
+        this.compressionType = compressionType;
+        this.decodedEventCall = decodedEventCall ?? ((val)=>{ });
     }
 
-    private async ValueTask<T?> DecodeObjectAsync<T>(byte[]? data, NatsHeaders? headers)
+    private async ValueTask<T> DecodeObjectAsync<T>(byte[]? data, NatsHeaders? headers)
     {
         if (data==null || data.Length==0)
             return default;
@@ -54,7 +52,7 @@ internal class MessageSerializer
 
         if (match.Groups["contenttype"].Value.Equals(JsonEncoding, StringComparison.InvariantCultureIgnoreCase))
         {
-            TraceHelper.AddMessageDecodedEvent(encoding);
+            decodedEventCall(encoding);
             return JsonSerializer.Deserialize<T>(input, options);
         }
 
@@ -88,7 +86,7 @@ internal class MessageSerializer
         return (data, headers);
     }
 
-    public ValueTask<TInput?> DecodeAsync<TInput>(byte[]? data, NatsHeaders? headers)
+    public ValueTask<TInput> DecodeAsync<TInput>(byte[]? data, NatsHeaders? headers)
         => DecodeObjectAsync<TInput>(data, headers);
     public ValueTask<object?> DecodeAsync(byte[]? data, NatsHeaders? headers)
         => DecodeObjectAsync<object>(data, headers);

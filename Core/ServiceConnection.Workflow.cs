@@ -36,11 +36,11 @@ internal partial class ServiceConnection
     }
     public ValueTask<Guid> StartWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow
-        => StartWorkflowAsync<TWorkflow>(Guid.NewGuid(), [], executionRequest, null, cancellationToken);
+        => StartWorkflowAsync<TWorkflow>(Guid.CreateVersion7(), [], executionRequest, null, cancellationToken);
     public async ValueTask<Guid> StartWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
         where TWorkflow : IWorkflow<TInput>
     {
-        var id = Guid.NewGuid();
+        var id = Guid.CreateVersion7();
         var (data, headers) = await EncodeMessageAsync<TInput>(executionRequest.Input, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
         return await StartWorkflowAsync<TWorkflow>(id, data, executionRequest, headers, cancellationToken);
     }
@@ -53,7 +53,7 @@ internal partial class ServiceConnection
             data,
             subjectMapper.WorkflowResumed(name, id.ToString()),
             headers,
-            $"{name}-{id}-resume-{Guid.NewGuid()}"
+            $"{name}-{id}-resume-{Guid.CreateVersion7()}"
             ), 
             cancellationToken);
     }
@@ -70,7 +70,7 @@ internal partial class ServiceConnection
     }
     public async ValueTask StartWorkflowDelayAsync(EventMessage message, TimeSpan delay, CancellationToken cancellationToken)
     {
-        var id = Guid.NewGuid();
+        var id = Guid.CreateVersion7();
         using var activity = TraceHelper.StartDelay(message);
         await connection.PublishMessagesAsync([
             new InternalNatsConnection.PublishMessage(

@@ -28,7 +28,7 @@ internal class WorkflowState : IWorkflowState
         );
         await foreach (var msg in query)
         {
-            var eventMessage = await EventMessage.CreateMessageAsync(serviceConnection, msg, CancellationToken.None);
+            var eventMessage = await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, msg, CancellationToken.None);
             if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepStart) && Equals(message.ActivityID, eventMessage.ActivityID)) 
                 break;
             if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepEnd))

@@ -3,6 +3,16 @@
 
 ## Contents
 
+- [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow')
+  - [#ctor(ID,SchedulerId,Name,Options,StartedAt,Arguments,MetaData,Steps)](#M-JetFlow-ActiveWorkflow-#ctor-System-Guid,System-Nullable{System-Guid},System-String,JetFlow-Configs-WorkflowOptions,System-DateTimeOffset,System-Object,System-Collections-Generic-Dictionary{System-String,System-String[]},JetFlow-WorkflowStep[]- 'JetFlow.ActiveWorkflow.#ctor(System.Guid,System.Nullable{System.Guid},System.String,JetFlow.Configs.WorkflowOptions,System.DateTimeOffset,System.Object,System.Collections.Generic.Dictionary{System.String,System.String[]},JetFlow.WorkflowStep[])')
+  - [Arguments](#P-JetFlow-ActiveWorkflow-Arguments 'JetFlow.ActiveWorkflow.Arguments')
+  - [ID](#P-JetFlow-ActiveWorkflow-ID 'JetFlow.ActiveWorkflow.ID')
+  - [MetaData](#P-JetFlow-ActiveWorkflow-MetaData 'JetFlow.ActiveWorkflow.MetaData')
+  - [Name](#P-JetFlow-ActiveWorkflow-Name 'JetFlow.ActiveWorkflow.Name')
+  - [Options](#P-JetFlow-ActiveWorkflow-Options 'JetFlow.ActiveWorkflow.Options')
+  - [SchedulerId](#P-JetFlow-ActiveWorkflow-SchedulerId 'JetFlow.ActiveWorkflow.SchedulerId')
+  - [StartedAt](#P-JetFlow-ActiveWorkflow-StartedAt 'JetFlow.ActiveWorkflow.StartedAt')
+  - [Steps](#P-JetFlow-ActiveWorkflow-Steps 'JetFlow.ActiveWorkflow.Steps')
 - [ActivityExecutionRequest](#T-JetFlow-ActivityExecutionRequest 'JetFlow.ActivityExecutionRequest')
   - [#ctor()](#M-JetFlow-ActivityExecutionRequest-#ctor 'JetFlow.ActivityExecutionRequest.#ctor')
   - [Retries](#P-JetFlow-ActivityExecutionRequest-Retries 'JetFlow.ActivityExecutionRequest.Retries')
@@ -36,6 +46,22 @@
   - [#ctor(OverallTimeout,AttemptTimeout)](#M-JetFlow-ActivityTimeoutConfiguration-#ctor-System-Nullable{System-TimeSpan},System-Nullable{System-TimeSpan}- 'JetFlow.ActivityTimeoutConfiguration.#ctor(System.Nullable{System.TimeSpan},System.Nullable{System.TimeSpan})')
   - [AttemptTimeout](#P-JetFlow-ActivityTimeoutConfiguration-AttemptTimeout 'JetFlow.ActivityTimeoutConfiguration.AttemptTimeout')
   - [OverallTimeout](#P-JetFlow-ActivityTimeoutConfiguration-OverallTimeout 'JetFlow.ActivityTimeoutConfiguration.OverallTimeout')
+- [ArchivedWorkflow](#T-JetFlow-ArchivedWorkflow 'JetFlow.ArchivedWorkflow')
+  - [#ctor(ID,SchedulerId,Name,Options,StartedAt,FinishedAt,IsSuccessful,ErrorMessage,Arguments,MetaData,Steps)](#M-JetFlow-ArchivedWorkflow-#ctor-System-Guid,System-Nullable{System-Guid},System-String,JetFlow-Configs-WorkflowOptions,System-DateTimeOffset,System-DateTimeOffset,System-Boolean,System-String,System-Object,System-Collections-Generic-Dictionary{System-String,System-String[]},JetFlow-WorkflowStep[]- 'JetFlow.ArchivedWorkflow.#ctor(System.Guid,System.Nullable{System.Guid},System.String,JetFlow.Configs.WorkflowOptions,System.DateTimeOffset,System.DateTimeOffset,System.Boolean,System.String,System.Object,System.Collections.Generic.Dictionary{System.String,System.String[]},JetFlow.WorkflowStep[])')
+  - [Arguments](#P-JetFlow-ArchivedWorkflow-Arguments 'JetFlow.ArchivedWorkflow.Arguments')
+  - [ErrorMessage](#P-JetFlow-ArchivedWorkflow-ErrorMessage 'JetFlow.ArchivedWorkflow.ErrorMessage')
+  - [FinishedAt](#P-JetFlow-ArchivedWorkflow-FinishedAt 'JetFlow.ArchivedWorkflow.FinishedAt')
+  - [ID](#P-JetFlow-ArchivedWorkflow-ID 'JetFlow.ArchivedWorkflow.ID')
+  - [IsSuccessful](#P-JetFlow-ArchivedWorkflow-IsSuccessful 'JetFlow.ArchivedWorkflow.IsSuccessful')
+  - [MetaData](#P-JetFlow-ArchivedWorkflow-MetaData 'JetFlow.ArchivedWorkflow.MetaData')
+  - [Name](#P-JetFlow-ArchivedWorkflow-Name 'JetFlow.ArchivedWorkflow.Name')
+  - [Options](#P-JetFlow-ArchivedWorkflow-Options 'JetFlow.ArchivedWorkflow.Options')
+  - [SchedulerId](#P-JetFlow-ArchivedWorkflow-SchedulerId 'JetFlow.ArchivedWorkflow.SchedulerId')
+  - [StartedAt](#P-JetFlow-ArchivedWorkflow-StartedAt 'JetFlow.ArchivedWorkflow.StartedAt')
+  - [Steps](#P-JetFlow-ArchivedWorkflow-Steps 'JetFlow.ArchivedWorkflow.Steps')
+- [CompressionTypes](#T-JetFlow-Configs-CompressionTypes 'JetFlow.Configs.CompressionTypes')
+  - [Brotli](#F-JetFlow-Configs-CompressionTypes-Brotli 'JetFlow.Configs.CompressionTypes.Brotli')
+  - [GZip](#F-JetFlow-Configs-CompressionTypes-GZip 'JetFlow.Configs.CompressionTypes.GZip')
 - [IActivity](#T-JetFlow-Interfaces-IActivity 'JetFlow.Interfaces.IActivity')
   - [ExecuteAsync(state,cancellationToken)](#M-JetFlow-Interfaces-IActivity-ExecuteAsync-JetFlow-Interfaces-IWorkflowState,System-Threading-CancellationToken- 'JetFlow.Interfaces.IActivity.ExecuteAsync(JetFlow.Interfaces.IWorkflowState,System.Threading.CancellationToken)')
 - [IActivityWithReturn\`1](#T-JetFlow-Interfaces-IActivityWithReturn`1 'JetFlow.Interfaces.IActivityWithReturn`1')
@@ -83,6 +109,10 @@
   - [GetActivityResultValueAsync\`\`2()](#M-JetFlow-Interfaces-IWorkflowState-GetActivityResultValueAsync``2 'JetFlow.Interfaces.IWorkflowState.GetActivityResultValueAsync``2')
 - [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1')
   - [ExecuteAsync(context,input)](#M-JetFlow-Interfaces-IWorkflow`1-ExecuteAsync-JetFlow-Interfaces-IWorkflowContext,`0- 'JetFlow.Interfaces.IWorkflow`1.ExecuteAsync(JetFlow.Interfaces.IWorkflowContext,`0)')
+- [InvalidContentTypeException](#T-JetFlow-InvalidContentTypeException 'JetFlow.InvalidContentTypeException')
+- [RetryTypes](#T-JetFlow-RetryTypes 'JetFlow.RetryTypes')
+  - [Error](#F-JetFlow-RetryTypes-Error 'JetFlow.RetryTypes.Error')
+  - [Timeout](#F-JetFlow-RetryTypes-Timeout 'JetFlow.RetryTypes.Timeout')
 - [WorkflowCompletionActions](#T-JetFlow-Configs-WorkflowCompletionActions 'JetFlow.Configs.WorkflowCompletionActions')
   - [ArchiveThenNothing](#F-JetFlow-Configs-WorkflowCompletionActions-ArchiveThenNothing 'JetFlow.Configs.WorkflowCompletionActions.ArchiveThenNothing')
   - [ArchiveThenPurge](#F-JetFlow-Configs-WorkflowCompletionActions-ArchiveThenPurge 'JetFlow.Configs.WorkflowCompletionActions.ArchiveThenPurge')
@@ -126,6 +156,121 @@
   - [Parse(cronString)](#M-JetFlow-WorkflowScheduleBuilder-Parse-System-String- 'JetFlow.WorkflowScheduleBuilder.Parse(System.String)')
   - [WeekDays()](#M-JetFlow-WorkflowScheduleBuilder-WeekDays 'JetFlow.WorkflowScheduleBuilder.WeekDays')
   - [WeekDaysAt(hour,minute)](#M-JetFlow-WorkflowScheduleBuilder-WeekDaysAt-System-Int32,System-Int32- 'JetFlow.WorkflowScheduleBuilder.WeekDaysAt(System.Int32,System.Int32)')
+- [WorkflowStep](#T-JetFlow-WorkflowStep 'JetFlow.WorkflowStep')
+  - [#ctor(Type,Index,Name,StartTime,EndTime,Retries,Input,Status,ErrorMessage,Result)](#M-JetFlow-WorkflowStep-#ctor-JetFlow-WorkflowStepTypes,System-Nullable{System-UInt32},System-String,System-DateTimeOffset,System-Nullable{System-DateTimeOffset},JetFlow-WorkflowStepRetry[],System-Object,System-Nullable{JetFlow-ActivityResultStatus},System-String,System-Object- 'JetFlow.WorkflowStep.#ctor(JetFlow.WorkflowStepTypes,System.Nullable{System.UInt32},System.String,System.DateTimeOffset,System.Nullable{System.DateTimeOffset},JetFlow.WorkflowStepRetry[],System.Object,System.Nullable{JetFlow.ActivityResultStatus},System.String,System.Object)')
+  - [EndTime](#P-JetFlow-WorkflowStep-EndTime 'JetFlow.WorkflowStep.EndTime')
+  - [ErrorMessage](#P-JetFlow-WorkflowStep-ErrorMessage 'JetFlow.WorkflowStep.ErrorMessage')
+  - [Index](#P-JetFlow-WorkflowStep-Index 'JetFlow.WorkflowStep.Index')
+  - [Input](#P-JetFlow-WorkflowStep-Input 'JetFlow.WorkflowStep.Input')
+  - [Name](#P-JetFlow-WorkflowStep-Name 'JetFlow.WorkflowStep.Name')
+  - [Result](#P-JetFlow-WorkflowStep-Result 'JetFlow.WorkflowStep.Result')
+  - [Retries](#P-JetFlow-WorkflowStep-Retries 'JetFlow.WorkflowStep.Retries')
+  - [StartTime](#P-JetFlow-WorkflowStep-StartTime 'JetFlow.WorkflowStep.StartTime')
+  - [Status](#P-JetFlow-WorkflowStep-Status 'JetFlow.WorkflowStep.Status')
+  - [Type](#P-JetFlow-WorkflowStep-Type 'JetFlow.WorkflowStep.Type')
+- [WorkflowStepRetry](#T-JetFlow-WorkflowStepRetry 'JetFlow.WorkflowStepRetry')
+  - [#ctor(RetryType,Timestamp)](#M-JetFlow-WorkflowStepRetry-#ctor-JetFlow-RetryTypes,System-DateTimeOffset- 'JetFlow.WorkflowStepRetry.#ctor(JetFlow.RetryTypes,System.DateTimeOffset)')
+  - [RetryType](#P-JetFlow-WorkflowStepRetry-RetryType 'JetFlow.WorkflowStepRetry.RetryType')
+  - [Timestamp](#P-JetFlow-WorkflowStepRetry-Timestamp 'JetFlow.WorkflowStepRetry.Timestamp')
+- [WorkflowStepTypes](#T-JetFlow-WorkflowStepTypes 'JetFlow.WorkflowStepTypes')
+  - [Action](#F-JetFlow-WorkflowStepTypes-Action 'JetFlow.WorkflowStepTypes.Action')
+  - [Delay](#F-JetFlow-WorkflowStepTypes-Delay 'JetFlow.WorkflowStepTypes.Delay')
+  - [Suspended](#F-JetFlow-WorkflowStepTypes-Suspended 'JetFlow.WorkflowStepTypes.Suspended')
+
+<a name='T-JetFlow-ActiveWorkflow'></a>
+## ActiveWorkflow `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Represents a workflow instance that is currently executing, including its metadata, execution
+details.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| ID | [T:JetFlow.ActiveWorkflow](#T-T-JetFlow-ActiveWorkflow 'T:JetFlow.ActiveWorkflow') | The unique identifier of the archived workflow instance. |
+
+<a name='M-JetFlow-ActiveWorkflow-#ctor-System-Guid,System-Nullable{System-Guid},System-String,JetFlow-Configs-WorkflowOptions,System-DateTimeOffset,System-Object,System-Collections-Generic-Dictionary{System-String,System-String[]},JetFlow-WorkflowStep[]-'></a>
+### #ctor(ID,SchedulerId,Name,Options,StartedAt,Arguments,MetaData,Steps) `constructor`
+
+##### Summary
+
+Represents a workflow instance that is currently executing, including its metadata, execution
+details.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| ID | [System.Guid](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Guid 'System.Guid') | The unique identifier of the archived workflow instance. |
+| SchedulerId | [System.Nullable{System.Guid}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Nullable 'System.Nullable{System.Guid}') | The identifier of the scheduler that executed the workflow, or null if not applicable. |
+| Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The name of the workflow definition associated with this instance. |
+| Options | [JetFlow.Configs.WorkflowOptions](#T-JetFlow-Configs-WorkflowOptions 'JetFlow.Configs.WorkflowOptions') | The options used to configure the workflow execution. |
+| StartedAt | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The date and time, in UTC, when the workflow execution started. |
+| Arguments | [System.Object](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Object 'System.Object') | The arguments provided to the workflow at the time of execution, or null if none. |
+| MetaData | [System.Collections.Generic.Dictionary{System.String,System.String[]}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Collections.Generic.Dictionary 'System.Collections.Generic.Dictionary{System.String,System.String[]}') | The metadata provided to the workflow at the time of execution, or null if none. |
+| Steps | [JetFlow.WorkflowStep[]](#T-JetFlow-WorkflowStep[] 'JetFlow.WorkflowStep[]') | An array containing the steps executed as part of the workflow, in order. |
+
+<a name='P-JetFlow-ActiveWorkflow-Arguments'></a>
+### Arguments `property`
+
+##### Summary
+
+The arguments provided to the workflow at the time of execution, or null if none.
+
+<a name='P-JetFlow-ActiveWorkflow-ID'></a>
+### ID `property`
+
+##### Summary
+
+The unique identifier of the archived workflow instance.
+
+<a name='P-JetFlow-ActiveWorkflow-MetaData'></a>
+### MetaData `property`
+
+##### Summary
+
+The metadata provided to the workflow at the time of execution, or null if none.
+
+<a name='P-JetFlow-ActiveWorkflow-Name'></a>
+### Name `property`
+
+##### Summary
+
+The name of the workflow definition associated with this instance.
+
+<a name='P-JetFlow-ActiveWorkflow-Options'></a>
+### Options `property`
+
+##### Summary
+
+The options used to configure the workflow execution.
+
+<a name='P-JetFlow-ActiveWorkflow-SchedulerId'></a>
+### SchedulerId `property`
+
+##### Summary
+
+The identifier of the scheduler that executed the workflow, or null if not applicable.
+
+<a name='P-JetFlow-ActiveWorkflow-StartedAt'></a>
+### StartedAt `property`
+
+##### Summary
+
+The date and time, in UTC, when the workflow execution started.
+
+<a name='P-JetFlow-ActiveWorkflow-Steps'></a>
+### Steps `property`
+
+##### Summary
+
+An array containing the steps executed as part of the workflow, in order.
 
 <a name='T-JetFlow-ActivityExecutionRequest'></a>
 ## ActivityExecutionRequest `type`
@@ -530,6 +675,150 @@ per-attempt timeout.
 
 The maximum duration allowed for the entire activity to complete. Specify `null` to indicate no
 overall timeout.
+
+<a name='T-JetFlow-ArchivedWorkflow'></a>
+## ArchivedWorkflow `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Represents a workflow instance that has completed execution and has been archived, including its metadata, execution
+details, and results.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| ID | [T:JetFlow.ArchivedWorkflow](#T-T-JetFlow-ArchivedWorkflow 'T:JetFlow.ArchivedWorkflow') | The unique identifier of the archived workflow instance. |
+
+<a name='M-JetFlow-ArchivedWorkflow-#ctor-System-Guid,System-Nullable{System-Guid},System-String,JetFlow-Configs-WorkflowOptions,System-DateTimeOffset,System-DateTimeOffset,System-Boolean,System-String,System-Object,System-Collections-Generic-Dictionary{System-String,System-String[]},JetFlow-WorkflowStep[]-'></a>
+### #ctor(ID,SchedulerId,Name,Options,StartedAt,FinishedAt,IsSuccessful,ErrorMessage,Arguments,MetaData,Steps) `constructor`
+
+##### Summary
+
+Represents a workflow instance that has completed execution and has been archived, including its metadata, execution
+details, and results.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| ID | [System.Guid](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Guid 'System.Guid') | The unique identifier of the archived workflow instance. |
+| SchedulerId | [System.Nullable{System.Guid}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Nullable 'System.Nullable{System.Guid}') | The identifier of the scheduler that executed the workflow, or null if not applicable. |
+| Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The name of the workflow definition associated with this instance. |
+| Options | [JetFlow.Configs.WorkflowOptions](#T-JetFlow-Configs-WorkflowOptions 'JetFlow.Configs.WorkflowOptions') | The options used to configure the workflow execution. |
+| StartedAt | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The date and time, in UTC, when the workflow execution started. |
+| FinishedAt | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The date and time, in UTC, when the workflow execution finished. |
+| IsSuccessful | [System.Boolean](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Boolean 'System.Boolean') | true if the workflow completed successfully; otherwise, false. |
+| ErrorMessage | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The error message if the workflow failed; otherwise, null. |
+| Arguments | [System.Object](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Object 'System.Object') | The arguments provided to the workflow at the time of execution, or null if none. |
+| MetaData | [System.Collections.Generic.Dictionary{System.String,System.String[]}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Collections.Generic.Dictionary 'System.Collections.Generic.Dictionary{System.String,System.String[]}') | The metadata provided to the workflow at the time of execution, or null if none. |
+| Steps | [JetFlow.WorkflowStep[]](#T-JetFlow-WorkflowStep[] 'JetFlow.WorkflowStep[]') | An array containing the steps executed as part of the workflow, in order. |
+
+<a name='P-JetFlow-ArchivedWorkflow-Arguments'></a>
+### Arguments `property`
+
+##### Summary
+
+The arguments provided to the workflow at the time of execution, or null if none.
+
+<a name='P-JetFlow-ArchivedWorkflow-ErrorMessage'></a>
+### ErrorMessage `property`
+
+##### Summary
+
+The error message if the workflow failed; otherwise, null.
+
+<a name='P-JetFlow-ArchivedWorkflow-FinishedAt'></a>
+### FinishedAt `property`
+
+##### Summary
+
+The date and time, in UTC, when the workflow execution finished.
+
+<a name='P-JetFlow-ArchivedWorkflow-ID'></a>
+### ID `property`
+
+##### Summary
+
+The unique identifier of the archived workflow instance.
+
+<a name='P-JetFlow-ArchivedWorkflow-IsSuccessful'></a>
+### IsSuccessful `property`
+
+##### Summary
+
+true if the workflow completed successfully; otherwise, false.
+
+<a name='P-JetFlow-ArchivedWorkflow-MetaData'></a>
+### MetaData `property`
+
+##### Summary
+
+The metadata provided to the workflow at the time of execution, or null if none.
+
+<a name='P-JetFlow-ArchivedWorkflow-Name'></a>
+### Name `property`
+
+##### Summary
+
+The name of the workflow definition associated with this instance.
+
+<a name='P-JetFlow-ArchivedWorkflow-Options'></a>
+### Options `property`
+
+##### Summary
+
+The options used to configure the workflow execution.
+
+<a name='P-JetFlow-ArchivedWorkflow-SchedulerId'></a>
+### SchedulerId `property`
+
+##### Summary
+
+The identifier of the scheduler that executed the workflow, or null if not applicable.
+
+<a name='P-JetFlow-ArchivedWorkflow-StartedAt'></a>
+### StartedAt `property`
+
+##### Summary
+
+The date and time, in UTC, when the workflow execution started.
+
+<a name='P-JetFlow-ArchivedWorkflow-Steps'></a>
+### Steps `property`
+
+##### Summary
+
+An array containing the steps executed as part of the workflow, in order.
+
+<a name='T-JetFlow-Configs-CompressionTypes'></a>
+## CompressionTypes `type`
+
+##### Namespace
+
+JetFlow.Configs
+
+##### Summary
+
+Specifies the compression type to be used for compressing message content when sending messages to NATS. The available options are:
+
+<a name='F-JetFlow-Configs-CompressionTypes-Brotli'></a>
+### Brotli `constants`
+
+##### Summary
+
+Brotli is a general-purpose lossless compression algorithm that offers high compression ratios and fast decompression speeds. It is particularly effective for compressing text-based data, such as JSON or XML, making it a good choice for NATS messages that contain structured data.
+
+<a name='F-JetFlow-Configs-CompressionTypes-GZip'></a>
+### GZip `constants`
+
+##### Summary
+
+GZip is a widely used compression algorithm that provides a good balance between compression ratio and speed. It is suitable for compressing various types of data, including text and binary formats, making it a versatile option for NATS messages.
 
 <a name='T-JetFlow-Interfaces-IActivity'></a>
 ## IActivity `type`
@@ -1487,6 +1776,42 @@ A ValueTask that represents the asynchronous execution of the workflow operation
 | context | [JetFlow.Interfaces.IWorkflowContext](#T-JetFlow-Interfaces-IWorkflowContext 'JetFlow.Interfaces.IWorkflowContext') | The workflow context that provides execution state and services for the operation. Cannot be null. |
 | input | [\`0](#T-`0 '`0') | The input data for the workflow operation. |
 
+<a name='T-JetFlow-InvalidContentTypeException'></a>
+## InvalidContentTypeException `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Thrown when a workflow event message is received with a content type that is not recognized or supported by the system.  This can occur when a message is received with a content type that is not registered in the system, or when a message is received with a content type that is registered but does not have a corresponding decoder or handler.  This can also occur if a message is received with a content type that is registered but is not properly formatted or contains invalid values.
+
+<a name='T-JetFlow-RetryTypes'></a>
+## RetryTypes `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Specifies the type of retry that occurred during a workflow step, which can be either a timeout or an error.
+
+<a name='F-JetFlow-RetryTypes-Error'></a>
+### Error `constants`
+
+##### Summary
+
+Specifies that the retry was triggered due to an error, indicating that an exception or failure occurred during the execution of the operation.
+
+<a name='F-JetFlow-RetryTypes-Timeout'></a>
+### Timeout `constants`
+
+##### Summary
+
+Specifies that the retry was triggered due to a timeout, indicating that the operation took longer than expected to complete.
+
 <a name='T-JetFlow-Configs-WorkflowCompletionActions'></a>
 ## WorkflowCompletionActions `type`
 
@@ -2114,3 +2439,189 @@ The current instance of the WorkflowScheduleBuilder, allowing for method chainin
 | ---- | ---- | ----------- |
 | hour | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | The hour at which the workflow should run (0-23). |
 | minute | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | The minute at which the workflow should run (0-59). |
+
+<a name='T-JetFlow-WorkflowStep'></a>
+## WorkflowStep `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Represents a single step within a workflow, including its type, timing, status, and associated data.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Type | [T:JetFlow.WorkflowStep](#T-T-JetFlow-WorkflowStep 'T:JetFlow.WorkflowStep') | The type of the workflow step. Specifies the operation or action performed at this step. |
+
+<a name='M-JetFlow-WorkflowStep-#ctor-JetFlow-WorkflowStepTypes,System-Nullable{System-UInt32},System-String,System-DateTimeOffset,System-Nullable{System-DateTimeOffset},JetFlow-WorkflowStepRetry[],System-Object,System-Nullable{JetFlow-ActivityResultStatus},System-String,System-Object-'></a>
+### #ctor(Type,Index,Name,StartTime,EndTime,Retries,Input,Status,ErrorMessage,Result) `constructor`
+
+##### Summary
+
+Represents a single step within a workflow, including its type, timing, status, and associated data.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Type | [JetFlow.WorkflowStepTypes](#T-JetFlow-WorkflowStepTypes 'JetFlow.WorkflowStepTypes') | The type of the workflow step. Specifies the operation or action performed at this step. |
+| Index | [System.Nullable{System.UInt32}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Nullable 'System.Nullable{System.UInt32}') | The zero-based index of the step within the workflow sequence, or null if not specified. |
+| Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The name of the workflow step, or null if unnamed. |
+| StartTime | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The date and time when the step started. |
+| EndTime | [System.Nullable{System.DateTimeOffset}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Nullable 'System.Nullable{System.DateTimeOffset}') | The date and time when the step ended. |
+| Retries | [JetFlow.WorkflowStepRetry[]](#T-JetFlow-WorkflowStepRetry[] 'JetFlow.WorkflowStepRetry[]') | An array of retry attempts for this step, or null if no retries occurred. |
+| Input | [System.Object](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Object 'System.Object') | The input provided to the step, or null if no input was provided. |
+| Status | [System.Nullable{JetFlow.ActivityResultStatus}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Nullable 'System.Nullable{JetFlow.ActivityResultStatus}') | The result status of the step, or null if the status is not set. |
+| ErrorMessage | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The error message associated with the step if it failed, or null if no error occurred. |
+| Result | [System.Object](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Object 'System.Object') | The result produced by the step, or null if there is no result. |
+
+<a name='P-JetFlow-WorkflowStep-EndTime'></a>
+### EndTime `property`
+
+##### Summary
+
+The date and time when the step ended.
+
+<a name='P-JetFlow-WorkflowStep-ErrorMessage'></a>
+### ErrorMessage `property`
+
+##### Summary
+
+The error message associated with the step if it failed, or null if no error occurred.
+
+<a name='P-JetFlow-WorkflowStep-Index'></a>
+### Index `property`
+
+##### Summary
+
+The zero-based index of the step within the workflow sequence, or null if not specified.
+
+<a name='P-JetFlow-WorkflowStep-Input'></a>
+### Input `property`
+
+##### Summary
+
+The input provided to the step, or null if no input was provided.
+
+<a name='P-JetFlow-WorkflowStep-Name'></a>
+### Name `property`
+
+##### Summary
+
+The name of the workflow step, or null if unnamed.
+
+<a name='P-JetFlow-WorkflowStep-Result'></a>
+### Result `property`
+
+##### Summary
+
+The result produced by the step, or null if there is no result.
+
+<a name='P-JetFlow-WorkflowStep-Retries'></a>
+### Retries `property`
+
+##### Summary
+
+An array of retry attempts for this step, or null if no retries occurred.
+
+<a name='P-JetFlow-WorkflowStep-StartTime'></a>
+### StartTime `property`
+
+##### Summary
+
+The date and time when the step started.
+
+<a name='P-JetFlow-WorkflowStep-Status'></a>
+### Status `property`
+
+##### Summary
+
+The result status of the step, or null if the status is not set.
+
+<a name='P-JetFlow-WorkflowStep-Type'></a>
+### Type `property`
+
+##### Summary
+
+The type of the workflow step. Specifies the operation or action performed at this step.
+
+<a name='T-JetFlow-WorkflowStepRetry'></a>
+## WorkflowStepRetry `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Represents a retry action for a workflow step, including the retry type and the time the retry occurred.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| RetryType | [T:JetFlow.WorkflowStepRetry](#T-T-JetFlow-WorkflowStepRetry 'T:JetFlow.WorkflowStepRetry') | The type of retry performed for the workflow step. |
+
+<a name='M-JetFlow-WorkflowStepRetry-#ctor-JetFlow-RetryTypes,System-DateTimeOffset-'></a>
+### #ctor(RetryType,Timestamp) `constructor`
+
+##### Summary
+
+Represents a retry action for a workflow step, including the retry type and the time the retry occurred.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| RetryType | [JetFlow.RetryTypes](#T-JetFlow-RetryTypes 'JetFlow.RetryTypes') | The type of retry performed for the workflow step. |
+| Timestamp | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The date and time, in UTC, when the retry action was executed. |
+
+<a name='P-JetFlow-WorkflowStepRetry-RetryType'></a>
+### RetryType `property`
+
+##### Summary
+
+The type of retry performed for the workflow step.
+
+<a name='P-JetFlow-WorkflowStepRetry-Timestamp'></a>
+### Timestamp `property`
+
+##### Summary
+
+The date and time, in UTC, when the retry action was executed.
+
+<a name='T-JetFlow-WorkflowStepTypes'></a>
+## WorkflowStepTypes `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Specifies the type of workflow step, which can be either an action (Activity) or a delay (a pause in the workflow).
+
+<a name='F-JetFlow-WorkflowStepTypes-Action'></a>
+### Action `constants`
+
+##### Summary
+
+Represents an action step, typically an activity or task to be executed.
+
+<a name='F-JetFlow-WorkflowStepTypes-Delay'></a>
+### Delay `constants`
+
+##### Summary
+
+Represents a Delay called within the workflow
+
+<a name='F-JetFlow-WorkflowStepTypes-Suspended'></a>
+### Suspended `constants`
+
+##### Summary
+
+Represents a suspension of the workflow

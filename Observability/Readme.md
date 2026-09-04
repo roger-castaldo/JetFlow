@@ -9,14 +9,23 @@
   - [AddNamespacesAsync(workflowNamespaces)](#M-JetFlow-Interfaces-IObservationConnection-AddNamespacesAsync-System-Collections-Generic-IEnumerable{System-String}- 'JetFlow.Interfaces.IObservationConnection.AddNamespacesAsync(System.Collections.Generic.IEnumerable{System.String})')
   - [AddPerformanceMonitoringAsync(sampleDurationMinutes,workflowRecordReceived,activityRecordReceived)](#M-JetFlow-Interfaces-IObservationConnection-AddPerformanceMonitoringAsync-System-Byte,System-Func{JetFlow-Data-WorkflowPerformanceRecord,System-Threading-Tasks-ValueTask},System-Func{JetFlow-Data-ActivityPerformanceRecord,System-Threading-Tasks-ValueTask}- 'JetFlow.Interfaces.IObservationConnection.AddPerformanceMonitoringAsync(System.Byte,System.Func{JetFlow.Data.WorkflowPerformanceRecord,System.Threading.Tasks.ValueTask},System.Func{JetFlow.Data.ActivityPerformanceRecord,System.Threading.Tasks.ValueTask})')
   - [GetActiveActivityCountAsync()](#M-JetFlow-Interfaces-IObservationConnection-GetActiveActivityCountAsync 'JetFlow.Interfaces.IObservationConnection.GetActiveActivityCountAsync')
-  - [GetActiveActivityCountAsync(workflowName)](#M-JetFlow-Interfaces-IObservationConnection-GetActiveActivityCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetActiveActivityCountAsync(System.String)')
+  - [GetActiveActivityCountAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetActiveActivityCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetActiveActivityCountAsync(System.String)')
   - [GetActiveWorkflowCountAsync()](#M-JetFlow-Interfaces-IObservationConnection-GetActiveWorkflowCountAsync 'JetFlow.Interfaces.IObservationConnection.GetActiveWorkflowCountAsync')
   - [GetActiveWorkflowCountAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetActiveWorkflowCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetActiveWorkflowCountAsync(System.String)')
   - [GetSuspendedWorkflowCountAsync()](#M-JetFlow-Interfaces-IObservationConnection-GetSuspendedWorkflowCountAsync 'JetFlow.Interfaces.IObservationConnection.GetSuspendedWorkflowCountAsync')
   - [GetSuspendedWorkflowCountAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetSuspendedWorkflowCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetSuspendedWorkflowCountAsync(System.String)')
+  - [LoadWorkflowAsync\`\`1(workflowNamespace,workflowId)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowAsync``1-System-String,System-Guid- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowAsync``1(System.String,System.Guid)')
+  - [LoadWorkflowAsync\`\`2(workflowNamespace,workflowId)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowAsync``2-System-String,System-Guid- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowAsync``2(System.String,System.Guid)')
+  - [LoadWorkflowsAsync\`\`1(workflowNamespace,checkMetaData)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowsAsync``1-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowsAsync``1(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean})')
+  - [LoadWorkflowsAsync\`\`2(workflowNamespace,checkMetaData,checkArguement)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowsAsync``2-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{``1,System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowsAsync``2(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean},System.Func{``1,System.Boolean})')
+  - [QueryWorkflowAsync\`\`1(workflowNamespace,checkMetaData)](#M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``1-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.QueryWorkflowAsync``1(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean})')
+  - [QueryWorkflowAsync\`\`2(workflowNamespace,checkMetaData,checkArguement)](#M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``2-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{``1,System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.QueryWorkflowAsync``2(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean},System.Func{``1,System.Boolean})')
   - [RemoveDefaultNamespaceAsync()](#M-JetFlow-Interfaces-IObservationConnection-RemoveDefaultNamespaceAsync 'JetFlow.Interfaces.IObservationConnection.RemoveDefaultNamespaceAsync')
   - [RemoveNamespaceAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-RemoveNamespaceAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.RemoveNamespaceAsync(System.String)')
   - [RemoveNamespacesAsync(workflowNamespaces)](#M-JetFlow-Interfaces-IObservationConnection-RemoveNamespacesAsync-System-Collections-Generic-IEnumerable{System-String}- 'JetFlow.Interfaces.IObservationConnection.RemoveNamespacesAsync(System.Collections.Generic.IEnumerable{System.String})')
+- [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery')
+  - [ToListAsync(cancellationToken)](#M-JetFlow-Interfaces-IWorkflowQuery-ToListAsync-System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowQuery.ToListAsync(System.Threading.CancellationToken)')
+- [NamespaceNotRegisteredException](#T-JetFlow-NamespaceNotRegisteredException 'JetFlow.NamespaceNotRegisteredException')
 - [ObservationConnection](#T-JetFlow-ObservationConnection 'JetFlow.ObservationConnection')
   - [CreateInstanceAsync(options)](#M-JetFlow-ObservationConnection-CreateInstanceAsync-JetFlow-Configs-ObservationConnectionOptions- 'JetFlow.ObservationConnection.CreateInstanceAsync(JetFlow.Configs.ObservationConnectionOptions)')
 - [ObservationConnectionFailedException](#T-JetFlow-ObservationConnectionFailedException 'JetFlow.ObservationConnectionFailedException')
@@ -109,7 +118,7 @@ A collection of [PerformanceCounter](#T-JetFlow-Data-PerformanceCounter 'JetFlow
 This method has no parameters.
 
 <a name='M-JetFlow-Interfaces-IObservationConnection-GetActiveActivityCountAsync-System-String-'></a>
-### GetActiveActivityCountAsync(workflowName) `method`
+### GetActiveActivityCountAsync(workflowNamespace) `method`
 
 ##### Summary
 
@@ -123,7 +132,7 @@ The number of active activities for the specified workflow.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| workflowName | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The workflow name to filter activity counts by, or `null` to use all workflows. |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The workflow namespace to filter by, or `null` to use the default namespace. |
 
 <a name='M-JetFlow-Interfaces-IObservationConnection-GetActiveWorkflowCountAsync'></a>
 ### GetActiveWorkflowCountAsync() `method`
@@ -189,6 +198,157 @@ The number of suspended workflows in the requested namespace.
 | ---- | ---- | ----------- |
 | workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The workflow namespace to filter by, or `null` to use the default namespace. |
 
+<a name='M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowAsync``1-System-String,System-Guid-'></a>
+### LoadWorkflowAsync\`\`1(workflowNamespace,workflowId) `method`
+
+##### Summary
+
+Loads a single active workflow by its identifier, scoped to the given workflow type and optional namespace.
+
+##### Returns
+
+The matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') if found; otherwise `null`.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the lookup. Use `null` to search the default namespace. |
+| workflowId | [System.Guid](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Guid 'System.Guid') | The unique identifier of the workflow instance to load. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow'). |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowAsync``2-System-String,System-Guid-'></a>
+### LoadWorkflowAsync\`\`2(workflowNamespace,workflowId) `method`
+
+##### Summary
+
+Loads a single active workflow by its identifier for workflows that accept a strongly-typed input.
+
+##### Returns
+
+The matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') if found; otherwise `null`.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the lookup. Use `null` to search the default namespace. |
+| workflowId | [System.Guid](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Guid 'System.Guid') | The unique identifier of the workflow instance to load. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1'). |
+| TInput | The workflow input type. |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowsAsync``1-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}-'></a>
+### LoadWorkflowsAsync\`\`1(workflowNamespace,checkMetaData) `method`
+
+##### Summary
+
+Loads all active workflows of the specified workflow type in the optional namespace into a materialized collection.
+
+##### Returns
+
+A collection of [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances that match the filters.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the load. Use `null` to load from the default namespace. |
+| checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow'). |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowsAsync``2-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{``1,System-Boolean}-'></a>
+### LoadWorkflowsAsync\`\`2(workflowNamespace,checkMetaData,checkArguement) `method`
+
+##### Summary
+
+Loads all active workflows of the specified workflow type with a strongly-typed input into a materialized collection.
+
+##### Returns
+
+A collection of [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances that match the filters.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the load. Use `null` to load from the default namespace. |
+| checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
+| checkArguement | [System.Func{\`\`1,System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{``1,System.Boolean}') | Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1'). |
+| TInput | The workflow input type used to apply an optional argument filter. |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``1-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}-'></a>
+### QueryWorkflowAsync\`\`1(workflowNamespace,checkMetaData) `method`
+
+##### Summary
+
+Creates a query that enumerates active workflows of the specified workflow type within the
+optionally provided namespace. The returned [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery') can be consumed
+asynchronously to iterate matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Returns
+
+An [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery') that yields matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the query. Use `null` to query the default namespace. |
+| checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow'). |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``2-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{``1,System-Boolean}-'></a>
+### QueryWorkflowAsync\`\`2(workflowNamespace,checkMetaData,checkArguement) `method`
+
+##### Summary
+
+Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
+
+##### Returns
+
+An [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery') that yields matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the query. Use `null` to query the default namespace. |
+| checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
+| checkArguement | [System.Func{\`\`1,System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{``1,System.Boolean}') | Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1'). |
+| TInput | The workflow input type used to apply an optional argument filter. |
+
 <a name='M-JetFlow-Interfaces-IObservationConnection-RemoveDefaultNamespaceAsync'></a>
 ### RemoveDefaultNamespaceAsync() `method`
 
@@ -225,6 +385,46 @@ Removes multiple namespaces from the set of namespaces being observed.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | workflowNamespaces | [System.Collections.Generic.IEnumerable{System.String}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Collections.Generic.IEnumerable 'System.Collections.Generic.IEnumerable{System.String}') | The namespaces to remove. |
+
+<a name='T-JetFlow-Interfaces-IWorkflowQuery'></a>
+## IWorkflowQuery `type`
+
+##### Namespace
+
+JetFlow.Interfaces
+
+##### Summary
+
+Represents an asynchronous, disposable query over active workflows. The query
+can be enumerated using await foreach and can be materialized to a list.
+
+<a name='M-JetFlow-Interfaces-IWorkflowQuery-ToListAsync-System-Threading-CancellationToken-'></a>
+### ToListAsync(cancellationToken) `method`
+
+##### Summary
+
+Materializes the query results to a collection of [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow').
+
+##### Returns
+
+A collection containing the matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | Cancellation token used to cancel the operation. |
+
+<a name='T-JetFlow-NamespaceNotRegisteredException'></a>
+## NamespaceNotRegisteredException `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Thrown when a requested call is made to a namespace that has not been registered with the observation connection.
 
 <a name='T-JetFlow-ObservationConnection'></a>
 ## ObservationConnection `type`

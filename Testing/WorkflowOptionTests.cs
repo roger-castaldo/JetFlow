@@ -52,7 +52,7 @@ public class WorkflowOptionTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithUnregisteredActivity>(new() { ErrorOnActivityTimeout=true }, CancellationToken.None);
 
@@ -97,7 +97,7 @@ public class WorkflowOptionTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithSlowActivity>(new() { ErrorOnActivityTimeout=true }, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<SlowActivity>(new(), CancellationToken.None);
@@ -143,7 +143,7 @@ public class WorkflowOptionTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithActivityError>(new() { ErrorOnActivityFailure=true }, CancellationToken.None);
         await connection.RegisterWorkflowActivityAsync<ActivityThatThrowsAnError>(new(), CancellationToken.None);
@@ -248,7 +248,7 @@ public class WorkflowOptionTests
                 var context = new NatsJSContext(natsConnection);
                 var consumer = await context.CreateConsumerAsync(
                     workflowEventsStreamsName,
-                    new(Guid.NewGuid().ToString())
+                    new(Guid.CreateVersion7().ToString())
                     {
                         FilterSubject=filterSubject,
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.None

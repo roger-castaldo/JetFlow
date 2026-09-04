@@ -3,9 +3,6 @@
 
 ## Contents
 
-- [CompressionTypes](#T-JetFlow-Configs-CompressionTypes 'JetFlow.Configs.CompressionTypes')
-  - [Brotli](#F-JetFlow-Configs-CompressionTypes-Brotli 'JetFlow.Configs.CompressionTypes.Brotli')
-  - [GZip](#F-JetFlow-Configs-CompressionTypes-GZip 'JetFlow.Configs.CompressionTypes.GZip')
 - [Connection](#T-JetFlow-Connection 'JetFlow.Connection')
   - [MetricsMeterName](#F-JetFlow-Connection-MetricsMeterName 'JetFlow.Connection.MetricsMeterName')
   - [TraceProviderName](#F-JetFlow-Connection-TraceProviderName 'JetFlow.Connection.TraceProviderName')
@@ -19,37 +16,11 @@
   - [JsonTypeInfoResolver](#P-JetFlow-Configs-ConnectionOptions-JsonTypeInfoResolver 'JetFlow.Configs.ConnectionOptions.JsonTypeInfoResolver')
   - [Namespace](#P-JetFlow-Configs-ConnectionOptions-Namespace 'JetFlow.Configs.ConnectionOptions.Namespace')
   - [ServiceProvider](#P-JetFlow-Configs-ConnectionOptions-ServiceProvider 'JetFlow.Configs.ConnectionOptions.ServiceProvider')
-- [InvalidContentTypeException](#T-JetFlow-InvalidContentTypeException 'JetFlow.InvalidContentTypeException')
 - [InvalidDelayStepException](#T-JetFlow-InvalidDelayStepException 'JetFlow.InvalidDelayStepException')
 - [InvalidStepException](#T-JetFlow-InvalidStepException 'JetFlow.InvalidStepException')
 - [InvalidWorkflowEventMessage](#T-JetFlow-InvalidWorkflowEventMessage 'JetFlow.InvalidWorkflowEventMessage')
 - [UnableToConnectException](#T-JetFlow-UnableToConnectException 'JetFlow.UnableToConnectException')
 - [WorkflowEndedException](#T-JetFlow-WorkflowEndedException 'JetFlow.WorkflowEndedException')
-
-<a name='T-JetFlow-Configs-CompressionTypes'></a>
-## CompressionTypes `type`
-
-##### Namespace
-
-JetFlow.Configs
-
-##### Summary
-
-Specifies the compression type to be used for compressing message content when sending messages to NATS. The available options are:
-
-<a name='F-JetFlow-Configs-CompressionTypes-Brotli'></a>
-### Brotli `constants`
-
-##### Summary
-
-Brotli is a general-purpose lossless compression algorithm that offers high compression ratios and fast decompression speeds. It is particularly effective for compressing text-based data, such as JSON or XML, making it a good choice for NATS messages that contain structured data.
-
-<a name='F-JetFlow-Configs-CompressionTypes-GZip'></a>
-### GZip `constants`
-
-##### Summary
-
-GZip is a widely used compression algorithm that provides a good balance between compression ratio and speed. It is suitable for compressing various types of data, including text and binary formats, making it a versatile option for NATS messages.
 
 <a name='T-JetFlow-Connection'></a>
 ## Connection `type`
@@ -178,17 +149,6 @@ Used to logically group related workflows and resources within JetFlow. By speci
 ##### Summary
 
 Specifies the IServiceProvider to be used for dependency injection when resolving services and dependencies within JetFlow. By providing a custom IServiceProvider, you can control how services are instantiated and managed, allowing for greater flexibility and customization of the dependency injection behavior in your application. The ServiceProvider property enables you to integrate JetFlow with your existing dependency injection framework, ensuring that all required services are properly resolved and available for use when executing workflows and interacting with NATS and JetStream.
-
-<a name='T-JetFlow-InvalidContentTypeException'></a>
-## InvalidContentTypeException `type`
-
-##### Namespace
-
-JetFlow
-
-##### Summary
-
-Thrown when a workflow event message is received with a content type that is not recognized or supported by the system.  This can occur when a message is received with a content type that is not registered in the system, or when a message is received with a content type that is registered but does not have a corresponding decoder or handler.  This can also occur if a message is received with a content type that is registered but is not properly formatted or contains invalid values.
 
 <a name='T-JetFlow-InvalidDelayStepException'></a>
 ## InvalidDelayStepException `type`

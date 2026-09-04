@@ -67,13 +67,36 @@ public record struct WorkflowStep(
     uint? Index,
     string? Name,
     DateTimeOffset StartTime,
-    DateTimeOffset EndTime,
+    DateTimeOffset? EndTime,
     WorkflowStepRetry[]? Retries,
     object? Input,
     [property: JsonConverter(typeof(JsonStringEnumConverter<ActivityResultStatus>))]
     ActivityResultStatus? Status,
     string? ErrorMessage,
     object? Result
+);
+
+/// <summary>
+/// Represents a workflow instance that is currently executing, including its metadata, execution
+/// details.
+/// </summary>
+/// <param name="ID">The unique identifier of the archived workflow instance.</param>
+/// <param name="SchedulerId">The identifier of the scheduler that executed the workflow, or null if not applicable.</param>
+/// <param name="Name">The name of the workflow definition associated with this instance.</param>
+/// <param name="Options">The options used to configure the workflow execution.</param>
+/// <param name="StartedAt">The date and time, in UTC, when the workflow execution started.</param>
+/// <param name="Arguments">The arguments provided to the workflow at the time of execution, or null if none.</param>
+/// <param name="MetaData">The metadata provided to the workflow at the time of execution, or null if none.</param>
+/// <param name="Steps">An array containing the steps executed as part of the workflow, in order.</param>
+public record struct ActiveWorkflow(
+    Guid ID,
+    Guid? SchedulerId,
+    string Name,
+    WorkflowOptions Options,
+    DateTimeOffset StartedAt,
+    object? Arguments,
+    Dictionary<string, string[]>? MetaData,
+    WorkflowStep[] Steps
 );
 
 /// <summary>

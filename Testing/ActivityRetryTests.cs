@@ -65,7 +65,7 @@ public class ActivityRetryTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithActivityTimeout>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<TimeoutActivity>(timeoutActivity, CancellationToken.None);
@@ -142,7 +142,7 @@ public class ActivityRetryTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithUnimplmentedActivity>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<UnimplementedActivity>(unimplementedActivity, CancellationToken.None);
@@ -207,7 +207,7 @@ public class ActivityRetryTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithUnimplementedActivityWithTimers>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<UnimplementedActivityWithTimers>(unimplementedActivityWithTimers, CancellationToken.None);

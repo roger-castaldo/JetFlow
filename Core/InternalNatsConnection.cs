@@ -143,7 +143,7 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
     private async ValueTask PublishMessagesChunkAsync(IEnumerable<PublishMessage> messages, int total, CancellationToken cancellationToken)
     {
         var index = 1;
-        var batchId = (total>1 ? Guid.NewGuid() : Guid.Empty);
+        var batchId = (total>1 ? Guid.CreateVersion7() : Guid.Empty);
         foreach (var m in messages)
         {
             var headers = AppendDefaultHeaders(m.Headers, m.Id, m.Timeout);

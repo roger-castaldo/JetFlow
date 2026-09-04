@@ -18,7 +18,7 @@ public class MessageSerializerTests
     public async Task EnsureBaseSerializationCallsOperateProperly()
     {
         //Arrange
-        var messageSerializer = new MessageSerializer(new(new NATS.Client.Core.NatsOpts()));
+        var messageSerializer = new MessageSerializer(CompressionTypes.Brotli,null);
         var testUser = new User(
             TestsHelper.GenerateRandomString(32),
             TestsHelper.GenerateRandomString(32),
@@ -49,10 +49,7 @@ public class MessageSerializerTests
     public async Task EnsureCompressionTypesOperateProperly(CompressionTypes compressionType, string addedEncoding)
     {
         //Arrange
-        var messageSerializer = new MessageSerializer(new(new NATS.Client.Core.NatsOpts())
-        {
-            CompressionType = compressionType
-        });
+        var messageSerializer = new MessageSerializer(compressionType,null);
         var stringLength = 32 * 1024 / 4;
         var testUser = new User(
             TestsHelper.GenerateRandomString(stringLength),
@@ -82,7 +79,7 @@ public class MessageSerializerTests
     public async Task EnsureInvalidHeaderThrowsException()
     {
         //Arrange
-        var messageSerializer = new MessageSerializer(new(new NATS.Client.Core.NatsOpts()));
+        var messageSerializer = new MessageSerializer(CompressionTypes.Brotli, null);
         var headers = new NatsHeaders();
         headers.Add(ContentHeaderKey, "/brotli");
         var data = new byte[] {1,2,3};
@@ -100,7 +97,7 @@ public class MessageSerializerTests
     public async Task EnsureUnknownEncoderThrowsError()
     {
         //Arrange
-        var messageSerializer = new MessageSerializer(new(new NATS.Client.Core.NatsOpts()));
+        var messageSerializer = new MessageSerializer(CompressionTypes.Brotli, null);
         var headers = new NatsHeaders();
         headers.Add(ContentHeaderKey, "application/binary");
         var data = new byte[] { 1, 2, 3 };

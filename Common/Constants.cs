@@ -22,6 +22,9 @@ internal static class Constants
     public const string ActivityResultHeader = $"{HeaderBase}activity-result";
     public const string ParalellActivityIndexHeader = $"{HeaderBase}parallel-activity-index";
     public const string ParallelActivityCountHeader = $"{HeaderBase}parallel-activity-count";
+    public const string WorkflowTraceHeaderKey = $"{HeaderBase}workflow-traceParentId";
+    public const string WorkflowTraceSpanHeaderKey = $"{HeaderBase}workflow-traceParentSpanId";
+
 
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {

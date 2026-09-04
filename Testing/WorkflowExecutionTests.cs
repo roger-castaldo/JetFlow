@@ -62,7 +62,7 @@ public class WorkflowExecutionTests
         {
             Namespace=namespaceValue
         };
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<EmptyActivityWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<EmptyActivity>(new(), CancellationToken.None);
@@ -121,7 +121,7 @@ public class WorkflowExecutionTests
         {
             Namespace=namespaceValue
         };
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<DelayedWorkflow>(cancellationToken: TestContext.CancellationToken);
 
@@ -188,7 +188,7 @@ public class WorkflowExecutionTests
         {
             Namespace=namespaceValue
         };
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<InvokeMismatchedActivityWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<EmptyActivity>(new(), CancellationToken.None);
@@ -236,7 +236,7 @@ public class WorkflowExecutionTests
         {
             Namespace=namespaceValue
         };
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<InvalidDelayStepWorkflow>(cancellationToken: TestContext.CancellationToken);
 
@@ -387,7 +387,7 @@ public class WorkflowExecutionTests
         {
             Namespace=namespaceValue
         };
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<NoActionActivity>(new(), CancellationToken.None);
@@ -502,7 +502,7 @@ public class WorkflowExecutionTests
 
         //Verify
         var workflowName = NameHelper.GetWorkflowName<AllActivityResultsWorkflow>();
-        var messages = await JetStreamHelper.QueryStreamAsync(jsContext, subjectMapper.WorkflowEventsStreamsName, false,
+        var messages = await TestJetStreamHelper.QueryStreamAsync(jsContext, subjectMapper.WorkflowEventsStreamsName, false,
             subjectMapper.WorkflowConfigure(workflowName, runId.ToString()),
             subjectMapper.WorkflowStart(workflowName, runId.ToString()),
             subjectMapper.WorkflowEnd(workflowName, runId.ToString()),

@@ -1,7 +1,8 @@
-﻿using JetFlow.Interfaces;
+﻿using JetFlow.Helpers;
+using JetFlow.Interfaces;
 using JetFlow.Serializers;
+using NATS.Client.Core;
 using NATS.Client.JetStream;
-using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using NATS.Client.ObjectStore;
 using System.Text;
@@ -12,19 +13,15 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
     INatsKVStore timerStore, INatsKVStore configurationStore, INatsObjStore archiveStore, INatsObjStore largeMessageStore,
     SubjectMapper subjectMapper, MessageSerializer messageSerializer)
 {
-    public async ValueTask<IJetstreamQuery> QueryStreamAsync(string streamName, bool headersOnly, params string[] filterSubjects)
-        => new JetstreamQuery(await connection.CreateOrUpdateConsumerAsync(
-                streamName,
-                new ConsumerConfig
-                {
-                    Name = Guid.NewGuid().ToString(), // ephemeral identity
-                    DeliverPolicy = ConsumerConfigDeliverPolicy.All,
-                    AckPolicy = ConsumerConfigAckPolicy.None,
-                    FilterSubjects = filterSubjects,
-                    HeadersOnly = headersOnly,
-                    InactiveThreshold = TimeSpan.FromSeconds(10)
-                }
-            ), connection);
+    public INatsJSContext JSContext => connection.JSContext;
+    public int MaxMessagePayload => connection.MaxMessagePayload;
+    public INatsObjStore LargeMessageStore => largeMessageStore;
+    public INatsObjStore ArchiveStore => archiveStore;
+    public ValueTask<IJetstreamQuery> QueryStreamAsync(string streamName, bool headersOnly, params string[] filterSubjects)
+        => JetStreamHelper.QueryStreamAsync(connection.JSContext, streamName, headersOnly, filterSubjects);
+
+    private ValueTask<(byte[] data, NatsHeaders headers)> EncodeMessageAsync<TMessage>(TMessage? message, string workflowName, string workflowInstanceId, CancellationToken cancellationToken)
+        => MessagesHelper.EncodeMessageAsync<TMessage>(MaxMessagePayload, LargeMessageStore, messageSerializer, message, workflowName, workflowInstanceId, cancellationToken);
 
     public async ValueTask PurgeWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
     {
@@ -32,11 +29,8 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
         var tasks = new List<Task>();
         await foreach (var msg in query)
         {
-            if (msg.Data!=null && msg.Data.Length>LargeMessageMagicByte.Length && msg.Data.Take(LargeMessageMagicByte.Length).SequenceEqual(LargeMessageMagicByte))
-            {
-                var messageId = UTF8Encoding.UTF8.GetString([.. msg.Data.Skip(LargeMessageMagicByte.Length)]);
-                tasks.Add(largeMessageStore.DeleteAsync(messageId, cancellationToken).AsTask());
-            }
+            if (MessagesHelper.IsLargeMessage(msg.Data))
+                tasks.Add(MessagesHelper.DeleteLargeMessageAsync(largeMessageStore, msg.Data!, cancellationToken));
         }
         await Task.WhenAll(
         [
@@ -48,48 +42,5 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
             new(Array.Empty<byte>(), subjectMapper.WorkflowPurged(message.WorkflowName, message.WorkflowId), new(), $"{message.WorkflowName}-{message.WorkflowId}-purged", Timeout: TimeSpan.FromHours(6)),
             cancellationToken: cancellationToken
         );
-    }
-
-    private sealed class JetstreamQuery(INatsJSConsumer consumer, InternalNatsConnection connection) : IJetstreamQuery
-    {
-        private const int MaxMessages = 64;
-        private bool disposed = false;
-
-        async ValueTask IAsyncDisposable.DisposeAsync()
-        {
-            if (!disposed)
-            {
-                disposed=true;
-                try
-                {
-                    await connection.DeleteConsumerAsync(consumer.Info.StreamName, consumer.Info.Name);
-                }
-                catch { /*bury error*/ }
-            }
-        }
-
-        IAsyncEnumerator<INatsJSMsg<byte[]>> IAsyncEnumerable<INatsJSMsg<byte[]>>.GetAsyncEnumerator(CancellationToken cancellationToken)
-            => GetAllMessagesAsync(cancellationToken);
-
-        private async IAsyncEnumerator<INatsJSMsg<byte[]>> GetAllMessagesAsync(CancellationToken cancellationToken)
-        {
-            // Fetch batches from the consumer and yield all available messages.
-            // If a fetch returns no messages, treat the query as complete and exit the enumerator.
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var cnt = 0;
-                await foreach (var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs = MaxMessages, Expires = TimeSpan.FromSeconds(1) }, cancellationToken: cancellationToken))
-                {
-                    cnt++;
-                    yield return msg;
-                }
-
-                if (cnt!=MaxMessages)
-                {
-                    // No messages in this fetch, end the query.
-                    yield break;
-                }
-            }
-        }
     }
 }

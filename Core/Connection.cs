@@ -105,7 +105,7 @@ public static class Connection
             var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore);
             var largeMessageStore = await objContext.CreateObjectStoreAsync(subjectMapper.LargeMessageObjectstore);
             var (activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer)= await StreamsHelper.EstablishBaseConsumersAsync(jsContext, subjectMapper);
-            return new ConnectionInstance(connection, jsContext, new(options), subjectMapper, options.ServiceProvider,
+            return new ConnectionInstance(connection, jsContext, new(options.CompressionType, options.JsonTypeInfoResolver, (header)=>TraceHelper.AddMessageDecodedEvent(header)), subjectMapper, options.ServiceProvider,
                 new(timerStore, configurationStore, archiveStore, largeMessageStore, activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer),
                 options.CanDisposeConnection
             );

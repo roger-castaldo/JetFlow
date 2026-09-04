@@ -14,7 +14,7 @@ internal static class WorkflowsHelper
                 stream,
                 new ConsumerConfig
                 {
-                    Name = Guid.NewGuid().ToString(), // ephemeral identity
+                    Name = Guid.CreateVersion7().ToString(), // ephemeral identity
                     DeliverPolicy = ConsumerConfigDeliverPolicy.ByStartTime,
                     AckPolicy = ConsumerConfigAckPolicy.None,
                     FilterSubject = subject,

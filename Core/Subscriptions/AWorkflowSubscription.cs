@@ -1,4 +1,5 @@
 ﻿using JetFlow.Configs;
+using JetFlow.Data;
 using JetFlow.Helpers;
 using JetFlow.Serializers;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,7 +107,19 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         var options = InternalsSerializer.DeserializeWorkflowOptions(config.Data!)!;
         if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenNothing) || Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge))
         {
-            await ServiceConnection.ArchiveWorkflowAsync(message, CancellationToken);
+            await ServiceConnection.ArchiveStore.PutAsync(
+                $"{message.WorkflowName}/{message.WorkflowId}",
+                InternalsSerializer.SerializeWorkflowArchive(await WorkflowHelper.ProduceArchivedWorkflowAsync(
+                    subjectMapper,
+                    ServiceConnection.JSContext,
+                    ServiceConnection.LargeMessageStore,
+                    MessageSerializer,
+                    message.WorkflowName,
+                    message.WorkflowId,
+                    CancellationToken
+                )),
+                CancellationToken
+            );
             await ServiceConnection.MarkWorkflowArchived(message, CancellationToken);
         }
         if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge) || Equals(options.CompletionAction, WorkflowCompletionActions.Purge))

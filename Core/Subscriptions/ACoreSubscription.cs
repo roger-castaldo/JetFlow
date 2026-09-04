@@ -14,7 +14,7 @@ internal abstract class ACoreSubscription
 
     protected override async ValueTask ProcessMessageAsync(INatsJSMsg<byte[]> msg)
     {
-        var message = await EventMessage.CreateMessageAsync(ServiceConnection, msg, CancellationToken);
+        var message = await EventMessage.CreateMessageAsync(ServiceConnection.LargeMessageStore, msg, CancellationToken);
         await ProcessMessageAsync(message);
     }
 

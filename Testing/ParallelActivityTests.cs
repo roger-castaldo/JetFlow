@@ -70,7 +70,7 @@ public class ParallelActivityTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithoutOutput>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<EmptyActivityWithInput, string>(emptyActivityWithInput, TestContext.CancellationToken);
@@ -150,7 +150,7 @@ public class ParallelActivityTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput, TestContext.CancellationToken);
@@ -291,7 +291,7 @@ public class ParallelActivityTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithProblems>(new()
         {
@@ -354,7 +354,7 @@ public class ParallelActivityTests
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var connectionOptions = new ConnectionOptions(natsConnection);
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithLargeNumberOfCalls>(cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<EmptyActivityWithInput, string>(emptyActivityWithInput, TestContext.CancellationToken);

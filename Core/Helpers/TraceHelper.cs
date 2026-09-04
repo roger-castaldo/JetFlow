@@ -5,8 +5,6 @@ namespace JetFlow.Helpers;
 
 internal static class TraceHelper
 {
-    public const string WorkflowTraceHeaderKey = "x-jetflow-workflow-traceParentId";
-    public const string WorkflowTraceSpanHeaderKey = "x-jetflow-workflow-traceParentSpanId";
     private const string WorkflowStepTraceParentHeaderKey = "x-jetflow-workflowstep-traceParentId";
     private const string WorkflowStepTraceParentSpanHeaderKey = "x-jetflow-workflowstep-traceParentSpanId";
 
@@ -31,8 +29,8 @@ internal static class TraceHelper
         => (Activity.Current?.OperationName) switch
         {
             TraceConstants.WorkflowStart => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>([
-                new(WorkflowTraceHeaderKey,Activity.Current.TraceId.ToString()), 
-                new(WorkflowTraceSpanHeaderKey, Activity.Current.SpanId.ToString()),
+                new(Constants.WorkflowTraceHeaderKey,Activity.Current.TraceId.ToString()), 
+                new(Constants.WorkflowTraceSpanHeaderKey, Activity.Current.SpanId.ToString()),
                 ..headers??[]])),
             TraceConstants.WorkflowStepStart => new(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>([
                 new(WorkflowStepTraceParentHeaderKey,Activity.Current.TraceId.ToString()),
@@ -50,8 +48,8 @@ internal static class TraceHelper
     private static IEnumerable<ActivityLink>? ExtractWorkflowLink(EventMessage message)
     {
         if (message.Headers!=null
-            && message.Headers.TryGetValue(WorkflowTraceHeaderKey, out var traceKey)
-            && message.Headers.TryGetValue(WorkflowTraceSpanHeaderKey, out var spanKey))
+            && message.Headers.TryGetValue(Constants.WorkflowTraceHeaderKey, out var traceKey)
+            && message.Headers.TryGetValue(Constants.WorkflowTraceSpanHeaderKey, out var spanKey))
             return [new(new(ActivityTraceId.CreateFromString(traceKey.ToString()), ActivitySpanId.CreateFromString(spanKey.ToString()), ActivityTraceFlags.Recorded, isRemote: true))];
         return null;
     }

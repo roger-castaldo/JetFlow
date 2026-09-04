@@ -73,7 +73,7 @@ public class CounterTests
                 new(typeof(IObservationConnection), observationConnection)
             ]))
         };
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
 
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<EmptyWorkflow, string?>(cancellationToken: CancellationToken.None);
@@ -213,7 +213,7 @@ public class CounterTests
                 new(typeof(IObservationConnection), observationConnection)
             ]))
         };
-        var messageSerializer = new MessageSerializer(connectionOptions);
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
 
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<EmptyActivityWorkflow, string?>(options: new() { CompletionAction=WorkflowCompletionActions.None, ErrorOnActivityFailure=true },cancellationToken: TestContext.CancellationToken);
