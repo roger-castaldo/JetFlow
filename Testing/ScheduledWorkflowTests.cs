@@ -257,7 +257,7 @@ public class ScheduledWorkflowTests
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<DelayedWorkflowWithInput, string>(options: new() { CompletionAction = WorkflowCompletionActions.None}, TestContext.CancellationToken);
+        await connection.RegisterWorkflowAsync<DelayedWorkflowWithInput, string>(options: new() { CompletionAction = WorkflowCompletionActions.Purge }, TestContext.CancellationToken);
 
         //Act
         _ = Task.Run(async () =>
@@ -269,7 +269,7 @@ public class ScheduledWorkflowTests
         }, TestContext.CancellationToken);
         var scheduleId = await connection.DelayStartWorkflowAsync<DelayedWorkflowWithInput, string>(new(input)
         {
-            Options = new() { CompletionAction = WorkflowCompletionActions.ArchiveThenPurge },
+            Options = new() { CompletionAction = WorkflowCompletionActions.Archive },
             MetaData = metaData
         }, TimeSpan.FromSeconds(30), TestContext.CancellationToken);
         var result = await completion.Task;
@@ -287,7 +287,7 @@ public class ScheduledWorkflowTests
         Assert.AreEqual(scheduleId, archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<DelayedWorkflowWithInput>(), archive.Name);
-        Assert.AreEqual(WorkflowCompletionActions.ArchiveThenPurge, archive.Options.CompletionAction);
+        Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotNull(archive.MetaData);
         Assert.IsTrue(metaData.All(pair => archive.MetaData.TryGetValue(pair.Key, out var value) && pair.Value.SequenceEqual(value)));

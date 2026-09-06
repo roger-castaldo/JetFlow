@@ -216,7 +216,7 @@ public class CounterTests
         var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
 
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<EmptyActivityWorkflow, string?>(options: new() { CompletionAction=WorkflowCompletionActions.None, ErrorOnActivityFailure=true },cancellationToken: TestContext.CancellationToken);
+        await connection.RegisterWorkflowAsync<EmptyActivityWorkflow, string?>(options: new() { ErrorOnActivityFailure=true },cancellationToken: TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<EmptyActivity, string>(cancellationToken: TestContext.CancellationToken);
 
         //Act

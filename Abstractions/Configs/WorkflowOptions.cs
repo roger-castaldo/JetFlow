@@ -8,24 +8,12 @@ namespace JetFlow.Configs;
 public enum WorkflowCompletionActions
 {
     /// <summary>
-    /// Default behavior where no automatic action is taken upon workflow completion. The workflow data will remain in the system until manually archived or purged. This option allows for maximum flexibility in managing workflow records, but may require manual intervention to clean up old or completed workflows.
+    /// Default behavior specifies that the workflow should be archived before being purged. This ensures that a backup of the workflow data is retained for future reference or auditing purposes, while still allowing for eventual cleanup of completed workflows.
     /// </summary>
-    None,
+    Archive,
     /// <summary>
-    /// Specifies that the item should be archived and no further action should be taken.
+    /// Specifies that the workflow should be purged upon completion. This will permanently remove the workflow data from the system, and there will be no archive or backup retained. Use this option when you want to immediately clean up completed workflows without retaining any historical data.
     /// </summary>
-    ArchiveThenNothing,
-    /// <summary>
-    /// Specifies that items should be archived before being purged.
-    /// </summary>
-    /// <remarks>Use this option when it is necessary to retain a backup of items prior to permanent deletion.
-    /// Archiving ensures that data can be restored if needed after the purge operation.</remarks>
-    ArchiveThenPurge,
-    /// <summary>
-    /// Removes all items or data from the collection or resource, resetting it to an empty state.
-    /// </summary>
-    /// <remarks>Use this method to clear all contents. After calling this method, the collection or resource
-    /// will contain no items. Any references to previously stored items will be released if applicable.</remarks>
     Purge
 }
 
@@ -42,7 +30,7 @@ public sealed record WorkflowOptions
     /// Gets the action to perform when the workflow completes.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter<WorkflowCompletionActions>))]
-    public WorkflowCompletionActions CompletionAction { get; init; } = WorkflowCompletionActions.None;
+    public WorkflowCompletionActions CompletionAction { get; init; } = WorkflowCompletionActions.Archive;
     /// <summary>
     /// Gets the optional delay before purging items.
     /// </summary>

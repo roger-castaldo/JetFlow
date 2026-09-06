@@ -269,9 +269,7 @@ public class ActivityRetryTests
         }
     }
     [TestMethod]
-    [DataRow(WorkflowCompletionActions.ArchiveThenNothing)]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge)]
-    public async Task RetryActivitiesWithArchiving(WorkflowCompletionActions action)
+    public async Task RetryActivitiesWithArchiving()
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -285,7 +283,7 @@ public class ActivityRetryTests
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<WorkflowWithRetryForArchiving>(options: new()
         {
-            CompletionAction = action
+            CompletionAction = WorkflowCompletionActions.Archive
         }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<MultiRetryActivity>(new(), TestContext.CancellationToken);
 
@@ -311,7 +309,7 @@ public class ActivityRetryTests
         Assert.AreEqual(runId, archive.ID);
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>(), archive.Name);
-        Assert.AreEqual(action, archive.Options.CompletionAction);
+        Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.HasCount(1, archive.Steps);
         var step = archive.Steps[0];

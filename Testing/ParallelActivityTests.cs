@@ -194,7 +194,7 @@ public class ParallelActivityTests
         var objContext = jsContext.CreateObjectStoreContext();
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
-        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>(new() { CompletionAction = WorkflowCompletionActions.ArchiveThenNothing }, TestContext.CancellationToken);
+        await connection.RegisterWorkflowAsync<ParallelActivityWorkflowWithOutput>(new() { CompletionAction = WorkflowCompletionActions.Archive }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<EmptyActivityWithInputAndOutput, string, string>(emptyActivityWithInputAndOutput, TestContext.CancellationToken);
 
         //Act
@@ -228,7 +228,7 @@ public class ParallelActivityTests
         Assert.IsNull(archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>(), archive.Name);
-        Assert.AreEqual(WorkflowCompletionActions.ArchiveThenNothing, archive.Options.CompletionAction);
+        Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotEmpty(archive.Steps);
         Assert.HasCount(emptyActivityWithInputAndOutput.Inputs.Count, archive.Steps);

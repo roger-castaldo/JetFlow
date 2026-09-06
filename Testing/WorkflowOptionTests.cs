@@ -270,44 +270,19 @@ public class WorkflowOptionTests
     }
 
     [TestMethod]
-    public async Task WorkflowCompletionPostActionNone()
+    public async Task WorkflowCompletionPostActionArchive()
     {
         //Act
-        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.None);
-
-        //Assert
-        Assert.IsNotNull(completion);
-        Assert.IsNull(archive);
-        Assert.IsNull(purge);
-    }
-
-    [TestMethod]
-    public async Task WorkflowCompletionPostActionArchiveThenNothing()
-    {
-        //Act
-        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenNothing);
-
-        //Assert
-        Assert.IsNotNull(completion);
-        Assert.IsNotNull(archive);
-        Assert.IsNull(purge);
-        Assert.IsGreaterThan(completion.Timestamp, archive.Timestamp);
-    }
-
-    [TestMethod]
-    public async Task WorkflowCompletionPostActionArchiveThenPurge()
-    {
-        //Act
-        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.ArchiveThenPurge, purgeDelay: TimeSpan.FromSeconds(1));
+        var (completion, archive, purge)= await WorkflowOptionTests.ExecuteCompletionTest(WorkflowCompletionActions.Archive);
 
         //Assert
         Assert.IsNotNull(completion);
         Assert.IsNotNull(archive);
         Assert.IsNotNull(purge);
-        Assert.IsGreaterThanOrEqualTo(completion.Timestamp, archive.Timestamp);
-        Assert.IsGreaterThanOrEqualTo(archive.Timestamp, purge.Timestamp);
+        Assert.IsGreaterThan(completion.Timestamp, archive.Timestamp);
+        Assert.IsGreaterThan(archive.Timestamp, purge.Timestamp);
     }
-
+    
     [TestMethod]
     public async Task WorkflowCompletionPostActionPurge()
     {
@@ -322,7 +297,7 @@ public class WorkflowOptionTests
     }
 
     [TestMethod]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge)]
+    [DataRow(WorkflowCompletionActions.Archive)]
     [DataRow(WorkflowCompletionActions.Purge)]
     public async Task WorkflowCompletionPurgeWithDelay(WorkflowCompletionActions completionAction)
     {
@@ -335,7 +310,7 @@ public class WorkflowOptionTests
         Assert.IsNotNull(completion);
         Assert.IsNotNull(purge);
         double mid;
-        if (completionAction== WorkflowCompletionActions.ArchiveThenPurge)
+        if (completionAction== WorkflowCompletionActions.Archive)
         {
             Assert.IsNotNull(archive);
             mid = Math.Floor(Stopwatch.GetElapsedTime(archive.Timestamp).Subtract(Stopwatch.GetElapsedTime(purge.Timestamp)).TotalSeconds);

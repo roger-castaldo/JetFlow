@@ -230,7 +230,7 @@ public class ConnectionTests
         var kvStoreContext = jsContext.CreateKeyValueStoreContext();
         var withInputConfig = new WorkflowOptions()
         {
-            CompletionAction = WorkflowCompletionActions.ArchiveThenNothing
+            CompletionAction = WorkflowCompletionActions.Archive
         };
         // Act
         var connection = await Connection.CreateInstanceAsync(new(natsConnection, jsContext)

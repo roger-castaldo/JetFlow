@@ -114,9 +114,7 @@
   - [Error](#F-JetFlow-RetryTypes-Error 'JetFlow.RetryTypes.Error')
   - [Timeout](#F-JetFlow-RetryTypes-Timeout 'JetFlow.RetryTypes.Timeout')
 - [WorkflowCompletionActions](#T-JetFlow-Configs-WorkflowCompletionActions 'JetFlow.Configs.WorkflowCompletionActions')
-  - [ArchiveThenNothing](#F-JetFlow-Configs-WorkflowCompletionActions-ArchiveThenNothing 'JetFlow.Configs.WorkflowCompletionActions.ArchiveThenNothing')
-  - [ArchiveThenPurge](#F-JetFlow-Configs-WorkflowCompletionActions-ArchiveThenPurge 'JetFlow.Configs.WorkflowCompletionActions.ArchiveThenPurge')
-  - [None](#F-JetFlow-Configs-WorkflowCompletionActions-None 'JetFlow.Configs.WorkflowCompletionActions.None')
+  - [Archive](#F-JetFlow-Configs-WorkflowCompletionActions-Archive 'JetFlow.Configs.WorkflowCompletionActions.Archive')
   - [Purge](#F-JetFlow-Configs-WorkflowCompletionActions-Purge 'JetFlow.Configs.WorkflowCompletionActions.Purge')
 - [WorkflowExecutionRequest](#T-JetFlow-WorkflowExecutionRequest 'JetFlow.WorkflowExecutionRequest')
   - [MetaData](#P-JetFlow-WorkflowExecutionRequest-MetaData 'JetFlow.WorkflowExecutionRequest.MetaData')
@@ -1823,43 +1821,19 @@ JetFlow.Configs
 
 Specifies the actions to take when a workflow completes, such as archiving or purging the workflow data. This allows for automated cleanup and management of workflow records based on the desired retention policies.
 
-<a name='F-JetFlow-Configs-WorkflowCompletionActions-ArchiveThenNothing'></a>
-### ArchiveThenNothing `constants`
+<a name='F-JetFlow-Configs-WorkflowCompletionActions-Archive'></a>
+### Archive `constants`
 
 ##### Summary
 
-Specifies that the item should be archived and no further action should be taken.
-
-<a name='F-JetFlow-Configs-WorkflowCompletionActions-ArchiveThenPurge'></a>
-### ArchiveThenPurge `constants`
-
-##### Summary
-
-Specifies that items should be archived before being purged.
-
-##### Remarks
-
-Use this option when it is necessary to retain a backup of items prior to permanent deletion.
-Archiving ensures that data can be restored if needed after the purge operation.
-
-<a name='F-JetFlow-Configs-WorkflowCompletionActions-None'></a>
-### None `constants`
-
-##### Summary
-
-Default behavior where no automatic action is taken upon workflow completion. The workflow data will remain in the system until manually archived or purged. This option allows for maximum flexibility in managing workflow records, but may require manual intervention to clean up old or completed workflows.
+Default behavior specifies that the workflow should be archived before being purged. This ensures that a backup of the workflow data is retained for future reference or auditing purposes, while still allowing for eventual cleanup of completed workflows.
 
 <a name='F-JetFlow-Configs-WorkflowCompletionActions-Purge'></a>
 ### Purge `constants`
 
 ##### Summary
 
-Removes all items or data from the collection or resource, resetting it to an empty state.
-
-##### Remarks
-
-Use this method to clear all contents. After calling this method, the collection or resource
-will contain no items. Any references to previously stored items will be released if applicable.
+Specifies that the workflow should be purged upon completion. This will permanently remove the workflow data from the system, and there will be no archive or backup retained. Use this option when you want to immediately clean up completed workflows without retaining any historical data.
 
 <a name='T-JetFlow-WorkflowExecutionRequest'></a>
 ## WorkflowExecutionRequest `type`

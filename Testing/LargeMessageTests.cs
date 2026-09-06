@@ -142,7 +142,7 @@ public class LargeMessageTests
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         var largeIOActivity = new LargeIOActivity(natsConnection.ServerInfo);
-        await connection.RegisterWorkflowAsync<LargeMessageWorkflow, string>(new() { CompletionAction = WorkflowCompletionActions.ArchiveThenNothing}, TestContext.CancellationToken);
+        await connection.RegisterWorkflowAsync<LargeMessageWorkflow, string>(new() { CompletionAction = WorkflowCompletionActions.Archive}, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<LargeIOActivity, string, string>(largeIOActivity, TestContext.CancellationToken);
 
         //Act
@@ -175,7 +175,7 @@ public class LargeMessageTests
         Assert.IsNull(archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<LargeMessageWorkflow>(), archive.Name);
-        Assert.AreEqual(WorkflowCompletionActions.ArchiveThenNothing, archive.Options.CompletionAction);
+        Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotEmpty(archive.Steps);
         Assert.AreEqual(start, archive.Arguments?.ToString());
@@ -186,9 +186,7 @@ public class LargeMessageTests
     }
 
     [TestMethod]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge)]
-    [DataRow(WorkflowCompletionActions.Purge)]
-    public async Task ExecuteLargeIOActivitiesThenPurge(WorkflowCompletionActions completionAction)
+    public async Task ExecuteLargeIOActivitiesThenPurge()
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -204,7 +202,7 @@ public class LargeMessageTests
         var connectionOptions = new ConnectionOptions(natsConnection, jsContext);
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         var largeIOActivity = new LargeIOActivity(natsConnection.ServerInfo);
-        await connection.RegisterWorkflowAsync<LargeMessageWorkflow, string>(new() { CompletionAction = completionAction }, TestContext.CancellationToken);
+        await connection.RegisterWorkflowAsync<LargeMessageWorkflow, string>(new() { CompletionAction = WorkflowCompletionActions.Purge }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityWithReturnAsync<LargeIOActivity, string, string>(largeIOActivity, TestContext.CancellationToken);
 
         //Act

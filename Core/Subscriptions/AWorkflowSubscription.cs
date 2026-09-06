@@ -105,7 +105,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         if (config is null)
             throw new InvalidOperationException($"Workflow configuration not found for workflow {message.WorkflowName} with id {message.WorkflowId}");
         var options = InternalsSerializer.DeserializeWorkflowOptions(config.Data!)!;
-        if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenNothing) || Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge))
+        if (Equals(options.CompletionAction, WorkflowCompletionActions.Archive))
         {
             await ServiceConnection.ArchiveStore.PutAsync(
                 $"{message.WorkflowName}/{message.WorkflowId}",
@@ -122,8 +122,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             );
             await ServiceConnection.MarkWorkflowArchived(message, CancellationToken);
         }
-        if (Equals(options.CompletionAction, WorkflowCompletionActions.ArchiveThenPurge) || Equals(options.CompletionAction, WorkflowCompletionActions.Purge))
-            await ServiceConnection.MarkWorkflowForPurge(message, options.PurgeDelay, CancellationToken);
+        await ServiceConnection.MarkWorkflowForPurge(message, options.PurgeDelay, CancellationToken);
     }
 
     protected abstract ValueTask HandleWorkflowEventAsync(WorkflowContext context);

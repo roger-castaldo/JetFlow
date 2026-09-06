@@ -71,8 +71,8 @@ public class PerformanceRecordTests
         var natsConnection = new NatsConnection(options);
         var jsContext = new NatsJSContext(natsConnection);
         var connection = await Connection.CreateInstanceAsync(new(natsConnection, jsContext));
-        await connection.RegisterWorkflowAsync<TestRecordedWorkflowSuccess>(options: new() { CompletionAction = Configs.WorkflowCompletionActions.Purge}, TestContext.CancellationToken);
-        await connection.RegisterWorkflowAsync<TestRecordedWorkflowFailure>(options: new() { CompletionAction = Configs.WorkflowCompletionActions.None, ErrorOnActivityFailure = true, ErrorOnActivityTimeout=true }, TestContext.CancellationToken);
+        await connection.RegisterWorkflowAsync<TestRecordedWorkflowSuccess>(options: new() { }, TestContext.CancellationToken);
+        await connection.RegisterWorkflowAsync<TestRecordedWorkflowFailure>(options: new() { ErrorOnActivityFailure = true, ErrorOnActivityTimeout=true }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<TestRecordedActivity>(cancellationToken: TestContext.CancellationToken);
         var observationConnection = await ObservationConnection.CreateInstanceAsync(new(natsConnection));
         await observationConnection.AddDefaultNamespaceAsync();
@@ -114,7 +114,7 @@ public class PerformanceRecordTests
         Assert.AreEqual(2, errorRecords.Sum(wr => wr.Started));
         Assert.AreEqual(0, errorRecords.Sum(wr => wr.Completed));
         Assert.AreEqual(2, errorRecords.Sum(wr => wr.Failed));
-        Assert.AreEqual(0, errorRecords.Sum(wr => wr.Purged));
+        Assert.AreEqual(2, errorRecords.Sum(wr => wr.Purged));
         Assert.AreEqual(5, errorRecords.Sum(wr => wr.QueueLatencies.Count()));
 
         Assert.IsTrue(activityRecords.All(ar => Equals(ar.Name, NameHelper.GetActivityName<TestRecordedActivity>())));

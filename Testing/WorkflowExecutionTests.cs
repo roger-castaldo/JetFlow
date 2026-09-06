@@ -448,11 +448,9 @@ public class WorkflowExecutionTests
     }
 
     [TestMethod]
-    [DataRow(WorkflowCompletionActions.Purge, null)]
-    [DataRow(WorkflowCompletionActions.Purge, TestNamespace)]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge, null)]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge, TestNamespace)]
-    public async Task ExecuteWorkflowWithPurgeOnCompletion(WorkflowCompletionActions action, string? namespaceValue)
+    [DataRow(null)]
+    [DataRow(TestNamespace)]
+    public async Task ExecuteWorkflowWithPurgeOnCompletion(string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -473,7 +471,7 @@ public class WorkflowExecutionTests
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
         {
-            CompletionAction = action
+            CompletionAction = WorkflowCompletionActions.Purge
         }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<NoActionActivity>(new(), CancellationToken.None);
         await connection.RegisterWorkflowActivityWithReturnAsync<NoActionActivityWithReturn, string>(noActWithReturn, CancellationToken.None);
@@ -522,11 +520,9 @@ public class WorkflowExecutionTests
     }
 
     [TestMethod]
-    [DataRow(WorkflowCompletionActions.ArchiveThenNothing, null)]
-    [DataRow(WorkflowCompletionActions.ArchiveThenNothing, TestNamespace)]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge, null)]
-    [DataRow(WorkflowCompletionActions.ArchiveThenPurge, TestNamespace)]
-    public async Task ExecuteWorkflowWithArchiveOnCompletion(WorkflowCompletionActions action, string? namespaceValue)
+    [DataRow(null)]
+    [DataRow(TestNamespace)]
+    public async Task ExecuteWorkflowWithArchiveOnCompletion(string? namespaceValue)
     {
         Assert.IsNotNull(natsTestHarness);
         //Arrange
@@ -552,7 +548,7 @@ public class WorkflowExecutionTests
         var connection = await Connection.CreateInstanceAsync(connectionOptions);
         await connection.RegisterWorkflowAsync<AllActivityResultsWorkflow>(options: new()
         {
-            CompletionAction = action
+            CompletionAction = WorkflowCompletionActions.Archive
         }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<NoActionActivity>(new(), CancellationToken.None);
         await connection.RegisterWorkflowActivityWithReturnAsync<NoActionActivityWithReturn, string>(noActWithReturn, CancellationToken.None);
@@ -586,7 +582,7 @@ public class WorkflowExecutionTests
         Assert.IsNull(archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<AllActivityResultsWorkflow>(), archive.Name);
-        Assert.AreEqual(action, archive.Options.CompletionAction);
+        Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotNull(archive.MetaData);
         Assert.IsTrue(metaData.All(pair => archive.MetaData.TryGetValue(pair.Key, out var value) && pair.Value.SequenceEqual(value)));
