@@ -1,5 +1,4 @@
 ﻿using JetFlow.Configs;
-using JetFlow.Data;
 using JetFlow.Helpers;
 using JetFlow.Serializers;
 using Microsoft.Extensions.DependencyInjection;

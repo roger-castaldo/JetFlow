@@ -5,7 +5,6 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
 using NATS.Client.ObjectStore;
-using System.Text;
 
 namespace JetFlow;
 

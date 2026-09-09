@@ -1,8 +1,18 @@
 <Solution>
+  <Folder Name="/Sample/">
+    <Project Path="Sample/AppHost/AppHost.csproj" Id="b0c75076-417e-44d5-b069-d2ca4820131a" />
+    <Project Path="Sample/WebUI/WebUI.csproj" Id="fbfc3d3f-5d2d-4cd5-981c-3c70c39f4a40" />
+  </Folder>
+  <Folder Name="/UI/">
+    <Project Path="UI/Abstractions/UI.Abstractions.csproj" Id="ba49a6db-1f39-4a4c-ae33-7e4b09e9b694" />
+    <Project Path="UI/Core/UI.Core.csproj" Id="180c2870-77e0-4df3-b15d-7d3844a77dd3" />
+  </Folder>
+  <Folder Name="/UI/Databases/">
+    <Project Path="UI/Databases/PostgreSql/PostgreSql.csproj" Id="34791066-ff06-4fc3-81e2-a78bb176f421" />
+  </Folder>
   <Project Path="Abstractions/Abstractions.csproj" />
   <Project Path="Common/Common.csproj" Id="dd63676d-090f-4735-8b5f-497dfcd4a433" />
   <Project Path="Core/Core.csproj" />
   <Project Path="Observability/Observability.csproj" Id="5d1bdb0a-d9d7-454a-882c-e600382d5715" />
-  <Project Path="Sample/Sample.csproj" Id="7a8e6f6d-656e-4040-9909-4f75149cf527" />
   <Project Path="Testing/JetFlow.Testing.csproj" Id="3e2218b2-6de3-4047-bd7f-52a4c10af586" />
 </Solution>

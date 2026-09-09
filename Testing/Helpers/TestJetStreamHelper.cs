@@ -1,6 +1,5 @@
 ﻿using JetFlow.Helpers;
 using NATS.Client.JetStream;
-using NATS.Client.JetStream.Models;
 
 namespace JetFlow.Testing.Helpers;
 

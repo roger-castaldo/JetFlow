@@ -18,6 +18,14 @@ internal record EventMessage
     private static readonly Regex activitySubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex purgeWorkflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?purge\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
 
+    public static (string workflowName, string instance) ExtractWorkflowFromSubject(string subject)
+    {
+        var match = workflowSubjectRegex.Match(subject);
+        if (match.Success)
+            return (match.Groups["workflowName"].Value, match.Groups["instance"].Value);
+        throw new ArgumentException(nameof(subject));
+    }
+
     public static async ValueTask<EventMessage> CreateMessageAsync(INatsObjStore largeMessageStore, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
         => new(
             msg.Subject, 

@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Import Project="../../../Shared.props" />
+
+	<PropertyGroup>
+		<AssemblyName>JetFlow.UI.PostgreSql</AssemblyName>
+		<RootNamespace>JetFlow.UI</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="init.sql" />
+	  <None Remove="postgresql.sql" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="init.sql" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Npgsql" Version="10.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Abstractions\UI.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

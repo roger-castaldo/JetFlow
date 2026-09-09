@@ -3,10 +3,6 @@ using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
-using NATS.Client.JetStream.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace JetFlow.Testing.Observation;
 

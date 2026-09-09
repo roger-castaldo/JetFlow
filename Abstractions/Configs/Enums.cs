@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JetFlow.Configs;
+﻿namespace JetFlow.Configs;
 
 /// <summary>
 /// Specifies the compression type to be used for compressing message content when sending messages to NATS. The available options are:

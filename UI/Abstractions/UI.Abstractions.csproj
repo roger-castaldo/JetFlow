@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Import Project="../../Shared.props" />
+
+	<PropertyGroup>
+		<AssemblyName>JetFlow.UI.Abstractions</AssemblyName>
+		<RootNamespace>JetFlow.UI</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Abstractions\Abstractions.csproj" />
+	</ItemGroup>
+
+
+</Project>
