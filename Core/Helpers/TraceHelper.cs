@@ -65,13 +65,13 @@ internal static class TraceHelper
 
     private static IEnumerable<KeyValuePair<string, object?>> ExtractWorkflowTags(EventMessage message)
         => [
-            new(TraceConstants.WorkflowNameTag, message.WorkflowName),
+            new(TraceConstants.WorkflowNameTag, message.WorkflowSubjectName),
             new(TraceConstants.WorkflowIdTag, message.WorkflowId)
         ];
 
     private static IEnumerable<KeyValuePair<string, object?>> ExtractWorkflowActivityTags(EventMessage message)
         => [ .. ExtractWorkflowTags(message),
-            new(TraceConstants.ActivityNameTag, message.ActivityName),
+            new(TraceConstants.ActivityNameTag, message.ActivitySubjectName),
             new(TraceConstants.ActivityIdTag, message.ActivityID)
         ];
 

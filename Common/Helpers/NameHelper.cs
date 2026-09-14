@@ -7,11 +7,11 @@ namespace JetFlow.Helpers;
 
 internal static class NameHelper
 {
-    private static readonly ConcurrentDictionary<Type, string> correctedNames = new();
+    private static readonly ConcurrentDictionary<Type, (string cleanedName,string rawName)> correctedNames = new();
 
-    public static string GetWorkflowName<TWorkflow>()
+    public static (string cleanedName, string rawName) GetWorkflowName<TWorkflow>()
     {
-        if (!correctedNames.TryGetValue(typeof(TWorkflow), out var name))
+        if (!correctedNames.TryGetValue(typeof(TWorkflow), out var pair))
         {
             var type = typeof(TWorkflow);
             var resolved = GetWorkflowNameFromType(type)
@@ -20,10 +20,10 @@ internal static class NameHelper
                     .Select(i => GetWorkflowNameFromType(i))
                     .FirstOrDefault(n => n is not null)
                 ?? TraceBaseWorkflowTypeName(type);
-            name = resolved is null ? CleanName(type.Name) : CleanName(resolved);
-            correctedNames.TryAdd(type, name);
+            pair = (CleanName(resolved??type.Name), resolved??type.Name);
+            correctedNames.TryAdd(type, pair);
         }
-        return name;
+        return pair;
     }
 
     private static string? TraceBaseWorkflowTypeName(Type type)
@@ -66,9 +66,9 @@ internal static class NameHelper
         => typeof(IWorkflow).IsAssignableFrom(t)
            || t.GetInterfaces().Any(i => IsWorkflowInterface(i));
 
-    public static string GetActivityName<TActivity>()
+    public static (string cleanedName, string rawName) GetActivityName<TActivity>()
     {
-        if (!correctedNames.TryGetValue(typeof(TActivity), out var name))
+        if (!correctedNames.TryGetValue(typeof(TActivity), out var pair))
         {
             var type = typeof(TActivity);
             var resolved = GetActivityNameFromType(type)
@@ -77,10 +77,10 @@ internal static class NameHelper
                     .Select(i => GetActivityNameFromType(i))
                     .FirstOrDefault(n => n is not null)
                 ?? TraceBaseActivityTypeName(type);
-            name = resolved is null ? CleanName(type.Name) : CleanName(resolved);
-            correctedNames.TryAdd(type, name);
+            pair = (CleanName(resolved??type.Name), resolved??type.Name);
+            correctedNames.TryAdd(type, pair);
         }
-        return name;
+        return pair;
     }
 
     private static string? TraceBaseActivityTypeName(Type type)

@@ -20,7 +20,7 @@ internal static class WorkflowHelper
         WorkflowStep[] Steps
     );
 
-    private static async ValueTask<ExtractedWorkflow> ExtraceWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
+    private static async ValueTask<ExtractedWorkflow> ExtractWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
         string workflowName, string workflowId, CancellationToken cancellationToken)
     {
         Guid? schedulerId = null;
@@ -145,7 +145,7 @@ internal static class WorkflowHelper
     public static async ValueTask<ArchivedWorkflow> ProduceArchivedWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
         string workflowName, string workflowId, CancellationToken cancellationToken)
     {
-        var extractedData = await ExtraceWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, workflowName, workflowId, cancellationToken);
+        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, workflowName, workflowId, cancellationToken);
         return new ArchivedWorkflow(
             Guid.Parse(workflowId),
             extractedData.SchedulerId,
@@ -164,7 +164,7 @@ internal static class WorkflowHelper
     public static async ValueTask<ActiveWorkflow> ProduceActiveWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
         string workflowName, string workflowId, CancellationToken cancellationToken)
     {
-        var extractedData = await ExtraceWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, workflowName, workflowId, cancellationToken);
+        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, workflowName, workflowId, cancellationToken);
         return new ActiveWorkflow(
             Guid.Parse(workflowId),
             extractedData.SchedulerId,

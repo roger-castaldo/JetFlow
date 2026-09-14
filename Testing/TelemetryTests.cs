@@ -66,7 +66,7 @@ public class TelemetryTests
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
             ActivityStarted = _ => { },
             ActivityStopped = activity => {
-                if(activity.Tags.Any(t=>Equals(t.Key,TraceConstants.WorkflowNameTag) && Equals(t.Value, name)))
+                if(activity.Tags.Any(t=>Equals(t.Key,TraceConstants.WorkflowNameTag) && Equals(t.Value, name.rawName)))
                 {
                     capturedActivities.Add(activity);
                 }
@@ -105,15 +105,15 @@ public class TelemetryTests
         Assert.AreEqual(ActivityKind.Internal, start.Kind);
         Assert.HasCount(2, start.Tags);
         Assert.IsTrue(start.Tags.All(t =>
-            (Equals(t.Key, TraceConstants.WorkflowNameTag) && Equals(t.Value, name))
+            (Equals(t.Key, TraceConstants.WorkflowNameTag) && Equals(t.Value, name.rawName))
             || (Equals(t.Key, TraceConstants.WorkflowIdTag) && Equals(t.Value, runId.ToString()))
         ));
         Assert.HasCount(2, start.Events);
         Assert.IsTrue(start.Events.All(e =>
             Equals(e.Name, TraceConstants.MessagePublished)
             && (
-                e.Tags.All(t=>Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowConfigure(name, runId.ToString())))
-                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStart(name, runId.ToString())))
+                e.Tags.All(t=>Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowConfigure(name.cleanedName, runId.ToString())))
+                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStart(name.cleanedName, runId.ToString())))
             )
         ));
 
@@ -122,17 +122,17 @@ public class TelemetryTests
         Assert.AreEqual(ActivityKind.Producer, stepStart.Kind);
         Assert.HasCount(4, stepStart.Tags);
         Assert.IsTrue(stepStart.Tags.All(t =>
-            (Equals(t.Key, TraceConstants.WorkflowNameTag) && Equals(t.Value, name))
+            (Equals(t.Key, TraceConstants.WorkflowNameTag) && Equals(t.Value, name.rawName))
             || (Equals(t.Key, TraceConstants.WorkflowIdTag) && Equals(t.Value, runId.ToString()))
-            || (Equals(t.Key, TraceConstants.ActivityNameTag) && Equals(t.Value, timeoutActivityName))
+            || (Equals(t.Key, TraceConstants.ActivityNameTag) && Equals(t.Value, timeoutActivityName.rawName))
             || Equals(t.Key, TraceConstants.ActivityIdTag)
         ));
         Assert.HasCount(2, stepStart.Events);
         Assert.IsTrue(stepStart.Events.All(e =>
             Equals(e.Name, TraceConstants.MessagePublished)
             && (
-                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepStart(name, runId.ToString(), timeoutActivityName)))
-                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.ActivityStart(timeoutActivityName, name, runId.ToString(), "*")))
+                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepStart(name.cleanedName, runId.ToString(), timeoutActivityName.cleanedName)))
+                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.ActivityStart(timeoutActivityName.cleanedName, name.cleanedName, runId.ToString(), "*")))
             )
         ));
         Assert.HasCount(1, stepStart.Links);
@@ -145,14 +145,14 @@ public class TelemetryTests
         Assert.AreEqual(ActivityKind.Consumer, activityStart.Kind);
         Assert.AreEqual(ActivityStatusCode.Error, activityStart.Status);
         Assert.AreEqual("Activity execution timed out", activityStart.StatusDescription);
-        Assert.AreEqual(name, activityStart.GetTagItem(TraceConstants.WorkflowNameTag));
+        Assert.AreEqual(name.rawName, activityStart.GetTagItem(TraceConstants.WorkflowNameTag));
         Assert.AreEqual(runId.ToString(), activityStart.GetTagItem(TraceConstants.WorkflowIdTag));
-        Assert.AreEqual(timeoutActivityName, activityStart.GetTagItem(TraceConstants.ActivityNameTag));
+        Assert.AreEqual(timeoutActivityName.rawName, activityStart.GetTagItem(TraceConstants.ActivityNameTag));
         Assert.IsNotNull(activityStart.GetTagItem(TraceConstants.ActivityIdTag));
         Assert.IsNotNull(activityStart.GetTagItem(TraceConstants.ActivityTimeoutIdTag));
         Assert.HasCount(3, activityStart.Events);
         Assert.IsTrue(activityStart.Events.All(e =>
-            (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepEnd(name, runId.ToString(), timeoutActivityName))))
+            (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepEnd(name.cleanedName, runId.ToString(), timeoutActivityName.cleanedName))))
             || (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.ActiveActivitiesCounter)))
             || (Equals(e.Name, TraceConstants.MessageDecoded) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageContentHeaderTag) && Equals(t.Value, "application/json")))
         ));
@@ -166,17 +166,17 @@ public class TelemetryTests
         Assert.AreEqual(ActivityKind.Producer, stepStart.Kind);
         Assert.HasCount(4, stepStart.Tags);
         Assert.IsTrue(stepStart.Tags.All(t =>
-            (Equals(t.Key, TraceConstants.WorkflowNameTag) && Equals(t.Value, name))
+            (Equals(t.Key, TraceConstants.WorkflowNameTag) && Equals(t.Value, name.rawName))
             || (Equals(t.Key, TraceConstants.WorkflowIdTag) && Equals(t.Value, runId.ToString()))
-            || (Equals(t.Key, TraceConstants.ActivityNameTag) && Equals(t.Value, notImplementedName))
+            || (Equals(t.Key, TraceConstants.ActivityNameTag) && Equals(t.Value, notImplementedName.rawName))
             || Equals(t.Key, TraceConstants.ActivityIdTag)
         ));
         Assert.HasCount(2, stepStart.Events);
         Assert.IsTrue(stepStart.Events.All(e =>
             Equals(e.Name, TraceConstants.MessagePublished)
             && (
-                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepStart(name, runId.ToString(), notImplementedName)))
-                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.ActivityStart(notImplementedName, name, runId.ToString(), "*")))
+                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepStart(name.cleanedName, runId.ToString(), notImplementedName.cleanedName)))
+                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.ActivityStart(notImplementedName.cleanedName, name.cleanedName, runId.ToString(), "*")))
             )
         ));
         Assert.HasCount(1, stepStart.Links);
@@ -189,13 +189,13 @@ public class TelemetryTests
         Assert.AreEqual(ActivityKind.Consumer, activityStart.Kind);
         Assert.AreEqual(ActivityStatusCode.Error, activityStart.Status);
         Assert.AreEqual(new NotImplementedException().Message, activityStart.StatusDescription);
-        Assert.AreEqual(name, activityStart.GetTagItem(TraceConstants.WorkflowNameTag));
+        Assert.AreEqual(name.rawName, activityStart.GetTagItem(TraceConstants.WorkflowNameTag));
         Assert.AreEqual(runId.ToString(), activityStart.GetTagItem(TraceConstants.WorkflowIdTag));
-        Assert.AreEqual(notImplementedName, activityStart.GetTagItem(TraceConstants.ActivityNameTag));
+        Assert.AreEqual(notImplementedName.rawName, activityStart.GetTagItem(TraceConstants.ActivityNameTag));
         Assert.IsNotNull(activityStart.GetTagItem(TraceConstants.ActivityIdTag));
         Assert.HasCount(2, activityStart.Events);
         Assert.IsTrue(activityStart.Events.All(e =>
-            Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepEnd(name, runId.ToString(), notImplementedName)))
+            Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepEnd(name.cleanedName, runId.ToString(), notImplementedName.cleanedName)))
             || (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.ActiveActivitiesCounter)))
         ));
         Assert.HasCount(1, activityStart.Links);
@@ -208,15 +208,15 @@ public class TelemetryTests
         Assert.AreEqual(ActivityKind.Producer, delayActivity.Kind);
         Assert.HasCount(2, delayActivity.Tags);
         Assert.IsTrue(delayActivity.Tags.All(t =>
-            (Equals(t.Key, TraceConstants.WorkflowNameTag) && Equals(t.Value, name))
+            (Equals(t.Key, TraceConstants.WorkflowNameTag) && Equals(t.Value, name.rawName))
             || (Equals(t.Key, TraceConstants.WorkflowIdTag) && Equals(t.Value, runId.ToString()))
         ));
         Assert.HasCount(2, delayActivity.Events);
         Assert.IsTrue(delayActivity.Events.All(e =>
             Equals(e.Name, TraceConstants.MessagePublished)
             && (
-                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowDelayStart(name, runId.ToString())))
-                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowTimer(name, runId.ToString())))
+                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowDelayStart(name.cleanedName, runId.ToString())))
+                || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowTimer(name.cleanedName, runId.ToString())))
             )
         ));
         Assert.HasCount(1, delayActivity.Links);

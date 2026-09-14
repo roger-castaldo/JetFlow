@@ -56,7 +56,7 @@ public class ScheduledWorkflowTests
         //Act
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<CronWorkflowNoInput>(), "*"), cancellationToken: TestContext.CancellationToken))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<CronWorkflowNoInput>().cleanedName, "*"), cancellationToken: TestContext.CancellationToken))
             {
                 cnt++;
                 if (cnt>1)
@@ -108,7 +108,7 @@ public class ScheduledWorkflowTests
         //Act
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<CronWorkflowWithInput>(), "*"), cancellationToken: TestContext.CancellationToken))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<CronWorkflowWithInput>().cleanedName, "*"), cancellationToken: TestContext.CancellationToken))
             {
                 cnt++;
                 if (cnt>1)
@@ -262,7 +262,7 @@ public class ScheduledWorkflowTests
         //Act
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<DelayedWorkflowWithInput>(), "*"), cancellationToken: TestContext.CancellationToken))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<DelayedWorkflowWithInput>().cleanedName, "*"), cancellationToken: TestContext.CancellationToken))
             {
                 completion.TrySetResult(msg);
             }
@@ -286,7 +286,7 @@ public class ScheduledWorkflowTests
         Assert.AreEqual(Guid.Parse(runId), archive.ID);
         Assert.AreEqual(scheduleId, archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
-        Assert.AreEqual(NameHelper.GetWorkflowName<DelayedWorkflowWithInput>(), archive.Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<DelayedWorkflowWithInput>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotNull(archive.MetaData);

@@ -40,23 +40,23 @@ internal class WorkflowContext
     {
         await using var enumerable = await serviceConnection.QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName,
                 false,
-                subjectMapper.WorkflowConfigure(message.WorkflowName, message.WorkflowId),
-                subjectMapper.WorkflowStart(message.WorkflowName, message.WorkflowId),
-                subjectMapper.WorkflowEnd(message.WorkflowName, message.WorkflowId),
-                subjectMapper.WorkflowDelayEnd(message.WorkflowName, message.WorkflowId),
-                subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*")
+                subjectMapper.WorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId),
+                subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId),
+                subjectMapper.WorkflowEnd(message.WorkflowSubjectName, message.WorkflowId),
+                subjectMapper.WorkflowDelayEnd(message.WorkflowSubjectName, message.WorkflowId),
+                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*")
             );
         var msgs = new List<INatsJSMsg<byte[]>>();
         INatsJSMsg<byte[]>? startMessage = null;
         WorkflowOptions? options = null;
         await foreach(var msg in enumerable)
         {
-            if (Equals(msg.Subject, subjectMapper.WorkflowConfigure(message.WorkflowName, message.WorkflowId)))
+            if (Equals(msg.Subject, subjectMapper.WorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId)))
             {
                 options = InternalsSerializer.DeserializeWorkflowOptions(msg.Data!);
                 continue;
             }
-            if (Equals(subjectMapper.WorkflowStart(message.WorkflowName, message.WorkflowId), msg.Subject))
+            if (Equals(subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId), msg.Subject))
                 startMessage=msg;
             else
                 msgs.Add(msg);
@@ -73,20 +73,20 @@ internal class WorkflowContext
             return null;
         var result = messages.ElementAt(index);
         index++;
-        if (Equals(result.Subject, subjectMapper.WorkflowEnd(message.WorkflowName, message.WorkflowId)))
+        if (Equals(result.Subject, subjectMapper.WorkflowEnd(message.WorkflowSubjectName, message.WorkflowId)))
             throw new WorkflowEndedException();
         return result;
     }
 
     private async ValueTask<EventMessage?> GetNextActivityMessageAsync<TActivity>(CancellationToken cancellationToken)
     {
-        var name = typeof(TActivity).Name;
+        var name = NameHelper.GetActivityName<TActivity>();
         var msg = GetNextMessage();
         if (msg == null)
             return null;
         var result = await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, msg, cancellationToken);
-        if (!Equals(result.ActivityName, name))    
-            throw new InvalidStepException(name, result.ActivityName??string.Empty);
+        if (!Equals(result.ActivityName, name.rawName))    
+            throw new InvalidStepException(name.rawName, result.ActivityName??string.Empty);
         activityIndex++;
         return result;
     }

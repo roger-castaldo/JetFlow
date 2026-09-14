@@ -23,8 +23,8 @@ internal class WorkflowState : IWorkflowState
         await using var query = await serviceConnection.QueryStreamAsync(
             subjectMapper.WorkflowEventsStreamsName,
             false,
-            subjectMapper.WorkflowStepStart(message.WorkflowName, message.WorkflowId, "*"),
-            subjectMapper.WorkflowStepEnd(message.WorkflowName, message.WorkflowId, "*")
+            subjectMapper.WorkflowStepStart(message.WorkflowSubjectName, message.WorkflowId, "*"),
+            subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*")
         );
         await foreach (var msg in query)
         {
@@ -33,15 +33,15 @@ internal class WorkflowState : IWorkflowState
                 break;
             if (Equals(eventMessage.WorkflowEventType, WorkflowEventTypes.StepEnd))
             {
-                if (!messages.TryGetValue(eventMessage.ActivityName!, out var msgs))
-                    messages.Add(eventMessage.ActivityName!, [eventMessage]);
+                if (!messages.TryGetValue(eventMessage.ActivitySubjectName!, out var msgs))
+                    messages.Add(eventMessage.ActivitySubjectName!, [eventMessage]);
                 else
                 {
-                    messages.Remove(eventMessage.ActivityName!);
+                    messages.Remove(eventMessage.ActivitySubjectName!);
                     if (Equals(msgs.First().ActivityID, eventMessage.ActivityID))
-                        messages.Add(eventMessage.ActivityName!, msgs.Append(eventMessage).OrderBy(m => m.ParallelActivityIndex));
+                        messages.Add(eventMessage.ActivitySubjectName!, msgs.Append(eventMessage).OrderBy(m => m.ParallelActivityIndex));
                     else
-                        messages.Add(eventMessage.ActivityName!, [eventMessage]);
+                        messages.Add(eventMessage.ActivitySubjectName!, [eventMessage]);
                 }
             }
         }
@@ -52,7 +52,7 @@ internal class WorkflowState : IWorkflowState
 
     ValueTask<IEnumerable<TValue?>?> IWorkflowState.GetActivityResultValueAsync<TWorkflowActivity, TValue>() 
         where TValue : default
-        => ((IWorkflowState)this).GetActivityResultValueAsync<TValue>(NameHelper.GetActivityName<TWorkflowActivity>());
+        => ((IWorkflowState)this).GetActivityResultValueAsync<TValue>(NameHelper.GetActivityName<TWorkflowActivity>().rawName);
 
     async ValueTask<IEnumerable<TValue?>?> IWorkflowState.GetActivityResultValueAsync<TValue>(string activityName) where TValue : default
     {

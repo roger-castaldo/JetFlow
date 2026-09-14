@@ -180,28 +180,28 @@ public class ConnectionTests
         await ((IAsyncDisposable)connection).DisposeAsync();
 
         //Verify
-        var activityConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>()}", TestContext.CancellationToken);
+        var activityConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(activityConsumer);
-        Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>()}", activityConsumer.Info.Config.DurableName);
-        Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>(), "*", "*", "*"), activityConsumer.Info.Config.FilterSubject);
+        Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>().cleanedName}", activityConsumer.Info.Config.DurableName);
+        Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>().cleanedName, "*", "*", "*"), activityConsumer.Info.Config.FilterSubject);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityConsumer.Info.Config.AckPolicy);
 
-        var activityWithInputConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>()}", TestContext.CancellationToken);
+        var activityWithInputConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(activityWithInputConsumer);
-        Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>()}", activityWithInputConsumer.Info.Config.DurableName);
-        Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>(), "*", "*", "*"), activityWithInputConsumer.Info.Config.FilterSubject);
+        Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>().cleanedName}", activityWithInputConsumer.Info.Config.DurableName);
+        Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>().cleanedName, "*", "*", "*"), activityWithInputConsumer.Info.Config.FilterSubject);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityWithInputConsumer.Info.Config.AckPolicy);
 
-        var activityWithReturnConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>()}", TestContext.CancellationToken);
+        var activityWithReturnConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(activityWithReturnConsumer);
-        Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>()}", activityWithReturnConsumer.Info.Config.DurableName);
-        Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>(), "*", "*", "*"), activityWithReturnConsumer.Info.Config.FilterSubject);
+        Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>().cleanedName}", activityWithReturnConsumer.Info.Config.DurableName);
+        Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>().cleanedName, "*", "*", "*"), activityWithReturnConsumer.Info.Config.FilterSubject);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityWithReturnConsumer.Info.Config.AckPolicy);
 
-        var activityWithInputWithReturnConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>()}", TestContext.CancellationToken);
+        var activityWithInputWithReturnConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(activityWithInputWithReturnConsumer);
-        Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>()}", activityWithInputWithReturnConsumer.Info.Config.DurableName);
-        Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>(), "*", "*", "*"), activityWithInputWithReturnConsumer.Info.Config.FilterSubject);
+        Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>().cleanedName}", activityWithInputWithReturnConsumer.Info.Config.DurableName);
+        Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>().cleanedName, "*", "*", "*"), activityWithInputWithReturnConsumer.Info.Config.FilterSubject);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityWithInputWithReturnConsumer.Info.Config.AckPolicy);
     }
 
@@ -245,43 +245,43 @@ public class ConnectionTests
         await ((IAsyncDisposable)connection).DisposeAsync();
 
         //Verify
-        var workflowConsumer = await jsContext.GetConsumerAsync(subjectMapper.WorkflowEventsStreamsName, $"wfr_{NameHelper.GetWorkflowName<WorkflowWithNoInput>()}", TestContext.CancellationToken);
+        var workflowConsumer = await jsContext.GetConsumerAsync(subjectMapper.WorkflowEventsStreamsName, $"wfr_{NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(workflowConsumer);
-        Assert.AreEqual($"wfr_{NameHelper.GetWorkflowName<WorkflowWithNoInput>()}", workflowConsumer.Info.Config.DurableName);
+        Assert.AreEqual($"wfr_{NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName}", workflowConsumer.Info.Config.DurableName);
         Assert.IsNotNull(workflowConsumer.Info.Config.FilterSubjects);
         Assert.IsTrue(CollectionsHelper.CollectionsMatchIgnoreOrder<string>(workflowConsumer.Info.Config.FilterSubjects,
         [
-            subjectMapper.WorkflowStart(NameHelper.GetWorkflowName<WorkflowWithNoInput>(), "*"),
-            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoInput>(), "*"),
-            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>(), "*"),
-            subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>(), "*"),
-            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>(), "*", "*"),
-            subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<WorkflowWithNoInput>(), "*")
+            subjectMapper.WorkflowStart(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*"),
+            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*"),
+            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*"),
+            subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*"),
+            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*", "*"),
+            subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*")
         ]));
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, workflowConsumer.Info.Config.AckPolicy);
         Assert.AreEqual(ConsumerConfigDeliverPolicy.New, workflowConsumer.Info.Config.DeliverPolicy);
 
-        var workflowWithInputConsumer = await jsContext.GetConsumerAsync(subjectMapper.WorkflowEventsStreamsName, $"wfr_{NameHelper.GetWorkflowName<WorkflowWithInput>()}", TestContext.CancellationToken);
+        var workflowWithInputConsumer = await jsContext.GetConsumerAsync(subjectMapper.WorkflowEventsStreamsName, $"wfr_{NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(workflowWithInputConsumer);
-        Assert.AreEqual($"wfr_{NameHelper.GetWorkflowName<WorkflowWithInput>()}", workflowWithInputConsumer.Info.Config.DurableName);
+        Assert.AreEqual($"wfr_{NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName}", workflowWithInputConsumer.Info.Config.DurableName);
         Assert.IsNotNull(workflowWithInputConsumer.Info.Config.FilterSubjects);
         Assert.IsTrue(CollectionsHelper.CollectionsMatchIgnoreOrder<string>(workflowWithInputConsumer.Info.Config.FilterSubjects,
         [
-            subjectMapper.WorkflowStart(NameHelper.GetWorkflowName<WorkflowWithInput>(), "*"),
-            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithInput>(), "*"),
-            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithInput>(), "*"),
-            subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<WorkflowWithInput>(), "*"),
-            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithInput>(), "*", "*"),
-            subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<WorkflowWithInput>(), "*")
+            subjectMapper.WorkflowStart(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*"),
+            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*"),
+            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*"),
+            subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*"),
+            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*", "*"),
+            subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*")
         ]));
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, workflowWithInputConsumer.Info.Config.AckPolicy);
         Assert.AreEqual(ConsumerConfigDeliverPolicy.New, workflowWithInputConsumer.Info.Config.DeliverPolicy);
 
         var configStorage = await kvStoreContext.GetStoreAsync(subjectMapper.WorkflowConfigKeystore, TestContext.CancellationToken);
         Assert.IsNotNull(configStorage);
-        var noInputConfig = await configStorage.TryGetEntryAsync<WorkflowOptions>(NameHelper.GetWorkflowName<WorkflowWithNoInput>(), serializer: new WorkflowOptionsSerializer(), cancellationToken: TestContext.CancellationToken);
+        var noInputConfig = await configStorage.TryGetEntryAsync<WorkflowOptions>(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, serializer: new WorkflowOptionsSerializer(), cancellationToken: TestContext.CancellationToken);
         Assert.IsFalse(noInputConfig.Success);
-        var inputConfig = await configStorage.TryGetEntryAsync<WorkflowOptions>(NameHelper.GetWorkflowName<WorkflowWithInput>(), serializer: new WorkflowOptionsSerializer(), cancellationToken: TestContext.CancellationToken);
+        var inputConfig = await configStorage.TryGetEntryAsync<WorkflowOptions>(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, serializer: new WorkflowOptionsSerializer(), cancellationToken: TestContext.CancellationToken);
         Assert.IsTrue(inputConfig.Success);
         Assert.AreEqual(withInputConfig, inputConfig.Value.Value);
     }

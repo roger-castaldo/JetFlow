@@ -12,9 +12,9 @@ internal partial class ServiceConnection
     public async ValueTask RegisterWorkflowConfigAsync<TWorkflow>(WorkflowOptions? workflowOptions)
     {
         if (workflowOptions == null)
-            await configurationStore.TryDeleteAsync(NameHelper.GetWorkflowName<TWorkflow>());
+            await configurationStore.TryDeleteAsync(NameHelper.GetWorkflowName<TWorkflow>().cleanedName);
         else
-            await configurationStore.PutAsync<WorkflowOptions>(NameHelper.GetWorkflowName<TWorkflow>(), workflowOptions, serializer: optionsSerializer);
+            await configurationStore.PutAsync<WorkflowOptions>(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, workflowOptions, serializer: optionsSerializer);
     }
 
     public async ValueTask<WorkflowOptions> GetWorkflowOptions(string name)

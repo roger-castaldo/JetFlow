@@ -7,7 +7,7 @@ namespace JetFlow.Testing;
 [TestClass]
 public class Activity_NameHelperTests
 {
-    private static string GetActivityName<TActivity>() 
+    private static (string cleanedName, string rawName) GetActivityName<TActivity>() 
         => NameHelper.GetActivityName<TActivity>();
 
     private class TestActivityWithoutAttribute : IActivity
@@ -41,14 +41,17 @@ public class Activity_NameHelperTests
     [TestMethod]
     public void GetActivityName_ShouldReturnClassName_WhenNoAttributeIsPresent()
     {
-        Assert.AreEqual("TestActivityWithoutAttribute", GetActivityName<TestActivityWithoutAttribute>());
-        Assert.AreEqual("TestActivityWithInputWithoutAttribute", GetActivityName<TestActivityWithInputWithoutAttribute>());
-        Assert.AreEqual("TestActivityWithOutputWithoutAttribute", GetActivityName<TestActivityWithOutputWithoutAttribute>());
-        Assert.AreEqual("TestActivityWithInputAndOutputWithoutAttribute", GetActivityName<TestActivityWithInputAndOutputWithoutAttribute>());
+        Assert.AreEqual("TestActivityWithoutAttribute", GetActivityName<TestActivityWithoutAttribute>().rawName);
+        Assert.AreEqual("TestActivityWithInputWithoutAttribute", GetActivityName<TestActivityWithInputWithoutAttribute>().rawName);
+        Assert.AreEqual("TestActivityWithOutputWithoutAttribute", GetActivityName<TestActivityWithOutputWithoutAttribute>().rawName);
+        Assert.AreEqual("TestActivityWithInputAndOutputWithoutAttribute", GetActivityName<TestActivityWithInputAndOutputWithoutAttribute>().rawName);
     }
 
-    private static void TestGetActivityName<TActivity>(string name)
-        => Assert.AreEqual(name, GetActivityName<TActivity>());
+    private static void TestGetActivityName<TActivity>(string cleanedName, string rawName)
+    {
+        Assert.AreEqual(cleanedName, GetActivityName<TActivity>().cleanedName);
+        Assert.AreEqual(rawName, GetActivityName<TActivity>().rawName);
+    }
 
     [ActivityName("CustomActivityName")]
     private class TestActivityWithAttribute : IActivity
@@ -85,10 +88,10 @@ public class Activity_NameHelperTests
     [TestMethod]
     public void GetActivityName_ShouldReturnAttributeValue_WhenAttributeIsPresent()
     {
-        TestGetActivityName<TestActivityWithAttribute>("CustomActivityName");
-        TestGetActivityName<TestActivityWithInputWithAttribute>("CustomActivityWithInputName");
-        TestGetActivityName<TestActivityWithOutputWithAttribute>("CustomActivityWithOutputName");
-        TestGetActivityName<TestActivityWithInputAndOutputWithAttribute>("CustomActivityWithInputAndOutputName");
+        TestGetActivityName<TestActivityWithAttribute>("CustomActivityName", "CustomActivityName");
+        TestGetActivityName<TestActivityWithInputWithAttribute>("CustomActivityWithInputName", "CustomActivityWithInputName");
+        TestGetActivityName<TestActivityWithOutputWithAttribute>("CustomActivityWithOutputName", "CustomActivityWithOutputName");
+        TestGetActivityName<TestActivityWithInputAndOutputWithAttribute>("CustomActivityWithInputAndOutputName", "CustomActivityWithInputAndOutputName");
     }
 
     [ActivityName("CustomActivityInterfaceName")]
@@ -134,10 +137,10 @@ public class Activity_NameHelperTests
     [TestMethod]
     public void GetActivityName_ShouldReturnInterfaceAttributeValue_WhenImplementedInterfaceHasAttribute()
     {
-        TestGetActivityName<TestActivityImplementingInterface>("CustomActivityInterfaceName");
-        TestGetActivityName<TestActivityImplementingInputInterface>("CustomActivityWithInputInterfaceName");
-        TestGetActivityName<TestActivityImplementingOutputInterface>("CustomActivityWithOutputInterfaceName");
-        TestGetActivityName<TestActivityImplementingInputAndOutputInterface>("CustomActivityWithInputAndOutputInterfaceName");
+        TestGetActivityName<TestActivityImplementingInterface>("CustomActivityInterfaceName", "CustomActivityInterfaceName");
+        TestGetActivityName<TestActivityImplementingInputInterface>("CustomActivityWithInputInterfaceName", "CustomActivityWithInputInterfaceName");
+        TestGetActivityName<TestActivityImplementingOutputInterface>("CustomActivityWithOutputInterfaceName", "CustomActivityWithOutputInterfaceName");
+        TestGetActivityName<TestActivityImplementingInputAndOutputInterface>("CustomActivityWithInputAndOutputInterfaceName", "CustomActivityWithInputAndOutputInterfaceName");
     }
 
     private class TestActivityInheritingFromBase : TestActivityWithAttribute
@@ -151,10 +154,10 @@ public class Activity_NameHelperTests
     [TestMethod]
     public void GetActivityName_ShouldReturnBaseClassAttributeValue_WhenInheritingFromBaseClassWithAttribute()
     {
-        TestGetActivityName<TestActivityInheritingFromBase>("CustomActivityName");
-        TestGetActivityName<TestActivityInheritingFromBaseWithInput>("CustomActivityWithInputName");
-        TestGetActivityName<TestActivityInheritingFromBaseWithOutput>("CustomActivityWithOutputName");
-        TestGetActivityName<TestActivityInheritingFromBaseWithInputAndOutput>("CustomActivityWithInputAndOutputName");
+        TestGetActivityName<TestActivityInheritingFromBase>("CustomActivityName", "CustomActivityName");
+        TestGetActivityName<TestActivityInheritingFromBaseWithInput>("CustomActivityWithInputName", "CustomActivityWithInputName");
+        TestGetActivityName<TestActivityInheritingFromBaseWithOutput>("CustomActivityWithOutputName", "CustomActivityWithOutputName");
+        TestGetActivityName<TestActivityInheritingFromBaseWithInputAndOutput>("CustomActivityWithInputAndOutputName", "CustomActivityWithInputAndOutputName");
     }
 
     private class TestActivityInheritingFromBaseWithoutAttribute : TestActivityImplementingInterface
@@ -168,10 +171,10 @@ public class Activity_NameHelperTests
     [TestMethod]
     public void GetActivityName_ShouldReturnBaseInterfaceAttributeValue_WhenInheritingFromBaseClassImplementingInterfaceWithAttribute()
     {
-        TestGetActivityName<TestActivityInheritingFromBaseWithoutAttribute>("CustomActivityInterfaceName");
-        TestGetActivityName<TestActivityInheritingFromBaseWithInputWithoutAttribute>("CustomActivityWithInputInterfaceName");
-        TestGetActivityName<TestActivityInheritingFromBaseWithOutputWithoutAttribute>("CustomActivityWithOutputInterfaceName");
-        TestGetActivityName<TestActivityInheritingFromBaseWithInputAndOutputWithoutAttribute>("CustomActivityWithInputAndOutputInterfaceName");
+        TestGetActivityName<TestActivityInheritingFromBaseWithoutAttribute>("CustomActivityInterfaceName", "CustomActivityInterfaceName");
+        TestGetActivityName<TestActivityInheritingFromBaseWithInputWithoutAttribute>("CustomActivityWithInputInterfaceName", "CustomActivityWithInputInterfaceName");
+        TestGetActivityName<TestActivityInheritingFromBaseWithOutputWithoutAttribute>("CustomActivityWithOutputInterfaceName", "CustomActivityWithOutputInterfaceName");
+        TestGetActivityName<TestActivityInheritingFromBaseWithInputAndOutputWithoutAttribute>("CustomActivityWithInputAndOutputInterfaceName", "CustomActivityWithInputAndOutputInterfaceName");
     }
 
     private class TestSubActivityInheritingFromBase : TestActivityInheritingFromBase
@@ -185,10 +188,10 @@ public class Activity_NameHelperTests
     [TestMethod]
     public void GetActivityName_ShouldReturnBaseClassAttributeValue_WhenInheritingFromSubClassOfBaseClassWithAttribute()
     {
-        TestGetActivityName<TestSubActivityInheritingFromBase>("CustomActivityName");
-        TestGetActivityName<TestSubActivityInheritingFromBaseWithInput>("CustomActivityWithInputName");
-        TestGetActivityName<TestSubActivityInheritingFromBaseWithOutput>("CustomActivityWithOutputName");
-        TestGetActivityName<TestSubActivityInheritingFromBaseWithInputAndOutput>("CustomActivityWithInputAndOutputName");
+        TestGetActivityName<TestSubActivityInheritingFromBase>("CustomActivityName", "CustomActivityName");
+        TestGetActivityName<TestSubActivityInheritingFromBaseWithInput>("CustomActivityWithInputName", "CustomActivityWithInputName");
+        TestGetActivityName<TestSubActivityInheritingFromBaseWithOutput>("CustomActivityWithOutputName", "CustomActivityWithOutputName");
+        TestGetActivityName<TestSubActivityInheritingFromBaseWithInputAndOutput>("CustomActivityWithInputAndOutputName", "CustomActivityWithInputAndOutputName");
     }
 
     [ActivityName("CustomActivityWith Invalid Characters!@#$%^&*()")]
@@ -226,9 +229,9 @@ public class Activity_NameHelperTests
     [TestMethod]
     public void GetActivityName_ShouldReturnCleanedName_WhenAttributeValueContainsInvalidCharacters()
     {
-        TestGetActivityName<TestActivityWithInvalidCharactersInName>("CustomActivityWith_Invalid_Characters");
-        TestGetActivityName<TestActivityWithInputInvalidCharactersInName>("CustomActivityWithInput_Invalid_Characters");
-        TestGetActivityName<TestActivityWithOutputInvalidCharactersInName>("CustomActivityWithOutput_Invalid_Characters");
-        TestGetActivityName<TestActivityWithInputAndOutputInvalidCharactersInName>("CustomActivityWithInputAndOutput_Invalid_Characters");
+        TestGetActivityName<TestActivityWithInvalidCharactersInName>("CustomActivityWith_Invalid_Characters", "CustomActivityWith Invalid Characters!@#$%^&*()");
+        TestGetActivityName<TestActivityWithInputInvalidCharactersInName>("CustomActivityWithInput_Invalid_Characters", "CustomActivityWithInput Invalid Characters!@#$%^&*()");
+        TestGetActivityName<TestActivityWithOutputInvalidCharactersInName>("CustomActivityWithOutput_Invalid_Characters", "CustomActivityWithOutput Invalid Characters!@#$%^&*()");
+        TestGetActivityName<TestActivityWithInputAndOutputInvalidCharactersInName>("CustomActivityWithInputAndOutput_Invalid_Characters", "CustomActivityWithInputAndOutput Invalid Characters!@#$%^&*()");
     }
 }

@@ -94,7 +94,7 @@ public class QueryTests
             Assert.AreEqual(instanceId, workflow.ID);
             Assert.HasCount(1, workflow.Steps);
             Assert.AreEqual(WorkflowStepTypes.Action, workflow.Steps[0].Type);
-            Assert.AreEqual(NameHelper.GetActivityName<AwaitableActivity>(), workflow.Steps[0].Name);
+            Assert.AreEqual(NameHelper.GetActivityName<AwaitableActivity>().rawName, workflow.Steps[0].Name);
             Assert.IsNull(workflow.Steps[0].EndTime);
         }
         var workflowList = await observationConnection.LoadWorkflowsAsync<ObservableWorkflowWithNoInput>(instanceNamespace);
@@ -103,7 +103,7 @@ public class QueryTests
         Assert.AreEqual(instanceId, workflowInstance.ID);
         Assert.HasCount(1, workflowInstance.Steps);
         Assert.AreEqual(WorkflowStepTypes.Action, workflowInstance.Steps[0].Type);
-        Assert.AreEqual(NameHelper.GetActivityName<AwaitableActivity>(), workflowInstance.Steps[0].Name);
+        Assert.AreEqual(NameHelper.GetActivityName<AwaitableActivity>().rawName, workflowInstance.Steps[0].Name);
         Assert.IsNull(workflowInstance.Steps[0].EndTime);
         //validate delays are being observed
         await ObservableWorkflowWithNoInput.DelayTask;

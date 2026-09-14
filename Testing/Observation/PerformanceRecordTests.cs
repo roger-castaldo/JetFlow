@@ -102,8 +102,8 @@ public class PerformanceRecordTests
         await ((IAsyncDisposable)observationConnection).DisposeAsync();
 
         // Verify
-        var successRecords = workflowRecords.Where(wr => Equals(NameHelper.GetWorkflowName<TestRecordedWorkflowSuccess>(), wr.Name));
-        var errorRecords = workflowRecords.Where(wr=>Equals(NameHelper.GetWorkflowName<TestRecordedWorkflowFailure>(), wr.Name));
+        var successRecords = workflowRecords.Where(wr => Equals(NameHelper.GetWorkflowName<TestRecordedWorkflowSuccess>().rawName, wr.Name));
+        var errorRecords = workflowRecords.Where(wr=>Equals(NameHelper.GetWorkflowName<TestRecordedWorkflowFailure>().rawName, wr.Name));
 
         Assert.AreEqual(1, successRecords.Sum(wr => wr.Started));
         Assert.AreEqual(1, successRecords.Sum(wr => wr.Completed));
@@ -117,7 +117,7 @@ public class PerformanceRecordTests
         Assert.AreEqual(2, errorRecords.Sum(wr => wr.Purged));
         Assert.AreEqual(5, errorRecords.Sum(wr => wr.QueueLatencies.Count()));
 
-        Assert.IsTrue(activityRecords.All(ar => Equals(ar.Name, NameHelper.GetActivityName<TestRecordedActivity>())));
+        Assert.IsTrue(activityRecords.All(ar => Equals(ar.Name, NameHelper.GetActivityName<TestRecordedActivity>().rawName)));
         Assert.AreEqual(6, activityRecords.Sum(ar => ar.Started));
         Assert.AreEqual(2, activityRecords.Sum(ar => ar.Completed));
         Assert.AreEqual(2, activityRecords.Sum(ar => ar.Failed));

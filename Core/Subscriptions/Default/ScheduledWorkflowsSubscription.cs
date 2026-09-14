@@ -10,15 +10,16 @@ namespace JetFlow.Subscriptions.Default
         protected override async ValueTask ProcessMessageAsync(EventMessage message)
         {
             INatsJSMsg<byte[]>? configMessage = null;
-            await using var query = await ServiceConnection.QueryStreamAsync(subjectMapper.ScheduledWorkflowStreamsName, false, subjectMapper.ScheduledWorkflowConfigure(message.WorkflowName, message.WorkflowId));
+            await using var query = await ServiceConnection.QueryStreamAsync(subjectMapper.ScheduledWorkflowStreamsName, false, subjectMapper.ScheduledWorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId));
             await foreach (var msg in query) { 
                 configMessage = msg;
             }
             var headers = new NatsHeaders(message.Headers?.Where(pair => pair.Key.StartsWith(Constants.HeaderBase)).ToDictionary() ?? []);
             var id = Guid.CreateVersion7();
-            var data = await MessagesHelper.EncodeLargeMessageAsync(ServiceConnection.MaxMessagePayload, ServiceConnection.LargeMessageStore, message.Data?? [], message.WorkflowName, id.ToString(), CancellationToken);
+            var data = await MessagesHelper.EncodeLargeMessageAsync(ServiceConnection.MaxMessagePayload, ServiceConnection.LargeMessageStore, message.Data?? [], message.WorkflowSubjectName, id.ToString(), CancellationToken);
             headers.Add(Constants.SchedulerSourceID, message.WorkflowId);
             _ = await ServiceConnection.StartWorkflowAsync(
+                message.WorkflowSubjectName,
                 message.WorkflowName,
                 id,
                 data,

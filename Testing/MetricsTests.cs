@@ -63,12 +63,12 @@ public class MetricsTests
 
         listener.SetMeasurementEventCallback<double>((instrument, measurement, tags, state) =>
         {
-            if (tags.ToArray().Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name, t.Value)))
+            if (tags.ToArray().Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name.rawName, t.Value)))
                 captured.Add((instrument.Name, measurement, null, tags.ToArray()));
         });
         listener.SetMeasurementEventCallback<long>((instrument, measurement, tags, state) =>
         {
-            if (tags.ToArray().Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name, t.Value)))
+            if (tags.ToArray().Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name.rawName, t.Value)))
                 captured.Add((instrument.Name, null, measurement, tags.ToArray()));
         });
 
@@ -101,34 +101,34 @@ public class MetricsTests
         Assert.HasCount(6, data);
         Assert.ContainsSingle(r =>
             Equals(TraceConstants.ActivityDuration, r.name)
-            && r.tags.Any(t => Equals(TraceConstants.ActivityNameTag, t.Key) && Equals(activityName, t.Value))
+            && r.tags.Any(t => Equals(TraceConstants.ActivityNameTag, t.Key) && Equals(activityName.rawName, t.Value))
             && r.dmeasurement!=null
             && r.dmeasurement>=1000
 , data);
         Assert.ContainsSingle(r =>
             Equals(TraceConstants.ActivityQueueLatency, r.name)
-            && r.tags.Any(t => Equals(TraceConstants.ActivityNameTag, t.Key) && Equals(activityName, t.Value))
+            && r.tags.Any(t => Equals(TraceConstants.ActivityNameTag, t.Key) && Equals(activityName.rawName, t.Value))
             && r.dmeasurement!=null
 , data);
         Assert.ContainsSingle(r =>
             Equals(TraceConstants.WorkflowQueueLatency, r.name)
-            && r.tags.Any(t => Equals(TraceConstants.ActivityNameTag, t.Key) && Equals(activityName, t.Value))
-            && r.tags.Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name, t.Value))
+            && r.tags.Any(t => Equals(TraceConstants.ActivityNameTag, t.Key) && Equals(activityName.rawName, t.Value))
+            && r.tags.Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name.rawName, t.Value))
             && r.dmeasurement!=null
 , data);
         Assert.AreEqual(2, data.Count(r =>
             Equals(TraceConstants.WorkflowQueueLatency, r.name)
-            && r.tags.Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name, t.Value))
+            && r.tags.Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name.rawName, t.Value))
             && r.dmeasurement!=null
         ));
         Assert.ContainsSingle(r =>
             Equals(TraceConstants.WorkflowsStarted, r.name)
-            && r.tags.Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name, t.Value))
+            && r.tags.Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name.rawName, t.Value))
             && r.lmeasurement==1
 , data);
         Assert.ContainsSingle(r =>
             Equals(TraceConstants.WorkflowsCompleted, r.name)
-            && r.tags.Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name, t.Value))
+            && r.tags.Any(t => Equals(TraceConstants.WorkflowNameTag, t.Key) && Equals(name.rawName, t.Value))
             && r.lmeasurement==1
 , data);
     }

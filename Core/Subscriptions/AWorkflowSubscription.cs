@@ -58,17 +58,17 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                     if (!isComplete)
                         throw new WorkflowSuspendedException();
                 }
-                if (!string.IsNullOrEmpty(message.ActivityName) && activityResultStatus.HasValue)
+                if (!string.IsNullOrEmpty(message.ActivitySubjectName) && activityResultStatus.HasValue)
                 {
                     if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Failure) && context.Options.ErrorOnActivityFailure)
                     {
                         errorMessage??=string.Empty;
                         if (!string.IsNullOrWhiteSpace(timeoutMessage))
                             errorMessage = $"{errorMessage}{(!string.IsNullOrWhiteSpace(errorMessage) ? ";" : "")} {timeoutMessage}";
-                        throw new ActivityFailedException(message.ActivityName, errorMessage);
+                        throw new ActivityFailedException(message.ActivityName??message.ActivitySubjectName, errorMessage);
                     }
                     if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Timeout) && context.Options.ErrorOnActivityTimeout)
-                        throw new ActivityTimeoutException(message.ActivityName, timeoutMessage);
+                        throw new ActivityTimeoutException(message.ActivityName??message.ActivitySubjectName, timeoutMessage);
                 }
                 await HandleWorkflowEventAsync(context);
                 isCompleted=true;
@@ -80,13 +80,13 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             catch (Exception ex)
             {
                 Activity.Current?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                await MetricsHelper.EndWorkflowAsync(message.WorkflowName, false, CancellationToken);
+                await MetricsHelper.EndWorkflowAsync(message.WorkflowSubjectName, false, CancellationToken);
                 await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, ex.Message), CancellationToken);
             }
             await message.AckAsync(CancellationToken);
             if (isCompleted)
             {
-                await MetricsHelper.EndWorkflowAsync(message.WorkflowName, true, CancellationToken);
+                await MetricsHelper.EndWorkflowAsync(message.WorkflowSubjectName, true, CancellationToken);
                 await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, null), CancellationToken);
             }
         }
@@ -95,19 +95,19 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
     private async Task ProcessEndOperation(EventMessage message)
     {
         INatsJSMsg<byte[]>? config = null;
-        await using var configQuery = await ServiceConnection.QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName, false, subjectMapper.WorkflowConfigure(message.WorkflowName, message.WorkflowId));
+        await using var configQuery = await ServiceConnection.QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName, false, subjectMapper.WorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId));
         await foreach(var msg in configQuery)
         {
             config = msg;
             break;
         }
         if (config is null)
-            throw new InvalidOperationException($"Workflow configuration not found for workflow {message.WorkflowName} with id {message.WorkflowId}");
+            throw new InvalidOperationException($"Workflow configuration not found for workflow {message.WorkflowSubjectName} with id {message.WorkflowId}");
         var options = InternalsSerializer.DeserializeWorkflowOptions(config.Data!)!;
         if (Equals(options.CompletionAction, WorkflowCompletionActions.Archive))
         {
             await ServiceConnection.ArchiveStore.PutAsync(
-                $"{message.WorkflowName}/{message.WorkflowId}",
+                $"{message.WorkflowSubjectName}/{message.WorkflowId}",
                 InternalsSerializer.SerializeWorkflowArchive(await WorkflowHelper.ProduceArchivedWorkflowAsync(
                     subjectMapper,
                     ServiceConnection.JSContext,

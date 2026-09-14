@@ -102,7 +102,7 @@ public class CounterTests
 
         var consumer = await new NatsJSContext(natsConnection).CreateConsumerAsync(subjectMapper.WorkflowEventsStreamsName, new() { 
             AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.All,
-            FilterSubjects = [subjectMapper.WorkflowDelayStart(NameHelper.GetWorkflowName<EmptyWorkflow>(), instance.ToString())]
+            FilterSubjects = [subjectMapper.WorkflowDelayStart(NameHelper.GetWorkflowName<EmptyWorkflow>().cleanedName, instance.ToString())]
         }, TestContext.CancellationToken);
 
         var sub = consumer.FetchAsync<byte[]>(new() { MaxMsgs=1 }, cancellationToken: TestContext.CancellationToken);

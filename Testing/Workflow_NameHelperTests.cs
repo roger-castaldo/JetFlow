@@ -1,14 +1,18 @@
 ﻿using JetFlow.Attributes;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
+using System.Xml.Linq;
 
 namespace JetFlow.Testing;
 
 [TestClass]
 public class Workflow_NameHelperTests
 {
-    private static void TestGetWorkflowName<TWorkflow>(string name)
-        => Assert.AreEqual(name, NameHelper.GetWorkflowName<TWorkflow>());
+    private static void TestGetWorkflowName<TWorkflow>(string cleanedName, string rawName)
+    {
+        Assert.AreEqual(cleanedName, NameHelper.GetWorkflowName<TWorkflow>().cleanedName);
+        Assert.AreEqual(rawName, NameHelper.GetWorkflowName<TWorkflow>().rawName);
+    }
 
     private class TestWorkflowWithoutAttribute : IWorkflow
     {
@@ -27,8 +31,8 @@ public class Workflow_NameHelperTests
     [TestMethod]
     public void GetWorkflowName_ShouldReturnClassName_WhenNoAttributeIsPresent()
     {
-        TestGetWorkflowName<TestWorkflowWithoutAttribute>("TestWorkflowWithoutAttribute");
-        TestGetWorkflowName<TestWorkflowWithInputWithoutAttribute>("TestWorkflowWithInputWithoutAttribute");
+        TestGetWorkflowName<TestWorkflowWithoutAttribute>("TestWorkflowWithoutAttribute", "TestWorkflowWithoutAttribute");
+        TestGetWorkflowName<TestWorkflowWithInputWithoutAttribute>("TestWorkflowWithInputWithoutAttribute", "TestWorkflowWithInputWithoutAttribute");
     }
 
     [WorkflowName("CustomWorkflowName")]
@@ -50,8 +54,8 @@ public class Workflow_NameHelperTests
     [TestMethod]
     public void GetWorkflowName_ShouldReturnAttributeValue_WhenAttributeIsPresent()
     {
-        TestGetWorkflowName<TestWorkflowWithAttribute>("CustomWorkflowName");
-        TestGetWorkflowName<TestWorkflowWithInputWithAttribute>("CustomWorkflowWithInputName");
+        TestGetWorkflowName<TestWorkflowWithAttribute>("CustomWorkflowName", "CustomWorkflowName");
+        TestGetWorkflowName<TestWorkflowWithInputWithAttribute>("CustomWorkflowWithInputName", "CustomWorkflowWithInputName");
     }
 
     [WorkflowName("CustomWorkflowInterfaceName")]
@@ -77,8 +81,8 @@ public class Workflow_NameHelperTests
     [TestMethod]
     public void GetWorkflowName_ShouldReturnInterfaceAttributeValue_WhenImplementedInterfaceHasAttribute()
     {
-        TestGetWorkflowName<TestWorkflowImplementingInterface>("CustomWorkflowInterfaceName");
-        TestGetWorkflowName<TestWorkflowImplementingInputInterface>("CustomWorkflowWithInputInterfaceName");
+        TestGetWorkflowName<TestWorkflowImplementingInterface>("CustomWorkflowInterfaceName", "CustomWorkflowInterfaceName");
+        TestGetWorkflowName<TestWorkflowImplementingInputInterface>("CustomWorkflowWithInputInterfaceName", "CustomWorkflowWithInputInterfaceName");
     }
 
     private class TestWorkflowInheritingFromBase : TestWorkflowWithAttribute
@@ -88,8 +92,8 @@ public class Workflow_NameHelperTests
     [TestMethod]
     public void GetWorkflowName_ShouldReturnBaseClassAttributeValue_WhenInheritingFromBaseClassWithAttribute()
     {
-        TestGetWorkflowName<TestWorkflowInheritingFromBase>("CustomWorkflowName");
-        TestGetWorkflowName<TestWorkflowInheritingFromBaseWithInput>("CustomWorkflowWithInputName");
+        TestGetWorkflowName<TestWorkflowInheritingFromBase>("CustomWorkflowName", "CustomWorkflowName");
+        TestGetWorkflowName<TestWorkflowInheritingFromBaseWithInput>("CustomWorkflowWithInputName", "CustomWorkflowWithInputName");
     }
 
     private class TestWorkflowInheritingFromBaseWithoutAttribute : TestWorkflowImplementingInterface
@@ -99,8 +103,8 @@ public class Workflow_NameHelperTests
     [TestMethod]
     public void GetWorkflowName_ShouldReturnBaseInterfaceAttributeValue_WhenInheritingFromBaseClassImplementingInterfaceWithAttribute()
     {
-        TestGetWorkflowName<TestWorkflowInheritingFromBaseWithoutAttribute>("CustomWorkflowInterfaceName");
-        TestGetWorkflowName<TestWorkflowInheritingFromBaseWithInputWithoutAttribute>("CustomWorkflowWithInputInterfaceName");
+        TestGetWorkflowName<TestWorkflowInheritingFromBaseWithoutAttribute>("CustomWorkflowInterfaceName", "CustomWorkflowInterfaceName");
+        TestGetWorkflowName<TestWorkflowInheritingFromBaseWithInputWithoutAttribute>("CustomWorkflowWithInputInterfaceName", "CustomWorkflowWithInputInterfaceName");
     }
 
     private class TestSubWorkflowInheritingFromBase : TestWorkflowInheritingFromBase
@@ -110,8 +114,8 @@ public class Workflow_NameHelperTests
     [TestMethod]
     public void GetWorkflowName_ShouldReturnBaseClassAttributeValue_WhenInheritingFromSubClassOfBaseClassWithAttribute()
     {
-        TestGetWorkflowName<TestSubWorkflowInheritingFromBase>("CustomWorkflowName");
-        TestGetWorkflowName<TestSubWorkflowInheritingFromBaseWithInput>("CustomWorkflowWithInputName");
+        TestGetWorkflowName<TestSubWorkflowInheritingFromBase>("CustomWorkflowName", "CustomWorkflowName");
+        TestGetWorkflowName<TestSubWorkflowInheritingFromBaseWithInput>("CustomWorkflowWithInputName", "CustomWorkflowWithInputName");
     }
 
     [WorkflowName("CustomWorkflowWith Invalid Characters!@#$%^&*()")]
@@ -133,7 +137,7 @@ public class Workflow_NameHelperTests
     [TestMethod]
     public void GetWorkflowName_ShouldReturnCleanedName_WhenAttributeValueContainsInvalidCharacters()
     {
-        TestGetWorkflowName<TestWorkflowWithInvalidCharactersInName>("CustomWorkflowWith_Invalid_Characters");
-        TestGetWorkflowName<TestWorkflowWithInputInvalidCharactersInName>("CustomWorkflowWithInput_Invalid_Characters");
+        TestGetWorkflowName<TestWorkflowWithInvalidCharactersInName>("CustomWorkflowWith_Invalid_Characters", "CustomWorkflowWith Invalid Characters!@#$%^&*()");
+        TestGetWorkflowName<TestWorkflowWithInputInvalidCharactersInName>("CustomWorkflowWithInput_Invalid_Characters", "CustomWorkflowWithInput Invalid Characters!@#$%^&*()");
     }
 }

@@ -12,7 +12,8 @@ internal record EventMessage
 {
     private static readonly string[] SharedHeaders = [
         Constants.WorkflowTraceHeaderKey,
-        Constants.WorkflowTraceSpanHeaderKey
+        Constants.WorkflowTraceSpanHeaderKey,
+        Constants.WorkflowNameHeader
     ];
     private static readonly Regex workflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|config|stepstart|stepend|stepretry|suspended|resumed)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     private static readonly Regex activitySubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
@@ -39,6 +40,13 @@ internal record EventMessage
     private readonly Func<CancellationToken, ValueTask> ack;
     private readonly Func<CancellationToken, ValueTask> nak;
 
+    private static string? ExtractHeader(NatsHeaders? headers, string headerKey)
+    {
+        if (headers?.TryGetValue(headerKey, out var value)??false)
+            return value.ToString();
+        return null;
+    }
+
     private static T? ExtractHeader<T>(NatsHeaders? headers, string headerKey, Func<string, T?> converter)
         where T : struct
     {
@@ -61,15 +69,14 @@ internal record EventMessage
         if (match.Success)
         {
             WorkflowEventType = Enum.Parse<WorkflowEventTypes>(match.Groups["eventType"].Value, true);
-            ActivityName = match.Groups["stepName"].Success ? match.Groups["stepName"].Value : null;       
+            ActivitySubjectName = match.Groups["stepName"].Success ? match.Groups["stepName"].Value : null;       
         }
         else
         {
             match = activitySubjectRegex.Match(subject);
             if (match.Success)
             {
-
-                ActivityName = match.Groups["activityName"].Value;
+                ActivitySubjectName = match.Groups["activityName"].Value;
                 ActivityEventType = Enum.Parse<ActivityEventTypes>(match.Groups["eventType"].Value, true);
                 ActivityInstanceID = match.Groups["activityInstance"].Value;
                 ActivityTimeout = ExtractHeader<TimeSpan>(headers, Constants.ActivityTimeoutHeader, value => (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var timeSpan) ? timeSpan : (TimeSpan?)null));
@@ -91,11 +98,13 @@ internal record EventMessage
             }
         }
         ActivityID = ExtractHeader<uint>(headers, Constants.ActivityIDHeader, value => uint.Parse(value));
+        ActivityName = ExtractHeader(headers, Constants.ActivityNameHeader);
         WorkflowStepResultStatus = ExtractHeader<ActivityResultStatus>(headers, Constants.ActivityResultHeader, value => Enum.Parse<ActivityResultStatus>(value, true));
         ParallelActivityIndex = ExtractHeader<uint>(headers, Constants.ParalellActivityIndexHeader, value => uint.Parse(value));
         ParallelActivityCount = ExtractHeader<uint>(headers, Constants.ParallelActivityCountHeader, value => uint.Parse(value));
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
-        WorkflowName = match.Groups["workflowName"].Value;
+        WorkflowSubjectName = match.Groups["workflowName"].Value;
+        WorkflowName = ExtractHeader(headers, Constants.WorkflowNameHeader)??WorkflowSubjectName;
         WorkflowId = match.Groups["instance"].Value;
         Subject = subject;
         Data = data?? [];
@@ -107,12 +116,14 @@ internal record EventMessage
 
     public DateTimeOffset RecievedTimestamp { get; private init; }
     public string? Namespace { get; private init; }
+    public string WorkflowSubjectName { get; private init; }
     public string WorkflowName { get; private init; }
     public string WorkflowId { get; private init; }
     public WorkflowEventTypes? WorkflowEventType { get; private init; } = null;
     public ActivityResultStatus? WorkflowStepResultStatus { get; private init; } = null;
     public uint? ParallelActivityIndex { get; private init; } = null;
     public uint? ParallelActivityCount { get; private init; } = null;
+    public string? ActivitySubjectName { get; private init; }
     public string? ActivityName { get; private init; }
     public ActivityEventTypes? ActivityEventType { get; private init; } = null;
     public uint? ActivityID { get; private init; } = null;

@@ -11,21 +11,22 @@ namespace JetFlow
         {
             var name = NameHelper.GetWorkflowName<TWorkflow>();
             headers ??= new();
+            headers.Add(Constants.WorkflowNameHeader, name.rawName);
             var messages = new List<InternalNatsConnection.PublishMessage>();
             if (executionRequest?.Options!=null)
                 messages.Add(new(
                     InternalsSerializer.SerializeWorkflowOptions(executionRequest.Options),
-                    subjectMapper.ScheduledWorkflowConfigure(name, id.ToString()),
+                    subjectMapper.ScheduledWorkflowConfigure(name.cleanedName, id.ToString()),
                     new(headers.ToDictionary()),
                     $"{name}-{id}-configure"
                 ));
             messages.Add(new InternalNatsConnection.ScheduledPublishMessage(
                     data,
-                    subjectMapper.ScheduledWorkflowTimer(name, id.ToString()),
+                    subjectMapper.ScheduledWorkflowTimer(name.cleanedName, id.ToString()),
                     new(MetaDataHelper.EncodeMetaData(executionRequest?.MetaData, headers).ToDictionary()),
                     $"{name}-{id}-start", 
                     delayString, 
-                    subjectMapper.ScheduledWorkflowStart(name, id.ToString())));
+                    subjectMapper.ScheduledWorkflowStart(name.cleanedName, id.ToString())));
             await connection.PublishMessagesAsync(messages, cancellationToken);
             return id;
         }
@@ -37,7 +38,7 @@ namespace JetFlow
             where TWorkflow : IWorkflow<TInput>
         {
             var id = Guid.CreateVersion7();
-            var (data, headers) = await EncodeMessageAsync<TInput>(executionRequest.Input, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
+            var (data, headers) = await EncodeMessageAsync<TInput>(executionRequest.Input, NameHelper.GetWorkflowName<TWorkflow>().cleanedName, id.ToString(), cancellationToken);
             return await ScheduleWorkflowAsync<TWorkflow>(schedule.AsString, executionRequest, id, data, headers, cancellationToken);
         }
 
@@ -48,7 +49,7 @@ namespace JetFlow
             where TWorkflow : IWorkflow<TInput>
         {
             var id = Guid.CreateVersion7();
-            var (data, headers) = await EncodeMessageAsync<TInput>(executionRequest.Input, NameHelper.GetWorkflowName<TWorkflow>(), id.ToString(), cancellationToken);
+            var (data, headers) = await EncodeMessageAsync<TInput>(executionRequest.Input, NameHelper.GetWorkflowName<TWorkflow>().cleanedName, id.ToString(), cancellationToken);
             return await ScheduleWorkflowAsync<TWorkflow>(InternalNatsConnection.CreateScheduledString(delay), executionRequest, id, data, headers, cancellationToken);
         }
     }

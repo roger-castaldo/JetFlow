@@ -70,12 +70,12 @@ public class WorkflowExecutionTests
         //Act
         var id = await connection.StartWorkflowAsync<EmptyActivityWorkflow>();
         var (data, headers) = await messageSerializer.EncodeAsync<WorkflowEnd>(new(DateTime.UtcNow, null));
-        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>(), id.ToString()), data, headers: headers, cancellationToken: TestContext.CancellationToken);
+        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>().cleanedName, id.ToString()), data, headers: headers, cancellationToken: TestContext.CancellationToken);
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>(), "*"), cancellationToken: TestContext.CancellationToken))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>().cleanedName, "*"), cancellationToken: TestContext.CancellationToken))
             {
-                if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>(), id.ToString())))
+                if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<EmptyActivityWorkflow>().cleanedName, id.ToString())))
                 {
                     completion.TrySetResult(msg);
                     break;
@@ -128,12 +128,12 @@ public class WorkflowExecutionTests
         //Act
         var id = await connection.StartWorkflowAsync<DelayedWorkflow>();
         var (data, headers) = await messageSerializer.EncodeAsync<WorkflowEnd>(new(DateTime.UtcNow, null));
-        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>(), id.ToString()), data, headers: headers, cancellationToken: TestContext.CancellationToken);
+        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>().cleanedName, id.ToString()), data, headers: headers, cancellationToken: TestContext.CancellationToken);
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>(), "*"), cancellationToken: TestContext.CancellationToken))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>().cleanedName, "*"), cancellationToken: TestContext.CancellationToken))
             {
-                if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>(), id.ToString())))
+                if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<DelayedWorkflow>().cleanedName, id.ToString())))
                 {
                     completion.TrySetResult(msg);
                     break;
@@ -207,7 +207,7 @@ public class WorkflowExecutionTests
         var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsFalse(endMessage.IsSuccess);
-        Assert.AreEqual($"Expected step name {NameHelper.GetActivityName<OtherEmptyActivity>()} but got {NameHelper.GetActivityName<EmptyActivity>()}", endMessage.ErrorMessage);
+        Assert.AreEqual($"Expected step name {NameHelper.GetActivityName<OtherEmptyActivity>().rawName} but got {NameHelper.GetActivityName<EmptyActivity>().rawName}", endMessage.ErrorMessage);
     }
 
     private sealed class InvalidDelayStepWorkflow : IWorkflow
@@ -242,12 +242,12 @@ public class WorkflowExecutionTests
 
         //Act
         var id = await connection.StartWorkflowAsync<InvalidDelayStepWorkflow>();
-        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), id.ToString(), NameHelper.GetActivityName<EmptyActivity>()), [], cancellationToken: TestContext.CancellationToken);
+        await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString(), NameHelper.GetActivityName<EmptyActivity>().cleanedName), [], cancellationToken: TestContext.CancellationToken);
         _ = Task.Run(async () =>
         {
-            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), "*"), cancellationToken: TestContext.CancellationToken))
+            await foreach (var msg in natsConnection.SubscribeAsync<byte[]>(subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, "*"), cancellationToken: TestContext.CancellationToken))
             {
-                if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), id.ToString())))
+                if (Equals(msg.Subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString())))
                 {
                     completion.TrySetResult(msg);
                     break;
@@ -264,7 +264,7 @@ public class WorkflowExecutionTests
         var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsFalse(endMessage.IsSuccess);
-        Assert.AreEqual($"Expected delay finished event but recieved {subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>(), id.ToString(), NameHelper.GetActivityName<EmptyActivity>())}", endMessage.ErrorMessage);
+        Assert.AreEqual($"Expected delay finished event but recieved {subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString(), NameHelper.GetActivityName<EmptyActivity>().cleanedName)}", endMessage.ErrorMessage);
     }
 
     private sealed class NoActionActivity : IActivity
@@ -501,17 +501,17 @@ public class WorkflowExecutionTests
         //Verify
         var workflowName = NameHelper.GetWorkflowName<AllActivityResultsWorkflow>();
         var messages = await TestJetStreamHelper.QueryStreamAsync(jsContext, subjectMapper.WorkflowEventsStreamsName, false,
-            subjectMapper.WorkflowConfigure(workflowName, runId.ToString()),
-            subjectMapper.WorkflowStart(workflowName, runId.ToString()),
-            subjectMapper.WorkflowEnd(workflowName, runId.ToString()),
-            subjectMapper.WorkflowArchived(workflowName, runId.ToString()),
-            subjectMapper.WorkflowPurge(workflowName, runId.ToString()),
-            subjectMapper.WorkflowDelayStart(workflowName, runId.ToString()),
-            subjectMapper.WorkflowDelayEnd(workflowName, runId.ToString()),
-            subjectMapper.WorkflowTimer(workflowName, runId.ToString()),
-            subjectMapper.WorkflowStepStart(workflowName, runId.ToString(), "*"),
-            subjectMapper.WorkflowStepEnd(workflowName, runId.ToString(), "*"),
-            subjectMapper.WorkflowStepRetry(workflowName, runId.ToString(), "*")
+            subjectMapper.WorkflowConfigure(workflowName.cleanedName, runId.ToString()),
+            subjectMapper.WorkflowStart(workflowName.cleanedName, runId.ToString()),
+            subjectMapper.WorkflowEnd(workflowName.cleanedName, runId.ToString()),
+            subjectMapper.WorkflowArchived(workflowName.cleanedName, runId.ToString()),
+            subjectMapper.WorkflowPurge(workflowName.cleanedName, runId.ToString()),
+            subjectMapper.WorkflowDelayStart(workflowName.cleanedName, runId.ToString()),
+            subjectMapper.WorkflowDelayEnd(workflowName.cleanedName, runId.ToString()),
+            subjectMapper.WorkflowTimer(workflowName.cleanedName, runId.ToString()),
+            subjectMapper.WorkflowStepStart(workflowName.cleanedName, runId.ToString(), "*"),
+            subjectMapper.WorkflowStepEnd(workflowName.cleanedName, runId.ToString(), "*"),
+            subjectMapper.WorkflowStepRetry(workflowName.cleanedName, runId.ToString(), "*")
         );
         Assert.IsEmpty(messages);
 
@@ -576,32 +576,32 @@ public class WorkflowExecutionTests
 
         //Verify
         var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
-        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<AllActivityResultsWorkflow>()}/{runId}", TestContext.CancellationToken);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<AllActivityResultsWorkflow>().cleanedName}/{runId}", TestContext.CancellationToken);
         var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(runId, archive.ID);
         Assert.IsNull(archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
-        Assert.AreEqual(NameHelper.GetWorkflowName<AllActivityResultsWorkflow>(), archive.Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<AllActivityResultsWorkflow>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotNull(archive.MetaData);
         Assert.IsTrue(metaData.All(pair => archive.MetaData.TryGetValue(pair.Key, out var value) && pair.Value.SequenceEqual(value)));
         Assert.AreEqual(metaData.Count, archive.MetaData.Count);
         Assert.IsNotEmpty(archive.Steps);
-        AssertStepMatch(archive.Steps, 0, NameHelper.GetActivityName<NoActionActivity>(), ActivityResultStatus.Success, WorkflowStepTypes.Action);
-        AssertStepMatch(archive.Steps, 1, NameHelper.GetActivityName<NoActionActivityWithReturn>(), ActivityResultStatus.Success, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 0, NameHelper.GetActivityName<NoActionActivity>().rawName, ActivityResultStatus.Success, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 1, NameHelper.GetActivityName<NoActionActivityWithReturn>().rawName, ActivityResultStatus.Success, WorkflowStepTypes.Action);
         Assert.AreEqual(noActWithReturn.ResultMessage, archive.Steps[1].Result?.ToString());
-        AssertStepMatch(archive.Steps, 2, NameHelper.GetActivityName<NoActionActivityWithInput>(), ActivityResultStatus.Success, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 2, NameHelper.GetActivityName<NoActionActivityWithInput>().rawName, ActivityResultStatus.Success, WorkflowStepTypes.Action);
         Assert.AreEqual(noActWithInput.InputMessage, archive.Steps[2].Input?.ToString());
-        AssertStepMatch(archive.Steps, 3, NameHelper.GetActivityName<NoActionActivityWithInputWithReturn>(), ActivityResultStatus.Success, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 3, NameHelper.GetActivityName<NoActionActivityWithInputWithReturn>().rawName, ActivityResultStatus.Success, WorkflowStepTypes.Action);
         Assert.AreEqual(noActWithInputWithReturn.InputMessage, archive.Steps[3].Input?.ToString());
         Assert.AreEqual(noActWithInputWithReturn.ResultMessage, archive.Steps[3].Result?.ToString());
-        AssertStepMatch(archive.Steps, 4, NameHelper.GetActivityName<ErrorActivity>(), ActivityResultStatus.Failure, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 4, NameHelper.GetActivityName<ErrorActivity>().rawName, ActivityResultStatus.Failure, WorkflowStepTypes.Action);
         Assert.AreEqual(new NotImplementedException().Message, archive.Steps[4].ErrorMessage);
-        AssertStepMatch(archive.Steps, 5, NameHelper.GetActivityName<ErrorActivityWithReturn>(), ActivityResultStatus.Failure, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 5, NameHelper.GetActivityName<ErrorActivityWithReturn>().rawName, ActivityResultStatus.Failure, WorkflowStepTypes.Action);
         Assert.AreEqual(new NotImplementedException().Message, archive.Steps[5].ErrorMessage);
-        AssertStepMatch(archive.Steps, 6, NameHelper.GetActivityName<TimeoutActivity>(), ActivityResultStatus.Timeout, WorkflowStepTypes.Action);
-        AssertStepMatch(archive.Steps, 7, NameHelper.GetActivityName<TimeoutActivityWithReturn>(), ActivityResultStatus.Timeout, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 6, NameHelper.GetActivityName<TimeoutActivity>().rawName, ActivityResultStatus.Timeout, WorkflowStepTypes.Action);
+        AssertStepMatch(archive.Steps, 7, NameHelper.GetActivityName<TimeoutActivityWithReturn>().rawName, ActivityResultStatus.Timeout, WorkflowStepTypes.Action);
         AssertStepMatch(archive.Steps, 8, null, null, WorkflowStepTypes.Delay);
         
         //cleanup

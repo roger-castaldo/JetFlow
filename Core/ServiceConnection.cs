@@ -24,7 +24,7 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
 
     public async ValueTask PurgeWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
     {
-        await using var query = await QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName, false, subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId));
+        await using var query = await QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName, false, subjectMapper.WorkflowPurgeFilter(message.WorkflowSubjectName, message.WorkflowId));
         var tasks = new List<Task>();
         await foreach (var msg in query)
         {
@@ -34,11 +34,11 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
         await Task.WhenAll(
         [
             .. tasks,
-            connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken),
-            connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowName, message.WorkflowId) }, cancellationToken)
+            connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken),
+            connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken)
         ]);
         await connection.PublishMessageAsync(
-            new(Array.Empty<byte>(), subjectMapper.WorkflowPurged(message.WorkflowName, message.WorkflowId), new(), $"{message.WorkflowName}-{message.WorkflowId}-purged", Timeout: TimeSpan.FromHours(6)),
+            new(Array.Empty<byte>(), subjectMapper.WorkflowPurged(message.WorkflowSubjectName, message.WorkflowId), new(), $"{message.WorkflowSubjectName}-{message.WorkflowId}-purged", Timeout: TimeSpan.FromHours(6)),
             cancellationToken: cancellationToken
         );
     }

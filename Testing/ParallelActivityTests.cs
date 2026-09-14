@@ -222,19 +222,19 @@ public class ParallelActivityTests
             Assert.Contains(output, emptyActivityWithInputAndOutput.Outputs);
 
         var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
-        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>()}/{runId}", TestContext.CancellationToken);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>().cleanedName}/{runId}", TestContext.CancellationToken);
         var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(runId, archive.ID);
         Assert.IsNull(archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
-        Assert.AreEqual(NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>(), archive.Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotEmpty(archive.Steps);
         Assert.HasCount(emptyActivityWithInputAndOutput.Inputs.Count, archive.Steps);
         var stepIndex = archive.Steps[0].Index;
         Assert.IsTrue(archive.Steps.All(s => 
-            Equals(s.Name, NameHelper.GetActivityName<EmptyActivityWithInputAndOutput>())
+            Equals(s.Name, NameHelper.GetActivityName<EmptyActivityWithInputAndOutput>().rawName)
             && Equals(s.Status, ActivityResultStatus.Success)
             && Equals(stepIndex, s.Index)
             && emptyActivityWithInputAndOutput.Inputs.Contains(s.Input?.ToString())
@@ -314,9 +314,9 @@ public class ParallelActivityTests
         Assert.IsNotNull(endMessage);
         Assert.IsFalse(endMessage.IsSuccess);
         if (errorOnFailure)
-            Assert.AreEqual($"Activity {NameHelper.GetActivityName<EmptyActivityWithProblems>()} has failed with error: 3: Simulated error occured; 5: Simulated error occured; 2: Activity timed out; 4: Activity timed out", endMessage.ErrorMessage);
+            Assert.AreEqual($"Activity {NameHelper.GetActivityName<EmptyActivityWithProblems>().rawName} has failed with error: 3: Simulated error occured; 5: Simulated error occured; 2: Activity timed out; 4: Activity timed out", endMessage.ErrorMessage);
         else
-            Assert.AreEqual($"Activity {NameHelper.GetActivityName<EmptyActivityWithProblems>()} has timed out: 2: Activity timed out; 4: Activity timed out", endMessage.ErrorMessage);
+            Assert.AreEqual($"Activity {NameHelper.GetActivityName<EmptyActivityWithProblems>().rawName} has timed out: 2: Activity timed out; 4: Activity timed out", endMessage.ErrorMessage);
 
         //Verify
         Assert.HasCount(ParallelActivityWorkflowWithProblems.Inputs.Count(), emptyActivityToTimeout.Inputs);

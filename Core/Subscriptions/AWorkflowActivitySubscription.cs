@@ -12,7 +12,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
     : AMetricSubscription(serviceConnection, consumer, metricsHelper, cancellationToken)
 {
     protected TWorkflowActivity Instance = instance;
-    private readonly string ActivityName = NameHelper.GetActivityName<TWorkflowActivity>();
+    private readonly string ActivityName = NameHelper.GetActivityName<TWorkflowActivity>().cleanedName;
     protected MessageSerializer MessageSerializer => messageSerializer;
 
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
@@ -26,7 +26,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
         Activity? activity = null;
         try
         {
-            if (Equals(message.ActivityName, ActivityName))
+            if (Equals(message.ActivitySubjectName, ActivityName))
             {
                 if (!Equals(ActivityEventTypes.Start, message.ActivityEventType))
                     throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");

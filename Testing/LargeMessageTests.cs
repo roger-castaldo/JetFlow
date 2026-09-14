@@ -111,7 +111,7 @@ public class LargeMessageTests
         var messageCount = 0;
         await foreach(var file in largeStore.ListAsync(cancellationToken: TestContext.CancellationToken))
         {
-            if (file.Name.StartsWith($"{NameHelper.GetWorkflowName<LargeMessageWorkflow>()}/{runId}/"))
+            if (file.Name.StartsWith($"{NameHelper.GetWorkflowName<LargeMessageWorkflow>().cleanedName}/{runId}/"))
             {
                 messageCount++;
                 var content = await JsonSerializer.DeserializeAsync<string>(new BrotliStream(new MemoryStream(await largeStore.GetBytesAsync(file.Name, TestContext.CancellationToken)), CompressionMode.Decompress), cancellationToken: TestContext.CancellationToken);
@@ -169,18 +169,18 @@ public class LargeMessageTests
         Assert.IsNotNull(LargeMessageWorkflow.OutgoingMessage);
         Assert.AreEqual(LargeMessageWorkflow.OutgoingMessage, largeIOActivity.OutgoingMessage);
         var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
-        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<LargeMessageWorkflow>()}/{runId}", TestContext.CancellationToken);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<LargeMessageWorkflow>().cleanedName}/{runId}", TestContext.CancellationToken);
         var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(runId, archive.ID);
         Assert.IsNull(archive.SchedulerId);
         Assert.IsTrue(archive.IsSuccessful);
-        Assert.AreEqual(NameHelper.GetWorkflowName<LargeMessageWorkflow>(), archive.Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<LargeMessageWorkflow>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.IsNotEmpty(archive.Steps);
         Assert.AreEqual(start, archive.Arguments?.ToString());
         Assert.HasCount(1, archive.Steps);
-        Assert.AreEqual(NameHelper.GetActivityName<LargeIOActivity>(), archive.Steps[0].Name);
+        Assert.AreEqual(NameHelper.GetActivityName<LargeIOActivity>().rawName, archive.Steps[0].Name);
         Assert.AreEqual(LargeMessageWorkflow.IncomingMessage, archive.Steps[0].Input?.ToString());
         Assert.AreEqual(LargeMessageWorkflow.OutgoingMessage, archive.Steps[0].Result?.ToString());
     }
@@ -233,7 +233,7 @@ public class LargeMessageTests
         var messageCount = 0;
         await foreach (var file in largeStore.ListAsync(cancellationToken: TestContext.CancellationToken))
         {
-            if (file.Name.StartsWith($"{NameHelper.GetWorkflowName<LargeMessageWorkflow>()}/{runId}/"))
+            if (file.Name.StartsWith($"{NameHelper.GetWorkflowName<LargeMessageWorkflow>().cleanedName}/{runId}/"))
                 messageCount++;
         }
         Assert.AreEqual(0, messageCount);

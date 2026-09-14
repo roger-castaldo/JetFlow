@@ -304,16 +304,16 @@ public class ActivityRetryTests
 
         //Verify
         var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
-        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>()}/{runId}", TestContext.CancellationToken);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>().cleanedName}/{runId}", TestContext.CancellationToken);
         var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(runId, archive.ID);
         Assert.IsTrue(archive.IsSuccessful);
-        Assert.AreEqual(NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>(), archive.Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
         Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
         Assert.HasCount(1, archive.Steps);
         var step = archive.Steps[0];
-        Assert.AreEqual(NameHelper.GetActivityName<MultiRetryActivity>(), step.Name);
+        Assert.AreEqual(NameHelper.GetActivityName<MultiRetryActivity>().rawName, step.Name);
         Assert.AreEqual(ActivityResultStatus.Success, step.Status);
         Assert.IsNotNull(step.Retries);
         Assert.HasCount(3, step.Retries);

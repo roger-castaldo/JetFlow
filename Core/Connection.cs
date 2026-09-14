@@ -114,10 +114,10 @@ public static class Connection
         private ValueTask<INatsJSConsumer> CreateWorkflowActivityConsumerAsync<TWorkflowActivity>(CancellationToken cancellationToken)
             => internalConnection.CreateOrUpdateConsumerAsync(
                     subjectMapper.ActivityQueueStream,
-                    new($"act_{NameHelper.GetActivityName<TWorkflowActivity>()}")
+                    new($"act_{NameHelper.GetActivityName<TWorkflowActivity>().cleanedName}")
                     {
-                        DurableName= $"act_{NameHelper.GetActivityName<TWorkflowActivity>()}",
-                        FilterSubject = subjectMapper.ActivityStart(NameHelper.GetActivityName<TWorkflowActivity>(), "*", "*", "*"),
+                        DurableName= $"act_{NameHelper.GetActivityName<TWorkflowActivity>().cleanedName}",
+                        FilterSubject = subjectMapper.ActivityStart(NameHelper.GetActivityName<TWorkflowActivity>().cleanedName, "*", "*", "*"),
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     },
                     cancellationToken
@@ -152,16 +152,16 @@ public static class Connection
         private ValueTask<INatsJSConsumer> CreateWorkflowConsumerAsync<TWorkflow>(CancellationToken cancellationToken)
             => internalConnection.CreateOrUpdateConsumerAsync(
                     subjectMapper.WorkflowEventsStreamsName,
-                    new($"wfr_{NameHelper.GetWorkflowName<TWorkflow>()}")
+                    new($"wfr_{NameHelper.GetWorkflowName<TWorkflow>().cleanedName}")
                     {
-                        DurableName = $"wfr_{NameHelper.GetWorkflowName<TWorkflow>()}",
+                        DurableName = $"wfr_{NameHelper.GetWorkflowName<TWorkflow>().cleanedName}",
                         FilterSubjects= [
-                            subjectMapper.WorkflowStart(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
-                            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
-                            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
-                            subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"),
-                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*", "*"),
-                            subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<TWorkflow>(), "*")
+                            subjectMapper.WorkflowStart(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"),
+                            subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"),
+                            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"),
+                            subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"),
+                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*", "*"),
+                            subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*")
                         ],
                         DeliverPolicy = NATS.Client.JetStream.Models.ConsumerConfigDeliverPolicy.New,
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit

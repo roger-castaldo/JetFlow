@@ -218,7 +218,7 @@ public static class ObservationConnection
                 jsContext,
                 mapper.WorkflowEventsStreamsName,
                 false,
-                mapper.WorkflowStart(NameHelper.GetWorkflowName<TWorkflow>(), workflowId)
+                mapper.WorkflowStart(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, workflowId)
             );
             return (largeMessageStore, mapper, query);
         }

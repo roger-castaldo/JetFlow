@@ -69,7 +69,7 @@ public class WorkflowOptionTests
         //Verify
         Assert.IsNotNull(endResult);
         Assert.IsFalse(endResult.IsSuccess);
-        Assert.AreEqual($"Activity {NameHelper.GetActivityName<UnregisteredActivity>()} has timed out", endResult.ErrorMessage);
+        Assert.AreEqual($"Activity {NameHelper.GetActivityName<UnregisteredActivity>().rawName} has timed out", endResult.ErrorMessage);
     }
 
     private sealed class SlowActivity : IActivity
@@ -115,7 +115,7 @@ public class WorkflowOptionTests
         //Verify
         Assert.IsNotNull(endResult);
         Assert.IsFalse(endResult.IsSuccess);
-        Assert.AreEqual($"Activity {NameHelper.GetActivityName<SlowActivity>()} has timed out", endResult.ErrorMessage);
+        Assert.AreEqual($"Activity {NameHelper.GetActivityName<SlowActivity>().rawName} has timed out", endResult.ErrorMessage);
     }
 
     private sealed class ActivityThatThrowsAnError : IActivity
@@ -161,7 +161,7 @@ public class WorkflowOptionTests
         //Verify
         Assert.IsNotNull(endResult);
         Assert.IsFalse(endResult.IsSuccess);
-        Assert.AreEqual($"Activity {NameHelper.GetActivityName<ActivityThatThrowsAnError>()} has failed with error: {new NotImplementedException().Message}", endResult.ErrorMessage);
+        Assert.AreEqual($"Activity {NameHelper.GetActivityName<ActivityThatThrowsAnError>().rawName} has failed with error: {new NotImplementedException().Message}", endResult.ErrorMessage);
     }
 
     private sealed class WorkflowWithNoSteps : IWorkflow
@@ -194,25 +194,25 @@ public class WorkflowOptionTests
         StartMessageListener(
             natsConnection, 
             subjectMapper.WorkflowEventsStreamsName, 
-            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>().cleanedName, "*"),
             completion, 
-            (subject)=>Equals(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            (subject)=>Equals(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoSteps>().cleanedName, runId.ToString())),
             cancellationTokenSource.Token
         );
         StartMessageListener(
             natsConnection,
             subjectMapper.WorkflowEventsStreamsName,
-            subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>().cleanedName, "*"),
             archive,
-            (subject) => Equals(subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            (subject) => Equals(subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<WorkflowWithNoSteps>().cleanedName, runId.ToString())),
             cancellationTokenSource.Token
         );
         StartMessageListener(
             natsConnection,
             subjectMapper.WorkflowEventsStreamsName,
-            subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), "*"),
+            subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<WorkflowWithNoSteps>().cleanedName, "*"),
             purge,
-            (subject) => Equals(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<WorkflowWithNoSteps>(), runId.ToString())),
+            (subject) => Equals(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<WorkflowWithNoSteps>().cleanedName, runId.ToString())),
             cancellationTokenSource.Token
         );
 

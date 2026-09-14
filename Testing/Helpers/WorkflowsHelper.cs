@@ -75,30 +75,30 @@ internal static class WorkflowsHelper
 
     public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForCompletion<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid?>> startCall)
     {
-        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
+        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"));
         return await StartWorkflowAndWait(consumer, close, startCall, 
             (runId, subject) => (runId.HasValue ?
-                Equals(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), runId.Value.ToString()))
-                : IsMatch(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>(), "*"))
+                Equals(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, runId.Value.ToString()))
+                : IsMatch(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"))
              ));
     }
 
     public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForPurge<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid?>> startCall)
     {
-        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
+        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"));
         return await StartWorkflowAndWait(consumer, close, startCall,
             (runId, subject) => (runId.HasValue ?
-                Equals(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>(), runId.Value.ToString()))
-                : IsMatch(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>(), "*"))
+                Equals(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, runId.Value.ToString()))
+                : IsMatch(subject, subjectMapper.WorkflowPurged(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"))
              ));
     }
 
     public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForArchive<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid?>> startCall)
     {
-        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>(), "*"));
+        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"));
         return await StartWorkflowAndWait(consumer, close, startCall, (runId, subject) => (runId.HasValue ?
-            Equals(subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>(), runId.Value.ToString()))
-            : IsMatch(subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>(), "*"))
+            Equals(subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, runId.Value.ToString()))
+            : IsMatch(subject, subjectMapper.WorkflowArchived(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"))
          ));
     }
 
