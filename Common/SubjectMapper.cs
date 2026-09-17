@@ -99,6 +99,8 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}swf.{workflowName}.{instance}.start";
     public string ScheduledWorkflowTimer(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}swf.{workflowName}.{instance}.timer";
+    public string ScheduleWorkflowPurge(string workflowName, string instance)
+        => $"jetflow.{subjectNamespace}swf.{workflowName}.{instance}.*";
 
     public string CountersStreamName
         => $"JETFLOW_{streamNamespace}COUNTERS";

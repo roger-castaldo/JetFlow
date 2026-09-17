@@ -2,6 +2,7 @@
 using JetFlow.Data;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
+using JetFlow.Serializers;
 using JetFlow.Subscriptions;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
@@ -9,6 +10,7 @@ using NATS.Client.JetStream.Models;
 using NATS.Client.ObjectStore;
 using NATS.Net;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -275,6 +277,52 @@ public static class ObservationConnection
             await foreach (var workflow in workflowQuery)
                 return workflow;
             return null;
+        }
+
+        ValueTask<IEnumerable<ScheduledWorkflow<object>>> IObservationConnection.ListScheduledWorkflowsAsync(string? workflowNamespace)
+            => ListScheduledWorkflowsAsync<object>(workflowNamespace, null);
+        ValueTask<IEnumerable<ScheduledWorkflow<object>>> IObservationConnection.ListScheduledWorkflowsAsync<TWorkflow>(string? workflowNamespace)
+            => ListScheduledWorkflowsAsync<object>(workflowNamespace, NameHelper.GetWorkflowName<TWorkflow>().cleanedName);
+        ValueTask<IEnumerable<ScheduledWorkflow<TInput>>> IObservationConnection.ListScheduledWorkflowsAsync<TWorkflow, TInput>(string? workflowNamespace)
+            => ListScheduledWorkflowsAsync<TInput>(workflowNamespace, NameHelper.GetWorkflowName<TWorkflow>().cleanedName);
+
+        private const string scheduledTimeFormat = "yyyy-MM-ddTHH:mm:ssK";
+        private async ValueTask<IEnumerable<ScheduledWorkflow<TInput>>> ListScheduledWorkflowsAsync<TInput>(string? workflowNamespace, string? workflowSubject)
+        {
+            if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
+                throw new NamespaceNotRegisteredException(workflowNamespace);
+            var objContext = jsContext.CreateObjectStoreContext();
+            var largeMessageStore = await objContext.GetObjectStoreAsync(mapper.LargeMessageObjectstore);
+            var messageSerializer = new MessageSerializer(CompressionTypes.Brotli, null);
+            await using var query = await JetStreamHelper.QueryStreamAsync(
+                jsContext,
+                mapper.ScheduledWorkflowStreamsName,
+                false,
+                mapper.ScheduledWorkflowTimer(workflowSubject??"*","*")
+            );
+            List<ScheduledWorkflow<TInput>> results = [];
+            await foreach(var msg in query)
+            {
+                var eventMessage = await EventMessage.CreateMessageAsync(largeMessageStore, msg, CancellationToken.None);
+                string? cron = null;
+                DateTimeOffset? runsAt = null;
+                if (eventMessage.Headers?.TryGetValue(Constants.ScheduleDelayHeader,out var value)??false)
+                {
+                    if (value.ToString().StartsWith("@"))
+                        runsAt = DateTimeOffset.ParseExact(value.ToString().Split(' ')[1], scheduledTimeFormat, CultureInfo.InvariantCulture);
+                    else
+                        cron = value.ToString();
+                }
+                results.Add(new ScheduledWorkflow<TInput>(
+                    eventMessage.WorkflowId,
+                    eventMessage.WorkflowName,
+                    (eventMessage.Data!=null ? await messageSerializer.DecodeAsync<TInput>(eventMessage.Data, eventMessage.Headers) : default),
+                    MetaDataHelper.ExtractMetaData(eventMessage.Headers),
+                    cron,
+                    runsAt
+                ));
+            }
+            return results;
         }
 
         async ValueTask IAsyncDisposable.DisposeAsync()

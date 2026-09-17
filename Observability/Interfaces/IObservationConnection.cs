@@ -159,4 +159,32 @@ public interface IObservationConnection
     /// <returns>The matching <see cref="ActiveWorkflow"/> if found; otherwise <c>null</c>.</returns>
     ValueTask<ActiveWorkflow?> LoadWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, Guid workflowId)
         where TWorkflow : class, IWorkflow<TInput>;
+
+    /// <summary>
+    /// Lists scheduled workflows in the specified namespace.
+    /// Returns scheduled workflow entries where the workflow input is represented as <see cref="object"/>.
+    /// </summary>
+    /// <param name="workflowNamespace">Optional namespace to scope the listing. Use <c>null</c> to list from the default namespace.</param>
+    /// <returns>A collection of scheduled workflows with untyped inputs.</returns>
+    ValueTask<IEnumerable<ScheduledWorkflow<object>>> ListScheduledWorkflowsAsync(string? workflowNamespace);
+
+    /// <summary>
+    /// Lists scheduled workflows of the specified workflow type in the given namespace.
+    /// The returned scheduled workflows contain untyped (<see cref="object"/>) inputs.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow"/>.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the listing. Use <c>null</c> to list from the default namespace.</param>
+    /// <returns>A collection of scheduled workflows for the specified workflow type.</returns>
+    ValueTask<IEnumerable<ScheduledWorkflow<object>>> ListScheduledWorkflowsAsync<TWorkflow>(string? workflowNamespace)
+        where TWorkflow : class, IWorkflow;
+
+    /// <summary>
+    /// Lists scheduled workflows of the specified workflow type that accept a strongly-typed input.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow{TInput}"/>.</typeparam>
+    /// <typeparam name="TInput">The strongly-typed input for the workflow.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the listing. Use <c>null</c> to list from the default namespace.</param>
+    /// <returns>A collection of scheduled workflows with inputs of type <typeparamref name="TInput"/>.</returns>
+    ValueTask<IEnumerable<ScheduledWorkflow<TInput>>> ListScheduledWorkflowsAsync<TWorkflow, TInput>(string? workflowNamespace)
+        where TWorkflow : class, IWorkflow<TInput>;
 }

@@ -34,8 +34,8 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
         await Task.WhenAll(
         [
             .. tasks,
-            connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken),
-            connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken)
+            connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken).AsTask(),
+            connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken).AsTask()
         ]);
         await connection.PublishMessageAsync(
             new(Array.Empty<byte>(), subjectMapper.WorkflowPurged(message.WorkflowSubjectName, message.WorkflowId), new(), $"{message.WorkflowSubjectName}-{message.WorkflowId}-purged", Timeout: TimeSpan.FromHours(6)),

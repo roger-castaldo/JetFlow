@@ -218,6 +218,26 @@ public static class Connection
 
         ValueTask<Guid> IConnection.DelayStartWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, TimeSpan delay, CancellationToken cancellationToken)
             => serviceConnection.DelayStartWorkflowAsync<TWorkflow, TInput>(delay, executionRequest, cancellationToken);
+        ValueTask<bool> IConnection.RemoveScheduledWorkflowAsync<TWorkflow>(Guid scheduledId, CancellationToken cancellationToken)
+            => RemoveScheduledWorkflowAsync<TWorkflow>(scheduledId, cancellationToken);
+        ValueTask<bool> IConnection.RemoveScheduledWorkflowAsync<TWorkflow, TInput>(Guid scheduledId, CancellationToken cancellationToken)
+            => RemoveScheduledWorkflowAsync<TWorkflow>(scheduledId, cancellationToken);
+        ValueTask<bool> IConnection.RemoveDelayedWorkflowAsync<TWorkflow>(Guid scheduledId, CancellationToken cancellationToken)
+            => RemoveScheduledWorkflowAsync<TWorkflow>(scheduledId, cancellationToken);
+        ValueTask<bool> IConnection.RemoveDelayedWorkflowAsync<TWorkflow, TInput>(Guid scheduledId, CancellationToken cancellationToken)
+            => RemoveScheduledWorkflowAsync<TWorkflow>(scheduledId, cancellationToken);
+        private async ValueTask<bool> RemoveScheduledWorkflowAsync<TWorkflow>(Guid scheduledId, CancellationToken cancellationToken)
+        {
+            var result = await internalConnection.PurgeStreamAsync(
+                subjectMapper.ScheduledWorkflowStreamsName,
+                new()
+                {
+                    Filter=subjectMapper.ScheduleWorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, scheduledId.ToString())
+                },
+                cancellationToken
+            );
+            return result.Success && result.Purged>0;
+        }
 
         async ValueTask IAsyncDisposable.DisposeAsync()
         {

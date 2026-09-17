@@ -190,5 +190,47 @@ namespace JetFlow.Interfaces
         /// scheduled workflow instance.</returns>
         ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> exectionRequest, TimeSpan delay, CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow<TInput>;
+        /// <summary>
+        /// Removes a previously scheduled workflow by its identifier.
+        /// </summary>
+        /// <typeparam name="TWorkflow">The workflow type the scheduled entry was created for. Must implement <see cref="IWorkflow"/>.</typeparam>
+        /// <param name="scheduledId">The identifier of the scheduled workflow to remove.</param>
+        /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+        /// <returns><c>true</c> if the scheduled workflow was found and removed; otherwise <c>false</c>.</returns>
+        ValueTask<bool> RemoveScheduledWorkflowAsync<TWorkflow>(Guid scheduledId, CancellationToken cancellationToken = default)
+            where TWorkflow : IWorkflow;
+
+        /// <summary>
+        /// Removes a previously scheduled workflow by its identifier for workflows that accept a strongly-typed input.
+        /// </summary>
+        /// <typeparam name="TWorkflow">The workflow type the scheduled entry was created for. Must implement <see cref="IWorkflow{TInput}"/>.</typeparam>
+        /// <typeparam name="TInput">The input type for the workflow.</typeparam>
+        /// <param name="scheduledId">The identifier of the scheduled workflow to remove.</param>
+        /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+        /// <returns><c>true</c> if the scheduled workflow was found and removed; otherwise <c>false</c>.</returns>
+        ValueTask<bool> RemoveScheduledWorkflowAsync<TWorkflow, TInput>(Guid scheduledId, CancellationToken cancellationToken = default)
+            where TWorkflow : IWorkflow<TInput>;
+
+        /// <summary>
+        /// Removes a delayed-start workflow entry by its identifier.
+        /// </summary>
+        /// <typeparam name="TWorkflow">The workflow type the delayed entry was created for. Must implement <see cref="IWorkflow"/>.</typeparam>
+        /// <param name="scheduledId">The identifier of the delayed workflow entry to remove.</param>
+        /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+        /// <returns><c>true</c> if the delayed workflow entry was found and removed; otherwise <c>false</c>.</returns>
+        ValueTask<bool> RemoveDelayedWorkflowAsync<TWorkflow>(Guid scheduledId, CancellationToken cancellationToken = default)
+            where TWorkflow : IWorkflow;
+
+        /// <summary>
+        /// Removes a delayed-start workflow entry by its identifier for workflows that accept a strongly-typed input.
+        /// </summary>
+        /// <typeparam name="TWorkflow">The workflow type the delayed entry was created for. Must implement <see cref="IWorkflow{TInput}"/>.</typeparam>
+        /// <typeparam name="TInput">The input type for the workflow.</typeparam>
+        /// <param name="scheduledId">The identifier of the delayed workflow entry to remove.</param>
+        /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+        /// <returns><c>true</c> if the delayed workflow entry was found and removed; otherwise <c>false</c>.</returns>
+        ValueTask<bool> RemoveDelayedWorkflowAsync<TWorkflow, TInput>(Guid scheduledId, CancellationToken cancellationToken = default)
+            where TWorkflow : IWorkflow<TInput>;
+
     }
 }

@@ -14,6 +14,9 @@
   - [GetActiveWorkflowCountAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetActiveWorkflowCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetActiveWorkflowCountAsync(System.String)')
   - [GetSuspendedWorkflowCountAsync()](#M-JetFlow-Interfaces-IObservationConnection-GetSuspendedWorkflowCountAsync 'JetFlow.Interfaces.IObservationConnection.GetSuspendedWorkflowCountAsync')
   - [GetSuspendedWorkflowCountAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetSuspendedWorkflowCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetSuspendedWorkflowCountAsync(System.String)')
+  - [ListScheduledWorkflowsAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.ListScheduledWorkflowsAsync(System.String)')
+  - [ListScheduledWorkflowsAsync\`\`1(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync``1-System-String- 'JetFlow.Interfaces.IObservationConnection.ListScheduledWorkflowsAsync``1(System.String)')
+  - [ListScheduledWorkflowsAsync\`\`2(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync``2-System-String- 'JetFlow.Interfaces.IObservationConnection.ListScheduledWorkflowsAsync``2(System.String)')
   - [LoadWorkflowAsync\`\`1(workflowNamespace,workflowId)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowAsync``1-System-String,System-Guid- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowAsync``1(System.String,System.Guid)')
   - [LoadWorkflowAsync\`\`2(workflowNamespace,workflowId)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowAsync``2-System-String,System-Guid- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowAsync``2(System.String,System.Guid)')
   - [LoadWorkflowsAsync\`\`1(workflowNamespace,checkMetaData)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowsAsync``1-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowsAsync``1(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean})')
@@ -197,6 +200,72 @@ The number of suspended workflows in the requested namespace.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The workflow namespace to filter by, or `null` to use the default namespace. |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync-System-String-'></a>
+### ListScheduledWorkflowsAsync(workflowNamespace) `method`
+
+##### Summary
+
+Lists scheduled workflows in the specified namespace.
+Returns scheduled workflow entries where the workflow input is represented as [Object](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Object 'System.Object').
+
+##### Returns
+
+A collection of scheduled workflows with untyped inputs.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the listing. Use `null` to list from the default namespace. |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync``1-System-String-'></a>
+### ListScheduledWorkflowsAsync\`\`1(workflowNamespace) `method`
+
+##### Summary
+
+Lists scheduled workflows of the specified workflow type in the given namespace.
+The returned scheduled workflows contain untyped ([Object](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Object 'System.Object')) inputs.
+
+##### Returns
+
+A collection of scheduled workflows for the specified workflow type.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the listing. Use `null` to list from the default namespace. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow'). |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync``2-System-String-'></a>
+### ListScheduledWorkflowsAsync\`\`2(workflowNamespace) `method`
+
+##### Summary
+
+Lists scheduled workflows of the specified workflow type that accept a strongly-typed input.
+
+##### Returns
+
+A collection of scheduled workflows with inputs of type `TInput`.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the listing. Use `null` to list from the default namespace. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1'). |
+| TInput | The strongly-typed input for the workflow. |
 
 <a name='M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowAsync``1-System-String,System-Guid-'></a>
 ### LoadWorkflowAsync\`\`1(workflowNamespace,workflowId) `method`

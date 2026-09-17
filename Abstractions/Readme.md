@@ -83,6 +83,10 @@
   - [RegisterWorkflowActivityWithReturnAsync\`\`3(cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowActivityWithReturnAsync``3-System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowActivityWithReturnAsync``3(System.Threading.CancellationToken)')
   - [RegisterWorkflowAsync\`\`1(options,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowAsync``1-JetFlow-Configs-WorkflowOptions,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowAsync``1(JetFlow.Configs.WorkflowOptions,System.Threading.CancellationToken)')
   - [RegisterWorkflowAsync\`\`2(options,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RegisterWorkflowAsync``2-JetFlow-Configs-WorkflowOptions,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RegisterWorkflowAsync``2(JetFlow.Configs.WorkflowOptions,System.Threading.CancellationToken)')
+  - [RemoveDelayedWorkflowAsync\`\`1(scheduledId,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RemoveDelayedWorkflowAsync``1-System-Guid,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RemoveDelayedWorkflowAsync``1(System.Guid,System.Threading.CancellationToken)')
+  - [RemoveDelayedWorkflowAsync\`\`2(scheduledId,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RemoveDelayedWorkflowAsync``2-System-Guid,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RemoveDelayedWorkflowAsync``2(System.Guid,System.Threading.CancellationToken)')
+  - [RemoveScheduledWorkflowAsync\`\`1(scheduledId,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RemoveScheduledWorkflowAsync``1-System-Guid,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RemoveScheduledWorkflowAsync``1(System.Guid,System.Threading.CancellationToken)')
+  - [RemoveScheduledWorkflowAsync\`\`2(scheduledId,cancellationToken)](#M-JetFlow-Interfaces-IConnection-RemoveScheduledWorkflowAsync``2-System-Guid,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.RemoveScheduledWorkflowAsync``2(System.Guid,System.Threading.CancellationToken)')
   - [ResumeWorkflowAsync\`\`1(instance,message,cancellationToken)](#M-JetFlow-Interfaces-IConnection-ResumeWorkflowAsync``1-System-Guid,System-String,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.ResumeWorkflowAsync``1(System.Guid,System.String,System.Threading.CancellationToken)')
   - [ResumeWorkflowAsync\`\`2(instance,message,cancellationToken)](#M-JetFlow-Interfaces-IConnection-ResumeWorkflowAsync``2-System-Guid,System-String,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.ResumeWorkflowAsync``2(System.Guid,System.String,System.Threading.CancellationToken)')
   - [ScheduleWorkflowAsync\`\`1(schedule,exectionRequest,cancellationToken)](#M-JetFlow-Interfaces-IConnection-ScheduleWorkflowAsync``1-JetFlow-Interfaces-IWorkflowSchedule,JetFlow-WorkflowExecutionRequest,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.ScheduleWorkflowAsync``1(JetFlow.Interfaces.IWorkflowSchedule,JetFlow.WorkflowExecutionRequest,System.Threading.CancellationToken)')
@@ -1263,6 +1267,104 @@ A ValueTask that represents the asynchronous registration operation.
 | ---- | ----------- |
 | TWorkflow | The workflow type to register. Must implement IWorkflow<TInput>. |
 | TInput | The type of input accepted by the workflow. |
+
+<a name='M-JetFlow-Interfaces-IConnection-RemoveDelayedWorkflowAsync``1-System-Guid,System-Threading-CancellationToken-'></a>
+### RemoveDelayedWorkflowAsync\`\`1(scheduledId,cancellationToken) `method`
+
+##### Summary
+
+Removes a delayed-start workflow entry by its identifier.
+
+##### Returns
+
+`true` if the delayed workflow entry was found and removed; otherwise `false`.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| scheduledId | [System.Guid](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Guid 'System.Guid') | The identifier of the delayed workflow entry to remove. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token to monitor for cancellation requests. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type the delayed entry was created for. Must implement [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow'). |
+
+<a name='M-JetFlow-Interfaces-IConnection-RemoveDelayedWorkflowAsync``2-System-Guid,System-Threading-CancellationToken-'></a>
+### RemoveDelayedWorkflowAsync\`\`2(scheduledId,cancellationToken) `method`
+
+##### Summary
+
+Removes a delayed-start workflow entry by its identifier for workflows that accept a strongly-typed input.
+
+##### Returns
+
+`true` if the delayed workflow entry was found and removed; otherwise `false`.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| scheduledId | [System.Guid](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Guid 'System.Guid') | The identifier of the delayed workflow entry to remove. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token to monitor for cancellation requests. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type the delayed entry was created for. Must implement [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1'). |
+| TInput | The input type for the workflow. |
+
+<a name='M-JetFlow-Interfaces-IConnection-RemoveScheduledWorkflowAsync``1-System-Guid,System-Threading-CancellationToken-'></a>
+### RemoveScheduledWorkflowAsync\`\`1(scheduledId,cancellationToken) `method`
+
+##### Summary
+
+Removes a previously scheduled workflow by its identifier.
+
+##### Returns
+
+`true` if the scheduled workflow was found and removed; otherwise `false`.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| scheduledId | [System.Guid](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Guid 'System.Guid') | The identifier of the scheduled workflow to remove. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token to monitor for cancellation requests. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type the scheduled entry was created for. Must implement [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow'). |
+
+<a name='M-JetFlow-Interfaces-IConnection-RemoveScheduledWorkflowAsync``2-System-Guid,System-Threading-CancellationToken-'></a>
+### RemoveScheduledWorkflowAsync\`\`2(scheduledId,cancellationToken) `method`
+
+##### Summary
+
+Removes a previously scheduled workflow by its identifier for workflows that accept a strongly-typed input.
+
+##### Returns
+
+`true` if the scheduled workflow was found and removed; otherwise `false`.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| scheduledId | [System.Guid](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Guid 'System.Guid') | The identifier of the scheduled workflow to remove. |
+| cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | A token to monitor for cancellation requests. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type the scheduled entry was created for. Must implement [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1'). |
+| TInput | The input type for the workflow. |
 
 <a name='M-JetFlow-Interfaces-IConnection-ResumeWorkflowAsync``1-System-Guid,System-String,System-Threading-CancellationToken-'></a>
 ### ResumeWorkflowAsync\`\`1(instance,message,cancellationToken) `method`

@@ -21,7 +21,6 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
 
     private const int maxChunkSize = 1000;
     private const string TTLHeader = "Nats-TTL";
-    private const string ScheduleDelayHeader = "Nats-Schedule";
     private const string ScheduleTargetHeader = "Nats-Schedule-Target";
     private const string ScheduledTargetTTL = "Nats-Schedule-TTL";
     private const string MessageIdHeader = "Nats-Msg-Id";
@@ -111,7 +110,7 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
     }
     private static NatsHeaders AppendScheduleHeaders(NatsHeaders headers, string cronString, string destinationSubject, TimeSpan? timeout)
     {
-        headers.Add(ScheduleDelayHeader, cronString);
+        headers.Add(Constants.ScheduleDelayHeader, cronString);
         headers.Add(ScheduleTargetHeader, destinationSubject);
         if (timeout.HasValue)
             headers.Add(ScheduledTargetTTL, CreateTTLString(timeout.Value));
@@ -179,11 +178,8 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
         CancellationToken cancellationToken = default)
         => jsContext.CreateOrUpdateConsumerAsync(stream, config, cancellationToken);
 
-    internal async Task PurgeStreamAsync(string stream, StreamPurgeRequest request, CancellationToken cancellationToken)
-    {
-        var result = await jsContext.PurgeStreamAsync(stream, request, cancellationToken);
-        System.Diagnostics.Debug.WriteLine($"PurgeStreamAsync: Stream={stream}, Filter={request.Filter}, Purged={result.Purged}, Success={result.Success}");
-    }
+    internal ValueTask<StreamPurgeResponse> PurgeStreamAsync(string stream, StreamPurgeRequest request, CancellationToken cancellationToken)
+        => jsContext.PurgeStreamAsync(stream, request, cancellationToken);
 
     internal ValueTask<bool> DeleteConsumerAsync(string streamName, string consumerName)
         => jsContext.DeleteConsumerAsync(streamName, consumerName);
