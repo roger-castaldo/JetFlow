@@ -177,6 +177,9 @@ internal static class WorkflowHelper
         );
     }
 
+    public static string WorkflowArchivePath(EventMessage eventMessage)
+        => $"{eventMessage.WorkflowSubjectName}/{eventMessage.WorkflowId}";
+
     private static IEnumerable<EventMessage> FindMatchingMessages(EventMessage eventMessage, ref List<EventMessage> events)
     {
         var result = events.Where(e => Equals(e.ActivityID, eventMessage.ActivityID)

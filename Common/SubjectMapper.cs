@@ -1,9 +1,12 @@
-﻿namespace JetFlow;
+﻿using System.Text.RegularExpressions;
+
+namespace JetFlow;
 
 internal class SubjectMapper
 {
     private readonly string streamNamespace;
     private readonly string subjectNamespace;
+    private readonly Regex regWorkflowArchiveExtractor;
 
     public SubjectMapper(string? instanceNamespace)
     {
@@ -17,6 +20,7 @@ internal class SubjectMapper
             instanceNamespace=null;
         this.streamNamespace = (instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_");
         this.subjectNamespace = (instanceNamespace==null ? "" : $"{instanceNamespace.ToLower()}.");
+        regWorkflowArchiveExtractor = new(@$"^jetflow\.{(string.IsNullOrEmpty(subjectNamespace) ? "" : $"{instanceNamespace}\\.")}wkf\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.archived$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     }
 
     public string WorkflowEventsStreamsName
@@ -121,5 +125,8 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}performance.activity";
     public string WorkflowPerformanceSubject
         => $"jetflow.{subjectNamespace}performance.workflow";
+
+    public string ArchiveObservationStreamName
+        => $"JETFLOW_{streamNamespace}ARCHIVE_OBS";
 
 }

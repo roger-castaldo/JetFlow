@@ -14,6 +14,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace JetFlow;
 
@@ -42,7 +43,7 @@ public static class ObservationConnection
             PropertyNameCaseInsensitive=true,
             ReadCommentHandling=JsonCommentHandling.Skip,
             DefaultIgnoreCondition=JsonIgnoreCondition.WhenWritingNull,
-            TypeInfoResolver = ObservationJsonContext.Default
+            TypeInfoResolver = JsonTypeInfoResolver.Combine(ObservationJsonContext.Default, Constants.JsonOptions.TypeInfoResolver) 
         };
         public static async ValueTask<IObservationConnection> CreateAsync(ObservationConnectionOptions options)
         {
@@ -67,8 +68,9 @@ public static class ObservationConnection
         private short samplingDurationMinutes = 5;
         private Func<WorkflowPerformanceRecord, ValueTask>? workflowRecordReceived;
         private Func<ActivityPerformanceRecord, ValueTask>? activityRecordReceived;
+        private Func<ArchivedWorkflowEvent, ValueTask<bool>>? archiveCallback;
         private CancellationTokenSource cancellationTokenSource = new();
-        private readonly ConcurrentBag<PerformanceSubscription> subscriptions = new();
+        private readonly ConcurrentBag<ASubscription> subscriptions = new();
         private readonly SemaphoreSlim semaphoreSlim = new(1, 1);
 
 
@@ -80,36 +82,68 @@ public static class ObservationConnection
             );
             subscriptions.Clear();
             cancellationTokenSource = new();
-            if (workflowRecordReceived!=null && activityRecordReceived!=null)
-                await Task.WhenAll(namespaces.Select(async pair =>
-                {
-                    await jsContext.CreateOrUpdateStreamAsync(new(pair.Value.PerformanceStreamName, [pair.Value.PerformanceFilter])
-                    {
-                        Retention = StreamConfigRetention.Limits,
-                        Discard = StreamConfigDiscard.Old,
-                        MaxAge = TimeSpan.FromDays(1)
-                    });
-                    var kc = jsContext.CreateKeyValueStoreContext();
-                    var configStore = await kc.GetStoreAsync(pair.Value.WorkflowConfigKeystore);
-                    var createResult = await configStore.TryCreateAsync<short>(pair.Value.PerformanceSamplingKey, samplingDurationMinutes, cancellationToken: cancellationTokenSource.Token);
-                    if (!createResult.Success)
-                    {
-                        var getEntryResult = await configStore.TryGetEntryAsync<short>(pair.Value.PerformanceSamplingKey, cancellationToken: cancellationTokenSource.Token);
-                        if(getEntryResult.Success && getEntryResult.Value.Value!= samplingDurationMinutes)
-                            await configStore.UpdateAsync<short>(pair.Value.PerformanceSamplingKey, samplingDurationMinutes, getEntryResult.Value.Revision, cancellationToken: cancellationTokenSource.Token);
-                    }
-                    var consumer = await jsContext.CreateConsumerAsync(
-                            pair.Value.PerformanceStreamName,
-                            new(groupName)
-                            {
-                                DurableName=groupName,
-                                FilterSubjects=new[] { pair.Value.WorkflowPerformanceSubject, pair.Value.ActivityPerformanceSubject },
-                                AckPolicy=NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
-                            }, cancellationTokenSource.Token
-                        );
-                    subscriptions.Add(new PerformanceSubscription(consumer, pair.Value, jsonOptions, workflowRecordReceived!, activityRecordReceived!, cancellationTokenSource.Token));
-                }));
+            await Task.WhenAll(namespaces.Select(async pair =>
+            {
+                if (workflowRecordReceived!=null && activityRecordReceived!=null)
+                    subscriptions.Add(await CreatePerformanceSubscription(pair));
+                if (archiveCallback!=null)
+                    subscriptions.Add(await CreateArchiveSubscription(pair));
+            }));
             semaphoreSlim.Release();
+        }
+
+        private async Task<ASubscription> CreateArchiveSubscription(KeyValuePair<string, SubjectMapper> pair)
+        {
+            await jsContext.CreateOrUpdateStreamAsync(new()
+            {
+                Name = pair.Value.ArchiveObservationStreamName,
+                Retention = StreamConfigRetention.Workqueue,
+                DenyPurge = true,
+                Mirror = new StreamSource() { 
+                    Name = pair.Value.WorkflowEventsStreamsName,
+                    FilterSubject = pair.Value.WorkflowArchived("*","*")
+                }
+            });
+            var oc = jsContext.CreateObjectStoreContext();
+            var archiveStore = await oc.GetObjectStoreAsync(pair.Value.WorkflowArchiveObjectstore, cancellationToken: cancellationTokenSource.Token);
+            var consumer = await jsContext.CreateOrUpdateConsumerAsync(
+                    pair.Value.ArchiveObservationStreamName,
+                    new(groupName)
+                    {
+                        DurableName = groupName,
+                        AckPolicy = ConsumerConfigAckPolicy.Explicit
+                    }, cancellationTokenSource.Token
+                );
+            return new ArchiveSubscription(consumer, jsonOptions, pair.Key, archiveStore, archiveCallback!, cancellationTokenSource.Token);
+        }
+
+        private async Task<ASubscription> CreatePerformanceSubscription(KeyValuePair<string, SubjectMapper> pair)
+        {
+            await jsContext.CreateOrUpdateStreamAsync(new(pair.Value.PerformanceStreamName, [pair.Value.PerformanceFilter])
+            {
+                Retention = StreamConfigRetention.Limits,
+                Discard = StreamConfigDiscard.Old,
+                MaxAge = TimeSpan.FromDays(1)
+            });
+            var kc = jsContext.CreateKeyValueStoreContext();
+            var configStore = await kc.GetStoreAsync(pair.Value.WorkflowConfigKeystore);
+            var createResult = await configStore.TryCreateAsync<short>(pair.Value.PerformanceSamplingKey, samplingDurationMinutes, cancellationToken: cancellationTokenSource.Token);
+            if (!createResult.Success)
+            {
+                var getEntryResult = await configStore.TryGetEntryAsync<short>(pair.Value.PerformanceSamplingKey, cancellationToken: cancellationTokenSource.Token);
+                if (getEntryResult.Success && getEntryResult.Value.Value!= samplingDurationMinutes)
+                    await configStore.UpdateAsync<short>(pair.Value.PerformanceSamplingKey, samplingDurationMinutes, getEntryResult.Value.Revision, cancellationToken: cancellationTokenSource.Token);
+            }
+            var consumer = await jsContext.CreateOrUpdateConsumerAsync(
+                    pair.Value.PerformanceStreamName,
+                    new(groupName)
+                    {
+                        DurableName=groupName,
+                        FilterSubjects=new[] { pair.Value.WorkflowPerformanceSubject, pair.Value.ActivityPerformanceSubject },
+                        AckPolicy=NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
+                    }, cancellationTokenSource.Token
+                );
+            return new PerformanceSubscription(consumer, pair.Value, jsonOptions, workflowRecordReceived!, activityRecordReceived!, cancellationTokenSource.Token);
         }
 
         ValueTask IObservationConnection.AddDefaultNamespaceAsync()
@@ -136,6 +170,14 @@ public static class ObservationConnection
             samplingDurationMinutes = sampleDurationMinutes;
             this.workflowRecordReceived = workflowRecordReceived;
             this.activityRecordReceived = activityRecordReceived;
+            return RefreshNamespacesAsync();
+        }
+
+        ValueTask IObservationConnection.AddArchivingListenerAsync(Func<ArchivedWorkflowEvent, ValueTask<bool>> archiveCallback)
+        {
+            if (this.archiveCallback!=null)
+                throw new InvalidOperationException("Archive monitoring has already been added.");
+            this.archiveCallback = archiveCallback;
             return RefreshNamespacesAsync();
         }
 

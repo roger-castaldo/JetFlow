@@ -107,7 +107,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         if (Equals(options.CompletionAction, WorkflowCompletionActions.Archive))
         {
             await ServiceConnection.ArchiveStore.PutAsync(
-                $"{message.WorkflowSubjectName}/{message.WorkflowId}",
+                WorkflowHelper.WorkflowArchivePath(message),
                 InternalsSerializer.SerializeWorkflowArchive(await WorkflowHelper.ProduceArchivedWorkflowAsync(
                     subjectMapper,
                     ServiceConnection.JSContext,

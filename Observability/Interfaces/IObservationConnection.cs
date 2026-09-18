@@ -94,6 +94,11 @@ public interface IObservationConnection
     /// <param name="activityRecordReceived">Callback invoked when an <see cref="ActivityPerformanceRecord"/> is available.</param>
     ValueTask AddPerformanceMonitoringAsync(byte sampleDurationMinutes, Func<WorkflowPerformanceRecord, ValueTask> workflowRecordReceived, Func<ActivityPerformanceRecord, ValueTask> activityRecordReceived);
     /// <summary>
+    /// Starts a listener for archiving of workflows to be invoked once a workflow archive is completed
+    /// </summary>
+    /// <param name="archiveCallback">The callback to invoke when the archiving occurs.  It returns a true to delete the actual archive from nats or false to leave it.</param>
+    ValueTask AddArchivingListenerAsync(Func<ArchivedWorkflowEvent, ValueTask<bool>> archiveCallback);
+    /// <summary>
     /// Creates a query that enumerates active workflows of the specified workflow type within the
     /// optionally provided namespace. The returned <see cref="IWorkflowQuery"/> can be consumed
     /// asynchronously to iterate matching <see cref="ActiveWorkflow"/> instances.

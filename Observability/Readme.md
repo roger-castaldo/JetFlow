@@ -3,7 +3,12 @@
 
 ## Contents
 
+- [ArchivedWorkflowEvent](#T-JetFlow-ArchivedWorkflowEvent 'JetFlow.ArchivedWorkflowEvent')
+  - [#ctor(WorkflowNamespace,Archive)](#M-JetFlow-ArchivedWorkflowEvent-#ctor-System-String,JetFlow-ArchivedWorkflow- 'JetFlow.ArchivedWorkflowEvent.#ctor(System.String,JetFlow.ArchivedWorkflow)')
+  - [Archive](#P-JetFlow-ArchivedWorkflowEvent-Archive 'JetFlow.ArchivedWorkflowEvent.Archive')
+  - [WorkflowNamespace](#P-JetFlow-ArchivedWorkflowEvent-WorkflowNamespace 'JetFlow.ArchivedWorkflowEvent.WorkflowNamespace')
 - [IObservationConnection](#T-JetFlow-Interfaces-IObservationConnection 'JetFlow.Interfaces.IObservationConnection')
+  - [AddArchivingListenerAsync(archiveCallback)](#M-JetFlow-Interfaces-IObservationConnection-AddArchivingListenerAsync-System-Func{JetFlow-ArchivedWorkflowEvent,System-Threading-Tasks-ValueTask{System-Boolean}}- 'JetFlow.Interfaces.IObservationConnection.AddArchivingListenerAsync(System.Func{JetFlow.ArchivedWorkflowEvent,System.Threading.Tasks.ValueTask{System.Boolean}})')
   - [AddDefaultNamespaceAsync()](#M-JetFlow-Interfaces-IObservationConnection-AddDefaultNamespaceAsync 'JetFlow.Interfaces.IObservationConnection.AddDefaultNamespaceAsync')
   - [AddNamespaceAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-AddNamespaceAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.AddNamespaceAsync(System.String)')
   - [AddNamespacesAsync(workflowNamespaces)](#M-JetFlow-Interfaces-IObservationConnection-AddNamespacesAsync-System-Collections-Generic-IEnumerable{System-String}- 'JetFlow.Interfaces.IObservationConnection.AddNamespacesAsync(System.Collections.Generic.IEnumerable{System.String})')
@@ -36,6 +41,59 @@
   - [#ctor(options)](#M-JetFlow-Configs-ObservationConnectionOptions-#ctor-NATS-Client-Core-NatsOpts- 'JetFlow.Configs.ObservationConnectionOptions.#ctor(NATS.Client.Core.NatsOpts)')
   - [#ctor(connection)](#M-JetFlow-Configs-ObservationConnectionOptions-#ctor-NATS-Client-Core-INatsConnection- 'JetFlow.Configs.ObservationConnectionOptions.#ctor(NATS.Client.Core.INatsConnection)')
   - [GroupName](#P-JetFlow-Configs-ObservationConnectionOptions-GroupName 'JetFlow.Configs.ObservationConnectionOptions.GroupName')
+- [ScheduledWorkflow\`1](#T-JetFlow-ScheduledWorkflow`1 'JetFlow.ScheduledWorkflow`1')
+  - [#ctor(ID,Name,Arguments,MetaData,CronString,RunsAt)](#M-JetFlow-ScheduledWorkflow`1-#ctor-System-String,System-String,`0,System-Collections-Generic-IReadOnlyDictionary{System-String,System-String[]},System-String,System-Nullable{System-DateTimeOffset}- 'JetFlow.ScheduledWorkflow`1.#ctor(System.String,System.String,`0,System.Collections.Generic.IReadOnlyDictionary{System.String,System.String[]},System.String,System.Nullable{System.DateTimeOffset})')
+  - [Arguments](#P-JetFlow-ScheduledWorkflow`1-Arguments 'JetFlow.ScheduledWorkflow`1.Arguments')
+  - [CronString](#P-JetFlow-ScheduledWorkflow`1-CronString 'JetFlow.ScheduledWorkflow`1.CronString')
+  - [ID](#P-JetFlow-ScheduledWorkflow`1-ID 'JetFlow.ScheduledWorkflow`1.ID')
+  - [MetaData](#P-JetFlow-ScheduledWorkflow`1-MetaData 'JetFlow.ScheduledWorkflow`1.MetaData')
+  - [Name](#P-JetFlow-ScheduledWorkflow`1-Name 'JetFlow.ScheduledWorkflow`1.Name')
+  - [RunsAt](#P-JetFlow-ScheduledWorkflow`1-RunsAt 'JetFlow.ScheduledWorkflow`1.RunsAt')
+
+<a name='T-JetFlow-ArchivedWorkflowEvent'></a>
+## ArchivedWorkflowEvent `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Houses an event to indicate that a workflow was archived
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| WorkflowNamespace | [T:JetFlow.ArchivedWorkflowEvent](#T-T-JetFlow-ArchivedWorkflowEvent 'T:JetFlow.ArchivedWorkflowEvent') | The namespace that the workflow belongs to, null if default |
+
+<a name='M-JetFlow-ArchivedWorkflowEvent-#ctor-System-String,JetFlow-ArchivedWorkflow-'></a>
+### #ctor(WorkflowNamespace,Archive) `constructor`
+
+##### Summary
+
+Houses an event to indicate that a workflow was archived
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| WorkflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The namespace that the workflow belongs to, null if default |
+| Archive | [JetFlow.ArchivedWorkflow](#T-JetFlow-ArchivedWorkflow 'JetFlow.ArchivedWorkflow') | The content of the archived workflow |
+
+<a name='P-JetFlow-ArchivedWorkflowEvent-Archive'></a>
+### Archive `property`
+
+##### Summary
+
+The content of the archived workflow
+
+<a name='P-JetFlow-ArchivedWorkflowEvent-WorkflowNamespace'></a>
+### WorkflowNamespace `property`
+
+##### Summary
+
+The namespace that the workflow belongs to, null if default
 
 <a name='T-JetFlow-Interfaces-IObservationConnection'></a>
 ## IObservationConnection `type`
@@ -50,6 +108,19 @@ Represents a connection used to observe runtime metrics and performance
 for workflows and activities. Implementations provide methods to query
 counters, manage observed namespaces, and subscribe to periodic performance
 records.
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-AddArchivingListenerAsync-System-Func{JetFlow-ArchivedWorkflowEvent,System-Threading-Tasks-ValueTask{System-Boolean}}-'></a>
+### AddArchivingListenerAsync(archiveCallback) `method`
+
+##### Summary
+
+Starts a listener for archiving of workflows to be invoked once a workflow archive is completed
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| archiveCallback | [System.Func{JetFlow.ArchivedWorkflowEvent,System.Threading.Tasks.ValueTask{System.Boolean}}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{JetFlow.ArchivedWorkflowEvent,System.Threading.Tasks.ValueTask{System.Boolean}}') | The callback to invoke when the archiving occurs.  It returns a true to delete the actual archive from nats or false to leave it. |
 
 <a name='M-JetFlow-Interfaces-IObservationConnection-AddDefaultNamespaceAsync'></a>
 ### AddDefaultNamespaceAsync() `method`
@@ -581,3 +652,92 @@ Constructs a new instance of the ObservationConnectionOptions class using the pr
 ##### Summary
 
 Identifies the connection to listen under a group name, this is used if multiple instances of a given service are being used to share load.
+
+<a name='T-JetFlow-ScheduledWorkflow`1'></a>
+## ScheduledWorkflow\`1 `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Houses a reference to a scheduled workflow found in the system
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| ID | [T:JetFlow.ScheduledWorkflow\`1](#T-T-JetFlow-ScheduledWorkflow`1 'T:JetFlow.ScheduledWorkflow`1') | The id of the scheduled workflow |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TInput | The type of the argument if there is one |
+
+<a name='M-JetFlow-ScheduledWorkflow`1-#ctor-System-String,System-String,`0,System-Collections-Generic-IReadOnlyDictionary{System-String,System-String[]},System-String,System-Nullable{System-DateTimeOffset}-'></a>
+### #ctor(ID,Name,Arguments,MetaData,CronString,RunsAt) `constructor`
+
+##### Summary
+
+Houses a reference to a scheduled workflow found in the system
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| ID | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The id of the scheduled workflow |
+| Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The name of the scheduled workflow |
+| Arguments | [\`0](#T-`0 '`0') | The value of the argument used to start the workflow |
+| MetaData | [System.Collections.Generic.IReadOnlyDictionary{System.String,System.String[]}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Collections.Generic.IReadOnlyDictionary 'System.Collections.Generic.IReadOnlyDictionary{System.String,System.String[]}') | The metadata associated with the scheduled workflow if any |
+| CronString | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The cron string representing the repeating schedule, if a scheduled workflow |
+| RunsAt | [System.Nullable{System.DateTimeOffset}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Nullable 'System.Nullable{System.DateTimeOffset}') | The timestamp to indicate when the workflow will run, if it was a delayed workflow |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TInput | The type of the argument if there is one |
+
+<a name='P-JetFlow-ScheduledWorkflow`1-Arguments'></a>
+### Arguments `property`
+
+##### Summary
+
+The value of the argument used to start the workflow
+
+<a name='P-JetFlow-ScheduledWorkflow`1-CronString'></a>
+### CronString `property`
+
+##### Summary
+
+The cron string representing the repeating schedule, if a scheduled workflow
+
+<a name='P-JetFlow-ScheduledWorkflow`1-ID'></a>
+### ID `property`
+
+##### Summary
+
+The id of the scheduled workflow
+
+<a name='P-JetFlow-ScheduledWorkflow`1-MetaData'></a>
+### MetaData `property`
+
+##### Summary
+
+The metadata associated with the scheduled workflow if any
+
+<a name='P-JetFlow-ScheduledWorkflow`1-Name'></a>
+### Name `property`
+
+##### Summary
+
+The name of the scheduled workflow
+
+<a name='P-JetFlow-ScheduledWorkflow`1-RunsAt'></a>
+### RunsAt `property`
+
+##### Summary
+
+The timestamp to indicate when the workflow will run, if it was a delayed workflow

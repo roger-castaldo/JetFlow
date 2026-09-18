@@ -102,7 +102,7 @@ internal partial class ServiceConnection
         );
     public ValueTask MarkWorkflowArchived(EventMessage message, CancellationToken cancellationToken)
         => connection.PublishMessageAsync(new(
-                [],
+                System.Text.UTF8Encoding.UTF8.GetBytes(WorkflowHelper.WorkflowArchivePath(message)),
                 subjectMapper.WorkflowArchived(message.WorkflowSubjectName, message.WorkflowId),
                 message.InjectHeaders(null),
                 $"{message.WorkflowSubjectName}-{message.WorkflowId}-archived"
