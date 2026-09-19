@@ -13,7 +13,7 @@
                           :message="(ErrorMessage!=null ? ErrorMessage : Message)"
                           :hasClose="ErrorMessage!=null"
                           :blockUser="ErrorMessage!=null" />
-        <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth, ColumnContainerModifiers.fullHeight,ColumnContainerModifiers.gapless]"
+        <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth, ColumnContainerModifiers.fullHeight]"
                  :columns="[{name:'menu',size:ColumnSizes.narrow,border:[BorderTypes.right]},{name:'content'}]">
             <template #content>
                 <component :is="currentComponent"/>

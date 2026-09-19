@@ -194,19 +194,19 @@ public class PostgresqlDbConnection(string connectionString)
         => (await ExecuteReader(new(
                 @"
 SELECT apr.window, 
-    a.name AS ""activity_name""
+    a.name AS ""activity_name"",
     SUM(apr.started) AS ""started"",
     SUM(apr.completed) AS ""completed"",
     SUM(apr.failed) AS ""failed"",
     SUM(apr.timed_out) AS ""timed_out"",
-    jsonb_agg(queue_latencies) AS ""queue_latencies""
+    jsonb_agg(queue_latencies) AS ""queue_latencies"",
     jsonb_agg(durations) as ""durations""
 FROM ""activity_performance_raw"" apr
 INNER JOIN ""activities"" a 
-    ON apr.activity_id = a.activity_id
+    ON apr.activity_id = a.id
     AND apr.namespace_id = a.namespace_id
 INNER JOIN ""namespaces"" n
-    ON apr.namespace_id = n.namespace_id,
+    ON apr.namespace_id = n.id,
 LATERAL jsonb_array_elements(apr.queue_latencies) AS queue_latencies,
 LATERAL jsonb_array_elements(apr.durations) AS durations
 WHERE n.name = @namespaceName
@@ -227,7 +227,7 @@ ORDER BY apr.window DESC
     => (await ExecuteReader(new(
                 @"
 SELECT wpr.window, 
-    w.name AS ""workflow_name""
+    w.name AS ""workflow_name"",
     SUM(wpr.started) AS ""started"",
     SUM(wpr.completed) AS ""completed"",
     SUM(wpr.failed) AS ""failed"",
@@ -235,14 +235,14 @@ SELECT wpr.window,
     jsonb_agg(queue_latencies) AS ""queue_latencies""
 FROM ""workflow_performance_raw"" wpr
 INNER JOIN ""workflows"" w
-    ON wpr.activity_id = w.workflow_id
+    ON wpr.workflow_id = w.id
     AND wpr.namespace_id = w.namespace_id
 INNER JOIN ""namespaces"" n
-    ON wpr.namespace_id = n.namespace_id,
+    ON wpr.namespace_id = n.id,
 LATERAL jsonb_array_elements(wpr.queue_latencies) AS queue_latencies
 WHERE n.name = @namespaceName
-GROUP BY apr.window, w.name
-ORDER BY apr.window DESC
+GROUP BY wpr.window, w.name
+ORDER BY wpr.window DESC
                 ", [new NpgsqlParameter("@namespaceName", namespaceName)]
             ))).Select(row => new WorkflowPerformanceRecord(
                 (DateTimeOffset)row["window"],

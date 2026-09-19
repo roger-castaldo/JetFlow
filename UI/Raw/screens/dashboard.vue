@@ -16,10 +16,13 @@
             </template>
         </ColumnContainer>
         <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth]"
-                 :columns="[{name:'activityPerformance',size:ColumnSizes.six},{name:'workflowPerformance',size:ColumnSizes.six}]"></ColumnContainer>
+                 :columns="[{name:'activityPerformance',size:ColumnSizes.six},{name:'workflowPerformance',size:ColumnSizes.six}]">
             <template #activityPerformance>
                 <Table>
                     <template #thead>
+                        <tr>
+                            <th colspan="100%" class="has-text-centered">Activity Performance</th>
+                        </tr>
                         <tr>
                             <th>Time</th>
                             <th>Name</th>
@@ -48,6 +51,9 @@
             <template #workflowPerformance>
                 <Table>
                     <template #thead>
+                        <tr>
+                            <th colspan="100%" class="has-text-centered">Workflow Performance</th>
+                        </tr>
                         <tr>
                             <th>Time</th>
                             <th>Name</th>
