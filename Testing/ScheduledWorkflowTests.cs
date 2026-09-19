@@ -63,10 +63,11 @@ public class ScheduledWorkflowTests
                     completion.TrySetResult(msg);
             }
         }, TestContext.CancellationToken);
-        await connection.ScheduleWorkflowAsync<CronWorkflowNoInput>(new WorkflowScheduleBuilder().Build(), cancellationToken: TestContext.CancellationToken);
+        var scheduledId = await connection.ScheduleWorkflowAsync<CronWorkflowNoInput>(new WorkflowScheduleBuilder().Build(), cancellationToken: TestContext.CancellationToken);
         var result = await completion.Task;
 
         // Assert
+        Assert.IsTrue(await connection.RemoveScheduledWorkflowAsync<CronWorkflowNoInput>(scheduledId, cancellationToken: TestContext.CancellationToken));
         await ((IAsyncDisposable)connection).DisposeAsync();
         Assert.IsNotNull(result);
         var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
@@ -115,10 +116,11 @@ public class ScheduledWorkflowTests
                     completion.TrySetResult(msg);
             }
         }, TestContext.CancellationToken);
-        await connection.ScheduleWorkflowAsync<CronWorkflowWithInput, string>(new(input), new WorkflowScheduleBuilder().Build(), cancellationToken: TestContext.CancellationToken);
+        var scheduleId = await connection.ScheduleWorkflowAsync<CronWorkflowWithInput, string>(new(input), new WorkflowScheduleBuilder().Build(), cancellationToken: TestContext.CancellationToken);
         var result = await completion.Task;
 
         // Assert
+        Assert.IsTrue(await connection.RemoveScheduledWorkflowAsync<CronWorkflowWithInput, string>(scheduleId, cancellationToken: TestContext.CancellationToken));
         await ((IAsyncDisposable)connection).DisposeAsync();
         Assert.IsNotNull(result);
         var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Value.Data, result.Value.Headers);
@@ -166,8 +168,10 @@ public class ScheduledWorkflowTests
             }
         );
         var endTime = Stopwatch.GetElapsedTime(startTime);
+        var scheduledId = await connection.DelayStartWorkflowAsync<DelayedWorkflowNoInput>(TimeSpan.FromHours(1), cancellationToken: TestContext.CancellationToken);
 
         // Assert
+        Assert.IsTrue(await connection.RemoveDelayedWorkflowAsync<DelayedWorkflowNoInput>(scheduledId, cancellationToken: TestContext.CancellationToken));
         await ((IAsyncDisposable)connection).DisposeAsync();
         Assert.IsNotNull(result);
         var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
@@ -217,8 +221,10 @@ public class ScheduledWorkflowTests
             }
         );
         var endTime = Stopwatch.GetElapsedTime(startTime);
+        var scheduledId = await connection.DelayStartWorkflowAsync<DelayedWorkflowWithInput, string>(new(input), TimeSpan.FromSeconds(60), cancellationToken: TestContext.CancellationToken);
 
         // Assert
+        Assert.IsTrue(await connection.RemoveDelayedWorkflowAsync<DelayedWorkflowWithInput, string>(scheduledId, cancellationToken: TestContext.CancellationToken));
         await ((IAsyncDisposable)connection).DisposeAsync();
         Assert.IsNotNull(result);
         var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
@@ -281,7 +287,7 @@ public class ScheduledWorkflowTests
         var runId = result.Value.Subject.Split('.')[3];
 
         var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
-        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<DelayedWorkflowWithInput>()}/{runId}", TestContext.CancellationToken);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<DelayedWorkflowWithInput>().cleanedName}/{runId}", TestContext.CancellationToken);
         var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
         Assert.AreEqual(Guid.Parse(runId), archive.ID);
         Assert.AreEqual(scheduleId, archive.SchedulerId);

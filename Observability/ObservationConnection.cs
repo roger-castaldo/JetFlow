@@ -66,8 +66,8 @@ public static class ObservationConnection
 
         private readonly ConcurrentDictionary<string,SubjectMapper> namespaces = [];
         private short samplingDurationMinutes = 5;
-        private Func<WorkflowPerformanceRecord, ValueTask>? workflowRecordReceived;
-        private Func<ActivityPerformanceRecord, ValueTask>? activityRecordReceived;
+        private Func<WorkflowPerformanceRecordEvent, ValueTask>? workflowRecordReceived;
+        private Func<ActivityPerformanceRecordEvent, ValueTask>? activityRecordReceived;
         private Func<ArchivedWorkflowEvent, ValueTask<bool>>? archiveCallback;
         private CancellationTokenSource cancellationTokenSource = new();
         private readonly ConcurrentBag<ASubscription> subscriptions = new();
@@ -143,7 +143,7 @@ public static class ObservationConnection
                         AckPolicy=NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit
                     }, cancellationTokenSource.Token
                 );
-            return new PerformanceSubscription(consumer, pair.Value, jsonOptions, workflowRecordReceived!, activityRecordReceived!, cancellationTokenSource.Token);
+            return new PerformanceSubscription(consumer, pair.Key, pair.Value, jsonOptions, workflowRecordReceived!, activityRecordReceived!, cancellationTokenSource.Token);
         }
 
         ValueTask IObservationConnection.AddDefaultNamespaceAsync()
@@ -161,7 +161,7 @@ public static class ObservationConnection
                 await RefreshNamespacesAsync();
         }
 
-        ValueTask IObservationConnection.AddPerformanceMonitoringAsync(byte sampleDurationMinutes, Func<WorkflowPerformanceRecord, ValueTask> workflowRecordReceived, Func<ActivityPerformanceRecord, ValueTask> activityRecordReceived)
+        ValueTask IObservationConnection.AddPerformanceMonitoringAsync(byte sampleDurationMinutes, Func<WorkflowPerformanceRecordEvent, ValueTask> workflowRecordReceived, Func<ActivityPerformanceRecordEvent, ValueTask> activityRecordReceived)
         {
             if (this.workflowRecordReceived!= null || this.activityRecordReceived != null)
                 throw new InvalidOperationException("Performance monitoring has already been added.");

@@ -61,24 +61,29 @@ public class PerformanceRecordTests
     }
 
     [TestMethod]
-    public async Task ValidatePerformanceData()
+    [DataRow(null, DisplayName = "Default namespace")]
+    [DataRow("validatePerformanceData", DisplayName = "Custom namespace")]
+    public async Task ValidatePerformanceData(string? namespaceName)
     {
         Assert.IsNotNull(natsTestHarness);
         // Arrange
         var start = DateTimeOffset.UtcNow;
-        var subjectMapper = new SubjectMapper(null);
+        var subjectMapper = new SubjectMapper(namespaceName);
         var options = natsTestHarness.Options;
         var natsConnection = new NatsConnection(options);
         var jsContext = new NatsJSContext(natsConnection);
-        var connection = await Connection.CreateInstanceAsync(new(natsConnection, jsContext));
+        var connection = await Connection.CreateInstanceAsync(new(natsConnection, jsContext) { Namespace = namespaceName});
         await connection.RegisterWorkflowAsync<TestRecordedWorkflowSuccess>(options: new() { }, TestContext.CancellationToken);
         await connection.RegisterWorkflowAsync<TestRecordedWorkflowFailure>(options: new() { ErrorOnActivityFailure = true, ErrorOnActivityTimeout=true }, TestContext.CancellationToken);
         await connection.RegisterWorkflowActivityAsync<TestRecordedActivity>(cancellationToken: TestContext.CancellationToken);
         var observationConnection = await ObservationConnection.CreateInstanceAsync(new(natsConnection));
-        await observationConnection.AddDefaultNamespaceAsync();
+        if (namespaceName is null)
+            await observationConnection.AddDefaultNamespaceAsync();
+        else
+            await observationConnection.AddNamespaceAsync(namespaceName);
 
-        var workflowRecords = new List<WorkflowPerformanceRecord>();
-        var activityRecords = new List<ActivityPerformanceRecord>();
+        var workflowRecords = new List<WorkflowPerformanceRecordEvent>();
+        var activityRecords = new List<ActivityPerformanceRecordEvent>();
 
         await observationConnection.AddPerformanceMonitoringAsync(1, async (workflowRecord) =>
         {
@@ -102,8 +107,9 @@ public class PerformanceRecordTests
         await ((IAsyncDisposable)observationConnection).DisposeAsync();
 
         // Verify
-        var successRecords = workflowRecords.Where(wr => Equals(NameHelper.GetWorkflowName<TestRecordedWorkflowSuccess>().rawName, wr.Name));
-        var errorRecords = workflowRecords.Where(wr=>Equals(NameHelper.GetWorkflowName<TestRecordedWorkflowFailure>().rawName, wr.Name));
+        Assert.IsTrue(workflowRecords.All(wr => Equals(wr.namespaceName, namespaceName)));
+        var successRecords = workflowRecords.Where(wr => Equals(NameHelper.GetWorkflowName<TestRecordedWorkflowSuccess>().rawName, wr.PerformanceRecord.Name)).Select(wr=>wr.PerformanceRecord);
+        var errorRecords = workflowRecords.Where(wr=>Equals(NameHelper.GetWorkflowName<TestRecordedWorkflowFailure>().rawName, wr.PerformanceRecord.Name)).Select(wr => wr.PerformanceRecord);
 
         Assert.AreEqual(1, successRecords.Sum(wr => wr.Started));
         Assert.AreEqual(1, successRecords.Sum(wr => wr.Completed));
@@ -117,16 +123,16 @@ public class PerformanceRecordTests
         Assert.AreEqual(2, errorRecords.Sum(wr => wr.Purged));
         Assert.AreEqual(5, errorRecords.Sum(wr => wr.QueueLatencies.Count()));
 
-        Assert.IsTrue(activityRecords.All(ar => Equals(ar.Name, NameHelper.GetActivityName<TestRecordedActivity>().rawName)));
-        Assert.AreEqual(6, activityRecords.Sum(ar => ar.Started));
-        Assert.AreEqual(2, activityRecords.Sum(ar => ar.Completed));
-        Assert.AreEqual(2, activityRecords.Sum(ar => ar.Failed));
-        Assert.AreEqual(2, activityRecords.Sum(ar => ar.TimedOut));
-        Assert.AreEqual(6, activityRecords.Sum(ar => ar.QueueLatencies.Count()));
-        Assert.AreEqual(2, activityRecords.Sum(ar => ar.Durations.Count()));
+        Assert.IsTrue(activityRecords.All(ar => Equals(ar.PerformanceRecord.Name, NameHelper.GetActivityName<TestRecordedActivity>().rawName) && Equals(ar.namespaceName, namespaceName)));
+        Assert.AreEqual(6, activityRecords.Sum(ar => ar.PerformanceRecord.Started));
+        Assert.AreEqual(2, activityRecords.Sum(ar => ar.PerformanceRecord.Completed));
+        Assert.AreEqual(2, activityRecords.Sum(ar => ar.PerformanceRecord.Failed));
+        Assert.AreEqual(2, activityRecords.Sum(ar => ar.PerformanceRecord.TimedOut));
+        Assert.AreEqual(6, activityRecords.Sum(ar => ar.PerformanceRecord.QueueLatencies.Count()));
+        Assert.AreEqual(2, activityRecords.Sum(ar => ar.PerformanceRecord.Durations.Count()));
 
-        Assert.IsTrue(workflowRecords.All(wr => wr.Window>=start && wr.Window.Second==0));
-        Assert.IsTrue(activityRecords.All(wr => wr.Window>=start && wr.Window.Second==0));
+        Assert.IsTrue(workflowRecords.All(wr => wr.PerformanceRecord.Window>=start && wr.PerformanceRecord.Window.Second==0));
+        Assert.IsTrue(activityRecords.All(wr => wr.PerformanceRecord.Window>=start && wr.PerformanceRecord.Window.Second==0));
     }
 
     public TestContext TestContext { get; set; }

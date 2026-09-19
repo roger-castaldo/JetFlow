@@ -90,9 +90,9 @@ public interface IObservationConnection
     /// callbacks for workflow and activity performance records.
     /// </summary>
     /// <param name="sampleDurationMinutes">Sampling interval in minutes. A small positive value is expected.</param>
-    /// <param name="workflowRecordReceived">Callback invoked when a <see cref="WorkflowPerformanceRecord"/> is available.</param>
-    /// <param name="activityRecordReceived">Callback invoked when an <see cref="ActivityPerformanceRecord"/> is available.</param>
-    ValueTask AddPerformanceMonitoringAsync(byte sampleDurationMinutes, Func<WorkflowPerformanceRecord, ValueTask> workflowRecordReceived, Func<ActivityPerformanceRecord, ValueTask> activityRecordReceived);
+    /// <param name="workflowRecordReceived">Callback invoked when a <see cref="WorkflowPerformanceRecordEvent"/> is available.</param>
+    /// <param name="activityRecordReceived">Callback invoked when an <see cref="ActivityPerformanceRecordEvent"/> is available.</param>
+    ValueTask AddPerformanceMonitoringAsync(byte sampleDurationMinutes, Func<WorkflowPerformanceRecordEvent, ValueTask> workflowRecordReceived, Func<ActivityPerformanceRecordEvent, ValueTask> activityRecordReceived);
     /// <summary>
     /// Starts a listener for archiving of workflows to be invoked once a workflow archive is completed
     /// </summary>
