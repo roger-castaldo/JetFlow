@@ -1,9 +1,12 @@
 ﻿using JetFlow.UI.Handlers;
 using JetFlow.UI.Interfaces;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
 using System.Text;
 
 namespace JetFlow.UI.Extensions;
@@ -15,17 +18,48 @@ public static class EndpointRouteBuilderExtension
             .RegisterWebFiles()
             .RegisterDashBoardStreams();
 
+    private static IFileInfo LocateFile(IFileProvider fileProvider, string path)
+    {
+        var fileInfo = fileProvider.GetFileInfo($"/jetflow/{path}");
+        if (fileInfo.Exists)
+            return fileInfo;
+        return fileProvider.GetFileInfo($"/_content/JetFlow.UI/jetflow/{path}");
+    }
+
+    private static IFileInfo LocateFile(IWebHostEnvironment webHostEnvironment, string path)
+    {
+        var fileInfo = LocateFile(webHostEnvironment.WebRootFileProvider, path);
+        if (!fileInfo.Exists)
+            fileInfo = LocateFile(webHostEnvironment.ContentRootFileProvider, path);
+        return fileInfo;
+    }
+
     private static IEndpointRouteBuilder RegisterWebFiles(this IEndpointRouteBuilder routeBuilder)
     {
-        routeBuilder.MapGet("/jetflow", async () =>
+        routeBuilder.MapGet("/jetflow", async ([FromServices] IWebHostEnvironment webHostEnvironment) =>
         {
-            var asm = typeof(EndpointRouteBuilderExtension).Assembly;
-            await using var stream = asm.GetManifestResourceStream("JetFlow.UI.WebFiles.index.html");
-            if (stream == null)
+            var fileInfo = LocateFile(webHostEnvironment, "index.html");
+            if (!fileInfo.Exists)
                 return Results.NotFound();
-            using var reader = new StreamReader(stream, Encoding.UTF8);
+            using var reader = new StreamReader(fileInfo.CreateReadStream(), Encoding.UTF8);
             var content = await reader.ReadToEndAsync();
             return Results.Content(content, "text/html; charset=utf-8");
+        });
+        routeBuilder.MapGet("/jetflow/resources/{fileName}", async (string fileName, [FromServices] IWebHostEnvironment webHostEnvironment) =>
+        {
+            var fileInfo = LocateFile(webHostEnvironment, $"resources/{fileName}");
+            if (!fileInfo.Exists)
+                return Results.NotFound();
+            var provider = new FileExtensionContentTypeProvider();
+
+            // 1. Detect content type from a file name or extension
+            if (!provider.TryGetContentType(fileName, out var contentType))
+                contentType = "application/octet-stream";
+            else
+                contentType+="; charset=utf-8";
+            using var reader = new StreamReader(fileInfo.CreateReadStream(), Encoding.UTF8);
+            var content = await reader.ReadToEndAsync();
+            return Results.Content(content, contentType);
         });
         return routeBuilder;
     }
@@ -33,9 +67,9 @@ public static class EndpointRouteBuilderExtension
     private static IEndpointRouteBuilder RegisterDashBoardStreams(this IEndpointRouteBuilder routeBuilder)
     {
         routeBuilder
-            .MapGet("/jetflow/dashboard", async (string? ns, [FromServices] IActiveFlowService activeFlowService, CancellationToken cancellation) =>
+            .MapGet("/jetflow/dashboard", async (string? ns, [FromServices] IActiveFlowService activeFlowService, [FromServices] IDbConnection dbConnection, CancellationToken cancellation) =>
             {
-                return TypedResults.ServerSentEvents(new DashboardEventStream(ns??string.Empty, activeFlowService));
+                return TypedResults.ServerSentEvents(new DashboardEventStream(ns??string.Empty, activeFlowService, dbConnection));
             });
         return routeBuilder;
     }

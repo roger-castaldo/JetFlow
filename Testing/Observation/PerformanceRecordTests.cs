@@ -1,5 +1,4 @@
-﻿using JetFlow.Data;
-using JetFlow.Helpers;
+﻿using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;

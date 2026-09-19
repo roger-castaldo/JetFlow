@@ -1,0 +1,1 @@
+export const GetDashboardStream = (namespace) => new EventSource('/jetflow/dashboard'+(namespace===null || namespace===undefined ? '' : `?ns=${namespace}`));

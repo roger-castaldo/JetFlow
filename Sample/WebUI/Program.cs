@@ -7,7 +7,8 @@ builder.Configuration
     .AddJsonFile("appsettings.json")
     .AddEnvironmentVariables();
 
-await builder.Services.RegisterJetflowUIAsync(
+await builder.Services
+    .RegisterJetflowUIAsync(
         new() { Url = builder.Configuration.GetValue<string>("nats_Uri")!},
         new PostgresqlDbConnection(builder.Configuration.GetConnectionString("jetflow")!)
     );
@@ -16,6 +17,7 @@ var app = builder.Build();
 
 app.UseHttpsRedirection()
     .UseRouting()
+    .UseStaticFiles()
     .UseEndpoints(configure =>
         configure.RegisterJetflowUIEndpoints()
     );

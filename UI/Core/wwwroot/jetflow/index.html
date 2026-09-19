@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>JETFLOW</title>
+    <style>
+        #preload-modal {
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+            position: fixed;
+            z-index: 40;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            top: 0;
+        }
+
+            #preload-modal > .modal-background {
+                background-color: rgba(10,10,10,.86);
+                bottom: 0;
+                left: 0;
+                position: absolute;
+                right: 0;
+                top: 0;
+            }
+
+            #preload-modal > .modal-content > .progress {
+                -moz-appearance: none;
+                -webkit-appearance: none;
+                border: none;
+                border-radius: 9999px;
+                display: block;
+                height: 1rem;
+                overflow: hidden;
+                padding: 0;
+                width: 100%;
+            }
+
+                #preload-modal > .modal-content > .progress.is-large {
+                    height: 1.5rem;
+                }
+
+            #preload-modal > .modal-content > .title.is-1 {
+                font-size: 3rem;
+            }
+
+            #preload-modal > .modal-content > .title:not(:last-child) {
+                margin-bottom: 1.5rem;
+            }
+
+            #preload-modal > .modal-content > .title {
+                color: #353535;
+                font-size: 2rem;
+                font-weight: 600;
+                line-height: 1.125;
+            }
+    </style>
+    <link href="/jetflow/resources/app.css" type="text/css"/>
+    <script type="importmap">
+        {
+            "imports": {
+                "vue": "https://unpkg.com/vue@3/dist/vue.runtime.esm-browser.prod.js",
+                "components":"https://roger-castaldo.github.io/VibrantVue/dist/vibrantvue.esm.min.js",
+                "moment":"https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js",
+                "jquery": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.slim.min.js",
+                "ace":"https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.3/ace.min.js",
+                "app":"/jetflow/resources/app.js",
+                "mixins":"/jetflow/resources/mixins.js",
+                "services":"/jetflow/resources/services.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="body"></div>
+    <div id="preload-modal">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="has-text-centered title is-1">
+                LOADING
+            </div>
+            <progress class="progress is-large is-info" max="100"></progress>
+        </div>
+    </div>
+    <script type="module" src="/jetflow/resources/load.js" />
+</body>
+</html>

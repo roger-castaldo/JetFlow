@@ -1,9 +1,9 @@
 ﻿using JetFlow.UI.Interfaces;
 using JetFlow.UI.Json;
 using JetFlow.UI.Services;
-using JetFlow.UI.Services.Background;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NATS.Client.Core;
 using NATS.Net;
 
@@ -32,14 +32,27 @@ public static class ServiceCollectionExtension
         var jsContext = connection.CreateJetStreamContext();
         await dbConnection.InitAsync();
         var observationConnection = await ObservationConnection.CreateInstanceAsync(new(connection));
+        await observationConnection.AddArchivingListenerAsync(async archiveEvent =>
+        {
+            await dbConnection.StoreArchiveAsync(archiveEvent.Archive, archiveEvent.WorkflowNamespace);
+            return true;
+        });
+        await observationConnection.AddPerformanceMonitoringAsync(1,
+            async workflowEvent =>
+            {
+                await dbConnection.StoreWorkflowPerformanceRecordAsync(workflowEvent.namespaceName, workflowEvent.PerformanceRecord);
+            },
+            async activityEvent =>
+            {
+                await dbConnection.StoreActivityPerformanceRecordAsync(activityEvent.namespaceName, activityEvent.PerformanceRecord);
+            }
+        );
         var configService = new ConfigService(dbConnection);
         var activeFlowService = new ActiveFlowService(dbConnection, configService, observationConnection);
         services.AddSingleton<IConfigService>(configService)
             .AddSingleton<IActiveFlowService>(activeFlowService)
-            .AddHostedService<ArchivingService>(services =>
-                new(dbConnection, jsContext, configService)
-            )
-            .Configure<JsonOptions>(options =>
+            .TryAddSingleton<IDbConnection>(dbConnection);
+        services.Configure<JsonOptions>(options =>
             {
                 options.SerializerOptions.Converters.Add(new BigIntegerConverter());
             });

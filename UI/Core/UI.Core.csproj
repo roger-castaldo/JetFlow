@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
 	<Import Project="../../Shared.props" />
 
@@ -6,14 +6,6 @@
 		<AssemblyName>JetFlow.UI</AssemblyName>
 		<RootNamespace>JetFlow.UI</RootNamespace>
 	</PropertyGroup>
-
-	<ItemGroup>
-	  <None Remove="WebFiles\index.html" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Include="WebFiles\index.html" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />

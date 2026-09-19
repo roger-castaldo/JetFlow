@@ -33,7 +33,7 @@ internal class ActiveFlowService(
             await observationConnection.AddDefaultNamespaceAsync();
     }
 
-    async ValueTask<PerformanceCounters> IActiveFlowService.GetPerformanceCountersAsync(string workflowNamespace)
+    async ValueTask<PerformanceCounters> IActiveFlowService.GetPerformanceCountersAsync(string? workflowNamespace)
         => new(
             await observationConnection.GetActiveWorkflowCountAsync(workflowNamespace),
             await observationConnection.GetSuspendedWorkflowCountAsync(workflowNamespace),

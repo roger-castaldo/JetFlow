@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS "archived_workflow_steps" (
     "step_id" bigint NOT NULL,
     "step_type" workflow_step_types NOT NULL,
     "step_index" bigint,
-    "step_name" character varying(512),
+    "activity_id" uuid,
     "start_time" timestamp NOT NULL,
     "end_time" timestamp NOT NULL,
     "input" jsonb,
@@ -110,7 +110,8 @@ CREATE TABLE IF NOT EXISTS "archived_workflow_steps" (
     "error_message" text,
     "result" jsonb,
     PRIMARY KEY ("id", "workflow_id", "namespace_id", "step_id"),
-    FOREIGN KEY ("id", "workflow_id", "namespace_id") REFERENCES "archived_workflows" ("id", "workflow_id", "namespace_id") ON DELETE CASCADE
+    FOREIGN KEY ("id", "workflow_id", "namespace_id") REFERENCES "archived_workflows" ("id", "workflow_id", "namespace_id") ON DELETE CASCADE,
+    FOREIGN KEY ("activity_id", "namespace_id") REFERENCES "activities" ("id", "namespace_id") ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "archived_workflow_step_retries" (
@@ -125,6 +126,20 @@ CREATE TABLE IF NOT EXISTS "archived_workflow_step_retries" (
     FOREIGN KEY ("id", "workflow_id", "namespace_id", "step_id") REFERENCES "archived_workflow_steps" ("id", "workflow_id", "namespace_id", "step_id") ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS "activity_performance_raw" (
+    "id" uuid NOT NULL,
+    "window" timestamptz NOT NULL,
+    "activity_id" uuid NOT NULL,
+    "namespace_id" uuid NOT NULL,
+    "started" bigint NOT NULL,
+    "completed" bigint NOT NULL,
+    "failed" bigint NOT NULL,
+    "timed_out" bigint NOT NULL,
+    "queue_latencies" jsonb NOT NULL,
+    "durations" jsonb NOT NULL,
+    PRIMARY KEY ("id"),
+    FOREIGN KEY ("activity_id", "namespace_id") REFERENCES "activities" ("id", "namespace_id") ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS "activity_performance" (
     "bucket_start" timestamptz NOT NULL,
@@ -139,6 +154,20 @@ CREATE TABLE IF NOT EXISTS "activity_performance" (
     "duration_digest" bytea NOT NULL,
     PRIMARY KEY ("bucket_start", "activity_id", "namespace_id", "aggregation_type"),
     FOREIGN KEY ("activity_id", "namespace_id") REFERENCES "activities" ("id", "namespace_id") ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "workflow_performance_raw" (
+    "id" uuid NOT NULL,
+    "window" timestamptz NOT NULL,
+    "workflow_id" uuid NOT NULL,
+    "namespace_id" uuid NOT NULL,
+    "started" bigint NOT NULL,
+    "completed" bigint NOT NULL,
+    "failed" bigint NOT NULL,
+    "purged" bigint NOT NULL,
+    "queue_latencies" jsonb NOT NULL,
+    PRIMARY KEY ("id"),
+    FOREIGN KEY ("workflow_id", "namespace_id") REFERENCES "workflows" ("id", "namespace_id") ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "workflow_performance" (
@@ -189,6 +218,73 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
 	UPDATE namespaces SET enabled = FALSE WHERE name = name;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE "add_activity_performance_entry" (
+    IN "entry_window" timestamptz, 
+    IN "namespace" character varying ,
+    IN "activity" character varying ,
+    IN "started" bigint,
+    IN "completed" bigint,
+    IN "failed" bigint,
+    IN "timed_out" bigint,
+    IN "queue_latencies" jsonb,
+    IN "durations" jsonb
+)
+LANGUAGE plpgsql 
+AS $$
+DECLARE
+    namespace_id uuid;
+    activity_id uuid;
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM namespaces WHERE name = name) THEN
+        namespace_id := gen_random_uuid();
+		INSERT INTO namespaces (id, name) VALUES (namespace_id, name);
+    ELSE
+        SELECT id INTO namespace_id FROM namespaces WHERE name = name;
+	END IF;
+    IF NOT EXISTS (SELECT 1 FROM activities WHERE name = activity AND namespace_id = namespace_id) THEN
+        activity_id := gen_random_uuid();
+        INSERT INTO activities (id, namespace_id, name) VALUES (activity_id, namespace_id, activity);
+    ELSE
+        SELECT id INTO activity_id FROM activities WHERE name = activity AND namespace_id = namespace_id;
+    END IF;
+    INSERT INTO activity_performance_raw (id, "window", namespace, activity, started, completed, failed, timed_out, queue_latencies, durations) 
+    VALUES (gen_random_uuid(), entry_window, namespace_id, activity_id, started, completed, failed, timed_out, queue_latencies, durations);
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE "add_workflow_performance_entry" (
+    IN "entry_window" timestamptz,
+    IN "namespace" character varying ,
+    IN "workflow" character varying ,
+    IN "started" bigint,
+    IN "completed" bigint,
+    IN "failed" bigint,
+    IN "purged" bigint,
+    IN "queue_latencies" jsonb
+)
+LANGUAGE plpgsql 
+AS $$
+DECLARE
+    namespace_id uuid;
+    workflow_id uuid;
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM namespaces WHERE name = name) THEN
+        namespace_id := gen_random_uuid();
+		INSERT INTO namespaces (id, name) VALUES (namespace_id, name);
+    ELSE
+        SELECT id INTO namespace_id FROM namespaces WHERE name = name;
+	END IF;
+    IF NOT EXISTS (SELECT 1 FROM workflows WHERE name = workflow AND namespace_id = namespace_id) THEN
+        workflow_id := gen_random_uuid();
+        INSERT INTO workflows (id, namespace_id, name) VALUES (workflow_id, namespace_id, workflow);
+    ELSE
+        SELECT id INTO workflow_id FROM workflows WHERE name = workflow AND namespace_id = namespace_id;
+    END IF;
+    INSERT INTO workflow_performance_raw (id, "window", namespace, workflow, started, completed, failed, purged, queue_latencies) 
+    VALUES (gen_random_uuid(), entry_window, namespace_id, workflow_id, started, completed, failed, purged, queue_latencies);
 END;
 $$;
 
@@ -315,6 +411,7 @@ AS $$
 DECLARE
     namespace_id uuid;
     workflow_id uuid;
+    activity_id uuid;
 BEGIN
 	IF NOT EXISTS (SELECT 1 FROM namespaces WHERE name = name) THEN
         namespace_id := gen_random_uuid();
@@ -328,9 +425,19 @@ BEGIN
     ELSE
         SELECT id INTO workflow_id FROM workflows WHERE name = workflow AND namespace_id = namespace_id;
     END IF;
+    IF step_name IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM activities WHERE name = activity AND namespace_id = namespace_id) THEN
+            activity_id := gen_random_uuid();
+            INSERT INTO activities (id, namespace_id, name) VALUES (activity_id, namespace_id, activity);
+        ELSE
+            SELECT id INTO activity_id FROM activities WHERE name = activity AND namespace_id = namespace_id;
+        END IF;
+    ELSE
+        activity_id := NULL;
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM archived_workflow_metadata_entry WHERE id = id AND workflow_id = workflow_id AND namespace_id = namespace_id AND step_id = step_id) THEN
-        INSERT INTO archived_workflow_steps (id, workflow_id, namespace_id, step_id, step_type, step_index, step_name, start_time, end_time, input, result_status, error_message, result) 
-        VALUES (id, workflow_id, namespace_id, step_id, step_type, step_index, step_name, start_time, end_time, input, result_status, error_message, result);
+        INSERT INTO archived_workflow_steps (id, workflow_id, namespace_id, step_id, step_type, step_index, activity_id, start_time, end_time, input, result_status, error_message, result) 
+        VALUES (id, workflow_id, namespace_id, step_id, step_type, step_index, activity_id, start_time, end_time, input, result_status, error_message, result);
     END IF;
 END;
 $$;
