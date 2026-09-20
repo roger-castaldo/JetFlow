@@ -1,12 +1,14 @@
-﻿using System.Text.RegularExpressions;
+﻿using JetFlow.Helpers;
+using System.Text.RegularExpressions;
 
 namespace JetFlow;
 
 internal class SubjectMapper
 {
+    public const string WorkflowConsumerStart = "wfr_";
+    public const string ActivityConsumerStart = "act_";
     private readonly string streamNamespace;
     private readonly string subjectNamespace;
-    private readonly Regex regWorkflowArchiveExtractor;
 
     public SubjectMapper(string? instanceNamespace)
     {
@@ -20,7 +22,6 @@ internal class SubjectMapper
             instanceNamespace=null;
         this.streamNamespace = (instanceNamespace==null ? "" : $"{instanceNamespace.ToUpper()}_");
         this.subjectNamespace = (instanceNamespace==null ? "" : $"{instanceNamespace.ToLower()}.");
-        regWorkflowArchiveExtractor = new(@$"^jetflow\.{(string.IsNullOrEmpty(subjectNamespace) ? "" : $"{instanceNamespace}\\.")}wkf\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.archived$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
     }
 
     public string WorkflowEventsStreamsName
@@ -55,6 +56,8 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepretry";
     public string WorkflowPurgeFilter(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.>";
+    public string WorkflowConsumerName<TWorkflow>()
+        => $"{WorkflowConsumerStart}{NameHelper.GetWorkflowName<TWorkflow>().cleanedName}";
 
     public string WorkflowPurgeEventsStreamName
         => $"JETFLOW_{streamNamespace}WORKFLOW_PURGE";
@@ -78,6 +81,8 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}act.{activityName}.{workflowName}.{workflowInstance}.{activityInstance}.timeout";
     public string WorkflowActivityPurgeFilter(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}act.*.{workflowName}.{instance}.>";
+    public string ActivityConsumerName<TActivity>()
+        => $"{ActivityConsumerStart}{NameHelper.GetActivityName<TActivity>().cleanedName}";
 
     public string ActivityLocksKeystore
         => $"JETFLOW_{streamNamespace}ACTIVITY_LOCKS";

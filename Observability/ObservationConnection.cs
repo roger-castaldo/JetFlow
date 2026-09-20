@@ -367,6 +367,66 @@ public static class ObservationConnection
             return results;
         }
 
+        async ValueTask<ServicabilityDetails> IObservationConnection.GetWorkflowServicabilityAsync<TWorkflow>(string? workflowNamespace)
+        {
+            if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
+                return ExtractDetails(null);
+            return ExtractDetails(await GetConsumer(mapper.WorkflowEventsStreamsName, mapper.WorkflowConsumerName<TWorkflow>()));
+        }
+
+        async ValueTask<IEnumerable<NamedServicabilityDetails>> IObservationConnection.GetWorkflowServicabilityAsync(string? workflowNamespace)
+        {
+            if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
+                return [];
+            var consumers = await GetConsumers(mapper.WorkflowEventsStreamsName, SubjectMapper.WorkflowConsumerStart);
+            return consumers.Select(consumer => ExtractDetails(consumer, Constants.WorkflowNameHeader));
+        }
+
+        async ValueTask<ServicabilityDetails> IObservationConnection.GetActivityServicabilityAsync<TActivity>(string? workflowNamespace)
+        {
+            if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
+                return ExtractDetails(null);
+            return ExtractDetails(await GetConsumer(mapper.ActivityQueueStream, mapper.ActivityConsumerName<TActivity>()));
+        }
+        async ValueTask<IEnumerable<NamedServicabilityDetails>> IObservationConnection.GetActivityServicabilityAsync(string? workflowNamespace)
+        {
+            if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
+                return [];
+            var consumers = await GetConsumers(mapper.ActivityQueueStream, SubjectMapper.ActivityConsumerStart);
+            return consumers.Select(consumer => ExtractDetails(consumer, Constants.ActivityNameHeader));
+        }
+
+        private NamedServicabilityDetails ExtractDetails(INatsJSConsumer? consumer, string? metaDataKey = null)
+            => new(
+                metaDataKey==null ? string.Empty : consumer?.Info.Config.Metadata?[metaDataKey]??string.Empty,
+                consumer?.Info.NumWaiting??0,
+                consumer?.Info.NumAckPending??0,
+                consumer?.Info.NumPending??0
+            );
+
+        private async ValueTask<INatsJSConsumer?> GetConsumer(string streamName, string consumerName)
+        {
+            try
+            {
+                return await jsContext.GetConsumerAsync(streamName, consumerName);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private async ValueTask<IEnumerable<INatsJSConsumer>> GetConsumers(string streamName, string consumerNameStart)
+        {
+            List<INatsJSConsumer> result = [];
+            await foreach (var consumer in jsContext.ListConsumersAsync(streamName))
+            {
+                if (consumer.Info.Name.StartsWith(consumerNameStart))
+                    result.Add(consumer);
+            }
+            return result;
+        }
+
         async ValueTask IAsyncDisposable.DisposeAsync()
         {
             if (!cancellationTokenSource.IsCancellationRequested)

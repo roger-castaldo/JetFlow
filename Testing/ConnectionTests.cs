@@ -185,24 +185,32 @@ public class ConnectionTests
         Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>().cleanedName}", activityConsumer.Info.Config.DurableName);
         Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>().cleanedName, "*", "*", "*"), activityConsumer.Info.Config.FilterSubject);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityConsumer.Info.Config.AckPolicy);
+        Assert.IsNotNull(activityConsumer.Info.Config.Metadata);
+        Assert.IsTrue(activityConsumer.Info.Config.Metadata.TryGetValue(Constants.ActivityNameHeader, out var activityName) && Equals(NameHelper.GetActivityName<WorkflowActivityNoInputNoReturn>().rawName, activityName));
 
         var activityWithInputConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(activityWithInputConsumer);
         Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>().cleanedName}", activityWithInputConsumer.Info.Config.DurableName);
         Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>().cleanedName, "*", "*", "*"), activityWithInputConsumer.Info.Config.FilterSubject);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityWithInputConsumer.Info.Config.AckPolicy);
+        Assert.IsNotNull(activityWithInputConsumer.Info.Config.Metadata);
+        Assert.IsTrue(activityWithInputConsumer.Info.Config.Metadata.TryGetValue(Constants.ActivityNameHeader, out activityName) && Equals(NameHelper.GetActivityName<WorkflowActivityWithInputNoReturn>().rawName, activityName));
 
         var activityWithReturnConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(activityWithReturnConsumer);
         Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>().cleanedName}", activityWithReturnConsumer.Info.Config.DurableName);
         Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>().cleanedName, "*", "*", "*"), activityWithReturnConsumer.Info.Config.FilterSubject);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityWithReturnConsumer.Info.Config.AckPolicy);
+        Assert.IsNotNull(activityWithReturnConsumer.Info.Config.Metadata);
+        Assert.IsTrue(activityWithReturnConsumer.Info.Config.Metadata.TryGetValue(Constants.ActivityNameHeader, out activityName) && Equals(NameHelper.GetActivityName<WorkflowActivityNoInputWithReturn>().rawName, activityName));
 
         var activityWithInputWithReturnConsumer = await jsContext.GetConsumerAsync(subjectMapper.ActivityQueueStream, $"act_{NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(activityWithInputWithReturnConsumer);
         Assert.AreEqual($"act_{NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>().cleanedName}", activityWithInputWithReturnConsumer.Info.Config.DurableName);
         Assert.AreEqual(subjectMapper.ActivityStart(NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>().cleanedName, "*", "*", "*"), activityWithInputWithReturnConsumer.Info.Config.FilterSubject);
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, activityWithInputWithReturnConsumer.Info.Config.AckPolicy);
+        Assert.IsNotNull(activityWithInputWithReturnConsumer.Info.Config.Metadata);
+        Assert.IsTrue(activityWithInputWithReturnConsumer.Info.Config.Metadata.TryGetValue(Constants.ActivityNameHeader, out activityName) && Equals(NameHelper.GetActivityName<WorkflowActivityWithInputWithReturn>().rawName, activityName));
     }
 
     private sealed class WorkflowWithNoInput : IWorkflow
@@ -260,6 +268,8 @@ public class ConnectionTests
         ]));
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, workflowConsumer.Info.Config.AckPolicy);
         Assert.AreEqual(ConsumerConfigDeliverPolicy.New, workflowConsumer.Info.Config.DeliverPolicy);
+        Assert.IsNotNull(workflowConsumer.Info.Config.Metadata);
+        Assert.IsTrue(workflowConsumer.Info.Config.Metadata.TryGetValue(Constants.WorkflowNameHeader, out var workflowName) && Equals(NameHelper.GetActivityName<WorkflowWithNoInput>().rawName, workflowName));
 
         var workflowWithInputConsumer = await jsContext.GetConsumerAsync(subjectMapper.WorkflowEventsStreamsName, $"wfr_{NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName}", TestContext.CancellationToken);
         Assert.IsNotNull(workflowWithInputConsumer);
@@ -276,6 +286,8 @@ public class ConnectionTests
         ]));
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, workflowWithInputConsumer.Info.Config.AckPolicy);
         Assert.AreEqual(ConsumerConfigDeliverPolicy.New, workflowWithInputConsumer.Info.Config.DeliverPolicy);
+        Assert.IsNotNull(workflowWithInputConsumer.Info.Config.Metadata);
+        Assert.IsTrue(workflowWithInputConsumer.Info.Config.Metadata.TryGetValue(Constants.WorkflowNameHeader, out workflowName) && Equals(NameHelper.GetActivityName<WorkflowWithInput>().rawName, workflowName));
 
         var configStorage = await kvStoreContext.GetStoreAsync(subjectMapper.WorkflowConfigKeystore, TestContext.CancellationToken);
         Assert.IsNotNull(configStorage);

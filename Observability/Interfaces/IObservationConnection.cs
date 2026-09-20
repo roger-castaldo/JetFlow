@@ -192,4 +192,10 @@ public interface IObservationConnection
     /// <returns>A collection of scheduled workflows with inputs of type <typeparamref name="TInput"/>.</returns>
     ValueTask<IEnumerable<ScheduledWorkflow<TInput>>> ListScheduledWorkflowsAsync<TWorkflow, TInput>(string? workflowNamespace)
         where TWorkflow : class, IWorkflow<TInput>;
+
+    ValueTask<ServicabilityDetails> GetWorkflowServicabilityAsync<TWorkflow>(string? workflowNamespace);
+    ValueTask<IEnumerable<NamedServicabilityDetails>> GetWorkflowServicabilityAsync(string? workflowNamespace);
+    ValueTask<ServicabilityDetails> GetActivityServicabilityAsync<TActivity>(string? workflowNamespace);
+    ValueTask<IEnumerable<NamedServicabilityDetails>> GetActivityServicabilityAsync(string? workflowNamespace);
+
 }
