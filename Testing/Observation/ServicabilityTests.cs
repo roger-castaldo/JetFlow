@@ -5,7 +5,7 @@ using JetFlow.Testing.Helpers;
 namespace JetFlow.Testing.Observation;
 
 [TestClass]
-public class ServicabilityTests
+public class ServiceabilityTests
 {
     private static NatsTestHarness? natsTestHarness;
 
@@ -55,10 +55,10 @@ public class ServicabilityTests
             await observationConnection.AddNamespaceAsync(instanceNamespace);
 
         //Assert
-        var workflowDetail = await observationConnection.GetWorkflowServicabilityAsync<WorkflowWithNoAction>(instanceNamespace);
+        var workflowDetail = await observationConnection.GetWorkflowServiceabilityAsync<WorkflowWithNoAction>(instanceNamespace);
         Assert.IsNotNull(workflowDetail);
         ConfirmInstanceValues(workflowDetail, 1, 0, 0);
-        var workflows = await observationConnection.GetWorkflowServicabilityAsync(instanceNamespace);
+        var workflows = await observationConnection.GetWorkflowServiceabilityAsync(instanceNamespace);
         Assert.IsGreaterThanOrEqualTo(1, workflows.Count());
         var workflow = workflows.FirstOrDefault(wf => Equals(NameHelper.GetWorkflowName<WorkflowWithNoAction>().rawName, wf.Name));
         Assert.IsNotNull(workflow);
@@ -68,10 +68,10 @@ public class ServicabilityTests
         _ = await connection.StartWorkflowAsync<WorkflowWithNoAction>();
         await Task.Delay(TimeSpan.FromSeconds(10));
 
-        workflowDetail = await observationConnection.GetWorkflowServicabilityAsync<WorkflowWithNoAction>(instanceNamespace);
+        workflowDetail = await observationConnection.GetWorkflowServiceabilityAsync<WorkflowWithNoAction>(instanceNamespace);
         Assert.IsNotNull(workflowDetail);
         ConfirmInstanceValues(workflowDetail, 1, 2, 0);
-        workflows = await observationConnection.GetWorkflowServicabilityAsync(instanceNamespace);
+        workflows = await observationConnection.GetWorkflowServiceabilityAsync(instanceNamespace);
         Assert.IsGreaterThanOrEqualTo(1, workflows.Count());
         workflow = workflows.FirstOrDefault(wf => Equals(NameHelper.GetWorkflowName<WorkflowWithNoAction>().rawName, wf.Name));
         Assert.IsNotNull(workflow);
@@ -80,10 +80,10 @@ public class ServicabilityTests
         WorkflowWithNoAction.TaskCompletionSource.TrySetResult();
         await Task.Delay(TimeSpan.FromSeconds(30));
 
-        workflowDetail = await observationConnection.GetWorkflowServicabilityAsync<WorkflowWithNoAction>(instanceNamespace);
+        workflowDetail = await observationConnection.GetWorkflowServiceabilityAsync<WorkflowWithNoAction>(instanceNamespace);
         Assert.IsNotNull(workflowDetail);
         ConfirmInstanceValues(workflowDetail, 1, 0, 0);
-        workflows = await observationConnection.GetWorkflowServicabilityAsync(instanceNamespace);
+        workflows = await observationConnection.GetWorkflowServiceabilityAsync(instanceNamespace);
         Assert.IsGreaterThanOrEqualTo(1, workflows.Count());
         workflow = workflows.FirstOrDefault(wf => Equals(NameHelper.GetWorkflowName<WorkflowWithNoAction>().rawName, wf.Name));
         Assert.IsNotNull(workflow);
@@ -136,10 +136,10 @@ public class ServicabilityTests
             await observationConnection.AddNamespaceAsync(instanceNamespace);
 
         //Assert
-        var activityDetail = await observationConnection.GetActivityServicabilityAsync<ActivityWithNoAction>(instanceNamespace);
+        var activityDetail = await observationConnection.GetActivityServiceabilityAsync<ActivityWithNoAction>(instanceNamespace);
         Assert.IsNotNull(activityDetail);
         ConfirmInstanceValues(activityDetail, 1, 0, 0);
-        var activities = await observationConnection.GetActivityServicabilityAsync(instanceNamespace);
+        var activities = await observationConnection.GetActivityServiceabilityAsync(instanceNamespace);
         Assert.HasCount(1, activities);
         var activity = activities.First();
         Assert.AreEqual(NameHelper.GetWorkflowName<ActivityWithNoAction>().rawName, activity.Name);
@@ -149,10 +149,10 @@ public class ServicabilityTests
         _ = await connection.StartWorkflowAsync<WorkflowWithSingleAction>();
         await Task.Delay(TimeSpan.FromSeconds(10));
 
-        activityDetail = await observationConnection.GetActivityServicabilityAsync<ActivityWithNoAction>(instanceNamespace);
+        activityDetail = await observationConnection.GetActivityServiceabilityAsync<ActivityWithNoAction>(instanceNamespace);
         Assert.IsNotNull(activityDetail);
         ConfirmInstanceValues(activityDetail, 1, 2, 0);
-        activities = await observationConnection.GetActivityServicabilityAsync(instanceNamespace);
+        activities = await observationConnection.GetActivityServiceabilityAsync(instanceNamespace);
         Assert.HasCount(1, activities);
         activity = activities.First();
         Assert.AreEqual(NameHelper.GetWorkflowName<ActivityWithNoAction>().rawName, activity.Name);
@@ -161,10 +161,10 @@ public class ServicabilityTests
         ActivityWithNoAction.TaskCompletionSource.TrySetResult();
         await Task.Delay(TimeSpan.FromSeconds(30));
 
-        activityDetail = await observationConnection.GetActivityServicabilityAsync<ActivityWithNoAction>(instanceNamespace);
+        activityDetail = await observationConnection.GetActivityServiceabilityAsync<ActivityWithNoAction>(instanceNamespace);
         Assert.IsNotNull(activityDetail);
         ConfirmInstanceValues(activityDetail, 1, 0, 0);
-        activities = await observationConnection.GetActivityServicabilityAsync(instanceNamespace);
+        activities = await observationConnection.GetActivityServiceabilityAsync(instanceNamespace);
         Assert.HasCount(1, activities);
         activity = activities.First();
         Assert.AreEqual(NameHelper.GetWorkflowName<ActivityWithNoAction>().rawName, activity.Name);
@@ -175,7 +175,7 @@ public class ServicabilityTests
         await ((IAsyncDisposable)observationConnection).DisposeAsync();
     }
 
-    private static void ConfirmInstanceValues(ServicabilityDetails instance, int idle, int active, ulong messagesWaiting)
+    private static void ConfirmInstanceValues(ServiceabilityDetails instance, int idle, int active, ulong messagesWaiting)
     {
         Assert.AreEqual(idle, instance.IdleInstances);
         Assert.AreEqual(active, instance.ActiveInstances);

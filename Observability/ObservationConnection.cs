@@ -367,14 +367,14 @@ public static class ObservationConnection
             return results;
         }
 
-        async ValueTask<ServicabilityDetails> IObservationConnection.GetWorkflowServicabilityAsync<TWorkflow>(string? workflowNamespace)
+        async ValueTask<ServiceabilityDetails> IObservationConnection.GetWorkflowServiceabilityAsync<TWorkflow>(string? workflowNamespace)
         {
             if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
                 return ExtractDetails(null);
             return ExtractDetails(await GetConsumer(mapper.WorkflowEventsStreamsName, mapper.WorkflowConsumerName<TWorkflow>()));
         }
 
-        async ValueTask<IEnumerable<NamedServicabilityDetails>> IObservationConnection.GetWorkflowServicabilityAsync(string? workflowNamespace)
+        async ValueTask<IEnumerable<NamedServiceabilityDetails>> IObservationConnection.GetWorkflowServiceabilityAsync(string? workflowNamespace)
         {
             if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
                 return [];
@@ -382,13 +382,13 @@ public static class ObservationConnection
             return consumers.Select(consumer => ExtractDetails(consumer, Constants.WorkflowNameHeader));
         }
 
-        async ValueTask<ServicabilityDetails> IObservationConnection.GetActivityServicabilityAsync<TActivity>(string? workflowNamespace)
+        async ValueTask<ServiceabilityDetails> IObservationConnection.GetActivityServiceabilityAsync<TActivity>(string? workflowNamespace)
         {
             if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
                 return ExtractDetails(null);
             return ExtractDetails(await GetConsumer(mapper.ActivityQueueStream, mapper.ActivityConsumerName<TActivity>()));
         }
-        async ValueTask<IEnumerable<NamedServicabilityDetails>> IObservationConnection.GetActivityServicabilityAsync(string? workflowNamespace)
+        async ValueTask<IEnumerable<NamedServiceabilityDetails>> IObservationConnection.GetActivityServiceabilityAsync(string? workflowNamespace)
         {
             if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
                 return [];
@@ -396,7 +396,7 @@ public static class ObservationConnection
             return consumers.Select(consumer => ExtractDetails(consumer, Constants.ActivityNameHeader));
         }
 
-        private NamedServicabilityDetails ExtractDetails(INatsJSConsumer? consumer, string? metaDataKey = null)
+        private NamedServiceabilityDetails ExtractDetails(INatsJSConsumer? consumer, string? metaDataKey = null)
             => new(
                 metaDataKey==null ? string.Empty : consumer?.Info.Config.Metadata?[metaDataKey]??string.Empty,
                 consumer?.Info.NumWaiting??0,

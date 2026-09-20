@@ -193,9 +193,9 @@ public interface IObservationConnection
     ValueTask<IEnumerable<ScheduledWorkflow<TInput>>> ListScheduledWorkflowsAsync<TWorkflow, TInput>(string? workflowNamespace)
         where TWorkflow : class, IWorkflow<TInput>;
 
-    ValueTask<ServicabilityDetails> GetWorkflowServicabilityAsync<TWorkflow>(string? workflowNamespace);
-    ValueTask<IEnumerable<NamedServicabilityDetails>> GetWorkflowServicabilityAsync(string? workflowNamespace);
-    ValueTask<ServicabilityDetails> GetActivityServicabilityAsync<TActivity>(string? workflowNamespace);
-    ValueTask<IEnumerable<NamedServicabilityDetails>> GetActivityServicabilityAsync(string? workflowNamespace);
+    ValueTask<ServiceabilityDetails> GetWorkflowServiceabilityAsync<TWorkflow>(string? workflowNamespace);
+    ValueTask<IEnumerable<NamedServiceabilityDetails>> GetWorkflowServiceabilityAsync(string? workflowNamespace);
+    ValueTask<ServiceabilityDetails> GetActivityServiceabilityAsync<TActivity>(string? workflowNamespace);
+    ValueTask<IEnumerable<NamedServiceabilityDetails>> GetActivityServiceabilityAsync(string? workflowNamespace);
 
 }
