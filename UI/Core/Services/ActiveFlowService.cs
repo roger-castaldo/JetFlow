@@ -39,4 +39,9 @@ internal class ActiveFlowService(
             await observationConnection.GetSuspendedWorkflowCountAsync(workflowNamespace),
             await observationConnection.GetActiveActivityCountAsync(workflowNamespace)
         );
+
+    ValueTask<IEnumerable<NamedServiceabilityDetails>> IActiveFlowService.GetWorkflowServiceability(string? workflowNamespace)
+        => observationConnection.GetWorkflowServiceabilityAsync(workflowNamespace);
+    ValueTask<IEnumerable<NamedServiceabilityDetails>> IActiveFlowService.GetActivityServiceability(string? workflowNamespace)
+        => observationConnection.GetActivityServiceabilityAsync(workflowNamespace);
 }

@@ -1,7 +1,7 @@
 <template>
     <section>
         <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth]"
-                 :columns="[{name:'performanceCounters',size:ColumnSizes.three}]">
+                 :columns="[{name:'performanceCounters',size:ColumnSizes.three},{name:'workflowServiceability',size:ColumnSizes.four},{name:'activityServiceability',size:ColumnSizes.four}]">
             <template #performanceCounters>
                 <Card>
                     <template #header="props">
@@ -13,6 +13,52 @@
                         Active Activities: {{performanceCounters.activeActivities}}
                     </template>
                 </Card>
+            </template>
+            <template #workflowServiceability>
+                <Table>
+                    <template #thead>
+                        <tr>
+                            <th colspan="100%" class="has-text-centered">Workflow Serviceability</th>
+                        </tr>
+                        <tr>
+                            <th>Name</th>
+                            <th>Idle Instances</th>
+                            <th>Active Instances</th>
+                            <th>Messages Waiting</th>
+                        </tr>
+                    </template>
+                    <template #tbody>
+                        <tr v-for="serv in workflowServiceability">
+                            <td>{{ serv.name }}</td>
+                            <td>{{ serv.idleInstances }}</td>
+                            <td>{{ serv.activeInstances }}</td>
+                            <td>{{ serv.messagesWaiting }}</td>
+                        </tr>
+                    </template>
+                </Table>
+            </template>
+            <template #activityServiceability>
+                <Table>
+                    <template #thead>
+                        <tr>
+                            <th colspan="100%" class="has-text-centered">Activity Serviceability</th>
+                        </tr>
+                        <tr>
+                            <th>Name</th>
+                            <th>Idle Instances</th>
+                            <th>Active Instances</th>
+                            <th>Messages Waiting</th>
+                        </tr>
+                    </template>
+                    <template #tbody>
+                        <tr v-for="serv in activityServiceability">
+                            <td>{{ serv.name }}</td>
+                            <td>{{ serv.idleInstances }}</td>
+                            <td>{{ serv.activeInstances }}</td>
+                            <td>{{ serv.messagesWaiting }}</td>
+                        </tr>
+                    </template>
+                </Table>
             </template>
         </ColumnContainer>
         <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth]"
@@ -30,8 +76,8 @@
                             <th>Completed</th>
                             <th>Failed</th>
                             <th>TimedOut</th>
-                            <th>Queue Latencies</th>
-                            <th>Durations</th>
+                            <th>Avg. Queue Latencies</th>
+                            <th>Avg. Durations</th>
                         </tr>
                     </template>
                     <template #tbody>
@@ -42,8 +88,8 @@
                             <td>{{ perf.Completed }}</td>
                             <td>{{ perf.Failed }}</td>
                             <td>{{ perf.TimedOut }}</td>
-                            <td>{{ perf.queueLatencies.slice(0, 10).join(', ') }}</td>
-                            <td>{{ perf.durations.slice(0, 10).join(', ') }}</td>
+                            <td>{{ perf.averageQueueLatencies }}</td>
+                            <td>{{ perf.averageDurations }}</td>
                         </tr>
                     </template>
                 </Table>
@@ -61,7 +107,7 @@
                             <th>Completed</th>
                             <th>Failed</th>
                             <th>Purged</th>
-                            <th>Queue Latencies</th>
+                            <th>Avg. Queue Latencies</th>
                         </tr>
                     </template>
                     <template #tbody>
@@ -72,7 +118,7 @@
                             <td>{{ perf.Completed }}</td>
                             <td>{{ perf.Failed }}</td>
                             <td>{{ perf.Purged }}</td>
-                            <td>{{ perf.queueLatencies.slice(0, 10).join(', ') }}</td>
+                            <td>{{ perf.averageQueueLatencies }}</td>
                         </tr>
                     </template>
                 </Table>
@@ -93,6 +139,8 @@
     });
     const activityPerformance = ref([]);
     const workflowPerformance = ref([]);
+    const workflowServiceability = ref([]);
+    const activityServiceability = ref([]);
 
     const dashboardStream = GetDashboardStream();
 
@@ -106,6 +154,14 @@
 
     dashboardStream.addEventListener("workflowPerformance", (e)=>{
         workflowPerformance.value = JSON.parse(e.data);
+    });
+
+    dashboardStream.addEventListener("workflowServiceability", (e)=>{
+        workflowServiceability.value = JSON.parse(e.data);
+    });
+
+    dashboardStream.addEventListener("activityServiceability", (e)=>{
+        activityServiceability.value = JSON.parse(e.data);
     });
 
     onUnmounted(()=>dashboardStream.close());
