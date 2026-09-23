@@ -8,6 +8,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Net;
 using System.Text.Json;
+using JetFlow.Attributes;
 
 namespace JetFlow.Testing;
 
@@ -29,12 +30,13 @@ public class WorkflowExecutionTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Empty Activity")]
     private sealed class EmptyActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
-
+    [WorkflowName("Empty Activity Workflow")]
     private sealed class EmptyActivityWorkflow : IWorkflow
     {
         public static readonly TaskCompletionSource DelayStartTask = new();
@@ -95,6 +97,7 @@ public class WorkflowExecutionTests
         Assert.AreEqual("You are unable to execute an activity inside a completed workflow", endMessage.ErrorMessage);
     }
 
+    [WorkflowName("Delayed Workflow")]
     private sealed class DelayedWorkflow : IWorkflow
     {
         public static readonly TaskCompletionSource DelayStartTask = new();
@@ -153,12 +156,13 @@ public class WorkflowExecutionTests
         Assert.AreEqual("You are unable to execute an activity inside a completed workflow", endMessage.ErrorMessage);
     }
 
+    [ActivityName("Other Empty Activity")]
     private sealed class OtherEmptyActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
-
+    [WorkflowName("Invoke Mismatched Activity Workflow")]
     private sealed class InvokeMismatchedActivityWorkflow : IWorkflow
     {
         private bool firstRun = true;
@@ -210,6 +214,7 @@ public class WorkflowExecutionTests
         Assert.AreEqual($"Expected step name {NameHelper.GetActivityName<OtherEmptyActivity>().rawName} but got {NameHelper.GetActivityName<EmptyActivity>().rawName}", endMessage.ErrorMessage);
     }
 
+    [WorkflowName("Invalid Delay Step Workflow")]
     private sealed class InvalidDelayStepWorkflow : IWorkflow
     {
         public static readonly TaskCompletionSource DelayStartTask = new();
@@ -267,11 +272,13 @@ public class WorkflowExecutionTests
         Assert.AreEqual($"Expected delay finished event but recieved {subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString(), NameHelper.GetActivityName<EmptyActivity>().cleanedName)}", endMessage.ErrorMessage);
     }
 
+    [ActivityName("No Action Activity")]
     private sealed class NoActionActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
             => Task.CompletedTask;
     }
+    [ActivityName("No Action Activity With Return")]
     private sealed class NoActionActivityWithReturn : IActivityWithReturn<string>
     {
         public string? ResultMessage { get; private set; } = string.Empty;
@@ -281,6 +288,7 @@ public class WorkflowExecutionTests
             return Task.FromResult(ResultMessage);
         }
     }
+    [ActivityName("No Action Activity With Input")]
     private sealed class NoActionActivityWithInput : IActivity<string>
     {
         public string? InputMessage { get; private set; } = string.Empty;
@@ -290,6 +298,7 @@ public class WorkflowExecutionTests
             return Task.CompletedTask;
         }
     }
+    [ActivityName("No Action Activity With Input With Return")]
     private sealed class NoActionActivityWithInputWithReturn : IActivityWithReturn<string, string>
     {
         public string? InputMessage { get; private set; } = string.Empty;
@@ -301,6 +310,7 @@ public class WorkflowExecutionTests
             return Task.FromResult(ResultMessage);
         }
     }
+    [ActivityName("Error Activity")]
     private sealed class ErrorActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -308,6 +318,7 @@ public class WorkflowExecutionTests
             throw new NotImplementedException();
         }
     }
+    [ActivityName("Error Activity With Return")]
     private sealed class ErrorActivityWithReturn : IActivityWithReturn<string>
     {
         public string? ResultMessage { get; private set; } = string.Empty;
@@ -317,6 +328,7 @@ public class WorkflowExecutionTests
             throw new NotImplementedException();
         }
     }
+    [ActivityName("Timeout Activity")]
     private sealed class TimeoutActivity : IActivity
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -324,6 +336,7 @@ public class WorkflowExecutionTests
             await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
         }
     }
+    [ActivityName("Timeout Activity With Return")]
     private sealed class TimeoutActivityWithReturn : IActivityWithReturn<string>
     {
         public string? ResultMessage { get; private set; } = string.Empty;
@@ -334,7 +347,7 @@ public class WorkflowExecutionTests
             return ResultMessage;
         }
     }
-
+    [WorkflowName("All Activity Results Workflow")]
     private sealed class AllActivityResultsWorkflow : IWorkflow
     {
         public static ActivityResult? NoActResult { get; private set; }

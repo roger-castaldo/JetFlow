@@ -1,4 +1,5 @@
-﻿using JetFlow.Helpers;
+﻿using JetFlow.Attributes;
+using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -22,6 +23,7 @@ public class PerformanceRecordTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Test Recorded Activity")]
     private sealed class TestRecordedActivity : IActivity
     {
         private int counter = 0;
@@ -40,6 +42,7 @@ public class PerformanceRecordTests
             }
         }
     }
+    [WorkflowName("Test Recorded Workflow Success")]
     private sealed class TestRecordedWorkflowSuccess : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
@@ -49,6 +52,7 @@ public class PerformanceRecordTests
             _ = await context.ExecuteActivityAsync<TestRecordedActivity>(new() { Timeouts = new(AttemptTimeout: TimeSpan.FromSeconds(30)) });
         }
     }
+    [WorkflowName("Test Recorded Workflow Failure")]
     private sealed class TestRecordedWorkflowFailure: IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)

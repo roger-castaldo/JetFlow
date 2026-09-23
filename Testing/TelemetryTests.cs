@@ -1,4 +1,5 @@
-﻿using JetFlow.Configs;
+﻿using JetFlow.Attributes;
+using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
@@ -23,6 +24,7 @@ public class TelemetryTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Timeout Activity")]
     private sealed class TimeoutActivity : IActivity<string>
     {
         async Task IActivity<string>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
@@ -30,6 +32,7 @@ public class TelemetryTests
             await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
         }
     }
+    [ActivityName("Not Implemented Activity")]
     private sealed class NotImplementedActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -37,6 +40,7 @@ public class TelemetryTests
             throw new NotImplementedException();
         }
     }
+    [WorkflowName("Workflow For Telemetry")]
     private sealed class WorkflowForTelemetry : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)

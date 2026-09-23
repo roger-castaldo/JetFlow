@@ -25,4 +25,7 @@ internal class ConfigService(IDbConnection dbConnection)
         await dbConnection.UnregisterNamespaceAsync(namespaceName);
         await Task.WhenAll(removeNamespaceCallbacks.Select(callback => callback(namespaceName)));
     }
+
+    ValueTask<IEnumerable<string?>> IConfigService.GetCurrentNamespacesAsync()
+        => dbConnection.ListNamespacesAsync();
 }

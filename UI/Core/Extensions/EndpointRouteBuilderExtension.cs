@@ -16,7 +16,8 @@ public static class EndpointRouteBuilderExtension
     public static IEndpointRouteBuilder RegisterJetflowUIEndpoints(this IEndpointRouteBuilder routeBuilder)
         => routeBuilder
             .RegisterWebFiles()
-            .RegisterDashBoardStreams();
+            .RegisterDashBoardStreams()
+            .RegisterNamespaceEndpoints();
 
     private static IFileInfo LocateFile(IFileProvider fileProvider, string path)
     {
@@ -70,6 +71,27 @@ public static class EndpointRouteBuilderExtension
             .MapGet("/jetflow/dashboard", async (string? ns, [FromServices] IActiveFlowService activeFlowService, [FromServices] IDbConnection dbConnection, CancellationToken cancellation) =>
             {
                 return TypedResults.ServerSentEvents(new DashboardEventStream(ns??string.Empty, activeFlowService, dbConnection));
+            });
+        return routeBuilder;
+    }
+    private static IEndpointRouteBuilder RegisterNamespaceEndpoints(this IEndpointRouteBuilder routeBuilder)
+    {
+        routeBuilder
+            .MapGet("/jetflow/namespaces", async (string? ns, [FromServices] IConfigService configService, CancellationToken cancellation) =>
+            {
+                return await configService.GetCurrentNamespacesAsync();
+            });
+        routeBuilder
+            .MapPost("/jetflow/namespaces", async ([FromBody] string? ns, [FromServices] IConfigService configService, CancellationToken cancellation) =>
+            {
+                await configService.RegisterNamespaceAsync(ns);
+                return;
+            });
+        routeBuilder
+            .MapDelete("/jetflow/namespaces/{ns}", async (string? ns, [FromServices] IConfigService configService, CancellationToken cancellation) =>
+            {
+                await configService.UnregisterNamespaceAsync(ns);
+                return;
             });
         return routeBuilder;
     }

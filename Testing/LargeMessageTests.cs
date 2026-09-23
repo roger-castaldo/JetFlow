@@ -9,6 +9,7 @@ using NATS.Client.JetStream;
 using NATS.Net;
 using System.IO.Compression;
 using System.Text.Json;
+using JetFlow.Attributes;
 
 namespace JetFlow.Testing;
 
@@ -28,6 +29,7 @@ public class LargeMessageTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Large IO Activity")]
     private sealed class LargeIOActivity(INatsServerInfo? natsServerInfo) : IActivityWithReturn<string, string>
     {
         public string? IncomingMessage { get; private set; }
@@ -40,6 +42,7 @@ public class LargeMessageTests
             return Task.FromResult(OutgoingMessage);
         }
     }
+    [WorkflowName("Large Message Workflow")]
     private sealed class LargeMessageWorkflow : IWorkflow<string>
     {
         public static string? InputMessage { get; private set; }

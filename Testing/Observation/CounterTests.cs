@@ -1,4 +1,5 @@
-﻿using JetFlow.Configs;
+﻿using JetFlow.Attributes;
+using JetFlow.Configs;
 using JetFlow.Data;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
@@ -26,6 +27,7 @@ public class CounterTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [WorkflowName("Empty Workflow")]
     private sealed class EmptyWorkflow(IObservationConnection observationConnection) : IWorkflow<string?>
     {
         async ValueTask IWorkflow<string?>.ExecuteAsync(IWorkflowContext context, string? input)
@@ -144,6 +146,7 @@ public class CounterTests
         Assert.AreEqual(BigInteger.Zero, counterValue);
     }
 
+    [ActivityName("Empty Activity")]
     private sealed class EmptyActivity(IObservationConnection observationConnection) : IActivity<string?>
     {
         async Task IActivity<string?>.ExecuteAsync(string? input, IWorkflowState state, CancellationToken cancellationToken)
@@ -166,6 +169,7 @@ public class CounterTests
             Assert.AreEqual(BigInteger.One, counterValue);
         }
     }
+    [WorkflowName("Empty Activity Workflow")]
     private sealed class EmptyActivityWorkflow(IObservationConnection observationConnection) : IWorkflow<string?>
     {
         async ValueTask IWorkflow<string?>.ExecuteAsync(IWorkflowContext context, string? input)

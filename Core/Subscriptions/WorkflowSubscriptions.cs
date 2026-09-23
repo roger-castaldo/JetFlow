@@ -1,6 +1,7 @@
 ﻿using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Serializers;
+using JetFlow.States;
 using NATS.Client.JetStream;
 
 namespace JetFlow.Subscriptions;

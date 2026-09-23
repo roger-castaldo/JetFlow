@@ -143,13 +143,13 @@ internal static class WorkflowHelper
     }
 
     public static async ValueTask<ArchivedWorkflow> ProduceArchivedWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
-        string workflowName, string workflowId, CancellationToken cancellationToken)
+        EventMessage message, CancellationToken cancellationToken)
     {
-        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, workflowName, workflowId, cancellationToken);
+        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, message.WorkflowSubjectName, message.WorkflowId, cancellationToken);
         return new ArchivedWorkflow(
-            Guid.Parse(workflowId),
+            Guid.Parse(message.WorkflowId),
             extractedData.SchedulerId,
-            workflowName,
+            message.WorkflowName,
             extractedData.Options,
             extractedData.Start,
             extractedData.End!.Value,
@@ -162,13 +162,13 @@ internal static class WorkflowHelper
     }
 
     public static async ValueTask<ActiveWorkflow> ProduceActiveWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
-        string workflowName, string workflowId, CancellationToken cancellationToken)
+        EventMessage message, CancellationToken cancellationToken)
     {
-        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, workflowName, workflowId, cancellationToken);
+        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, message.WorkflowSubjectName, message.WorkflowId, cancellationToken);
         return new ActiveWorkflow(
-            Guid.Parse(workflowId),
+            Guid.Parse(message.WorkflowId),
             extractedData.SchedulerId,
-            workflowName,
+            message.WorkflowName,
             extractedData.Options,
             extractedData.Start,
             extractedData.Arguments,

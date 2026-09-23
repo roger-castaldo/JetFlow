@@ -131,7 +131,7 @@ internal static class NameHelper
         => typeof(IActivity).IsAssignableFrom(t)
            || t.GetInterfaces().Any(i => IsActivityInterface(i));
 
-    private static string CleanName(string value)
+    public static string CleanName(string value)
         => new([.. value
             .Select(c=> (char.IsLetterOrDigit(c), c) switch {
                 (true, _) => c,

@@ -24,6 +24,7 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
 
     public async ValueTask PurgeWorkflowAsync(EventMessage message, CancellationToken cancellationToken)
     {
+        await connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken);
         await using var query = await QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName, false, subjectMapper.WorkflowPurgeFilter(message.WorkflowSubjectName, message.WorkflowId));
         var tasks = new List<Task>();
         await foreach (var msg in query)
@@ -34,7 +35,6 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
         await Task.WhenAll(
         [
             .. tasks,
-            connection.PurgeStreamAsync(subjectMapper.ActivityQueueStream, new() { Filter = subjectMapper.WorkflowActivityPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken).AsTask(),
             connection.PurgeStreamAsync(subjectMapper.WorkflowEventsStreamsName, new() { Filter = subjectMapper.WorkflowPurgeFilter(message.WorkflowSubjectName, message.WorkflowId) }, cancellationToken).AsTask()
         ]);
         await connection.PublishMessageAsync(

@@ -1,7 +1,7 @@
 <template>
     <section>
         <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth]"
-                 :columns="[{name:'performanceCounters',size:ColumnSizes.three},{name:'workflowServiceability',size:ColumnSizes.four},{name:'activityServiceability',size:ColumnSizes.four}]">
+                 :columns="[{name:'performanceCounters',size:ColumnSizes.two},{name:'workflowServiceability',size:ColumnSizes.five},{name:'activityServiceability',size:ColumnSizes.five}]">
             <template #performanceCounters>
                 <Card>
                     <template #header="props">
@@ -82,12 +82,12 @@
                     </template>
                     <template #tbody>
                         <tr v-for="perf in activityPerformance">
-                            <td>{{ perf.window }}</td>
-                            <td>{{ perf.Name }}</td>
-                            <td>{{ perf.Started }}</td>
-                            <td>{{ perf.Completed }}</td>
-                            <td>{{ perf.Failed }}</td>
-                            <td>{{ perf.TimedOut }}</td>
+                            <td>{{ timeFormatter.format(new Date(perf.window)) }}</td>
+                            <td>{{ perf.name }}</td>
+                            <td>{{ perf.started }}</td>
+                            <td>{{ perf.completed }}</td>
+                            <td>{{ perf.failed }}</td>
+                            <td>{{ perf.timedOut }}</td>
                             <td>{{ perf.averageQueueLatencies }}</td>
                             <td>{{ perf.averageDurations }}</td>
                         </tr>
@@ -112,12 +112,12 @@
                     </template>
                     <template #tbody>
                         <tr v-for="perf in workflowPerformance">
-                            <td>{{ perf.window }}</td>
-                            <td>{{ perf.Name }}</td>
-                            <td>{{ perf.Started }}</td>
-                            <td>{{ perf.Completed }}</td>
-                            <td>{{ perf.Failed }}</td>
-                            <td>{{ perf.Purged }}</td>
+                            <td>{{ timeFormatter.format(new Date(perf.window)) }}</td>
+                            <td>{{ perf.name }}</td>
+                            <td>{{ perf.started }}</td>
+                            <td>{{ perf.completed }}</td>
+                            <td>{{ perf.failed }}</td>
+                            <td>{{ perf.purged }}</td>
                             <td>{{ perf.averageQueueLatencies }}</td>
                         </tr>
                     </template>
@@ -129,8 +129,11 @@
 
 <script setup>
     import {GetDashboardStream} from "services";
-    import {ref, onUnmounted} from "vue";
+    import {ref, onUnmounted, inject, watch} from "vue";
     import {ColumnContainerModifiers, ColumnContainer, ColumnSizes, Card, Table} from "components";
+    import {Constants} from "mixins";
+
+    const timeFormatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' });
 
     const performanceCounters = ref({
         activeWorkflows:0,
@@ -141,27 +144,34 @@
     const workflowPerformance = ref([]);
     const workflowServiceability = ref([]);
     const activityServiceability = ref([]);
+    const currentNamespace = inject(Constants.namespaceName);
 
-    const dashboardStream = GetDashboardStream();
+    const establishDashboard = () =>
+    {
+        let result = GetDashboardStream(currentNamespace.value);
+        result.addEventListener("performanceCounters", (e) => {
+            performanceCounters.value = JSON.parse(e.data);
+        });
+        result.addEventListener("activityPerformance", (e)=>{
+            activityPerformance.value = JSON.parse(e.data);
+        });
+        result.addEventListener("workflowPerformance", (e)=>{
+            workflowPerformance.value = JSON.parse(e.data);
+        });
+        result.addEventListener("workflowServiceability", (e)=>{
+            workflowServiceability.value = JSON.parse(e.data);
+        });
+        result.addEventListener("activityServiceability", (e)=>{
+            activityServiceability.value = JSON.parse(e.data);
+        });
+        return result;
+    };
 
-    dashboardStream.addEventListener("performanceCounters", (e) => {
-        performanceCounters.value = JSON.parse(e.data);
-    });
+    let dashboardStream = establishDashboard();
 
-    dashboardStream.addEventListener("activityPerformance", (e)=>{
-        activityPerformance.value = JSON.parse(e.data);
-    });
-
-    dashboardStream.addEventListener("workflowPerformance", (e)=>{
-        workflowPerformance.value = JSON.parse(e.data);
-    });
-
-    dashboardStream.addEventListener("workflowServiceability", (e)=>{
-        workflowServiceability.value = JSON.parse(e.data);
-    });
-
-    dashboardStream.addEventListener("activityServiceability", (e)=>{
-        activityServiceability.value = JSON.parse(e.data);
+    watch(currentNamespace,()=>{
+        dashboardStream.close();
+        dashboardStream = establishDashboard();
     });
 
     onUnmounted(()=>dashboardStream.close());

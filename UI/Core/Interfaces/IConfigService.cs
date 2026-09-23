@@ -6,4 +6,5 @@ internal interface IConfigService
     void RegisterRemoveNamespaceCallback(Func<string?, Task> callback);
     ValueTask RegisterNamespaceAsync(string? namespaceName);
     ValueTask UnregisterNamespaceAsync(string? namespaceName);
+    ValueTask<IEnumerable<string?>> GetCurrentNamespacesAsync();
 }

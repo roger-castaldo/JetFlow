@@ -4,6 +4,7 @@ using JetFlow.Data;
 using JetFlow.Serializers;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
+using JetFlow.Attributes;
 
 namespace JetFlow.Testing;
 
@@ -23,6 +24,7 @@ public class ActivityExecutionTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Basic Activity")]
     private sealed class BasicActivity : IActivity
     {
         public int InvokeCount { get; private set; } = 0;
@@ -32,6 +34,7 @@ public class ActivityExecutionTests
             return Task.CompletedTask;
         }
     }
+    [ActivityName("Basic Activity With Input")]
     private sealed class BasicActivityWithInput : IActivity<string>
     {
         public string? InvokedMessage { get; private set; } = string.Empty;
@@ -42,6 +45,7 @@ public class ActivityExecutionTests
             return Task.CompletedTask;
         }
     }
+    [ActivityName("Basic Activity With Return")]
     private sealed class BasicActivityWithReturn : IActivityWithReturn<string>
     {
         public string ReturnedMessage { get; private set; } = string.Empty;
@@ -52,6 +56,7 @@ public class ActivityExecutionTests
             return Task.FromResult(ReturnedMessage);
         }
     }
+    [ActivityName("Basic Activity With Input And Return")]
     private sealed class BasicActivityWithInputAndReturn : IActivityWithReturn<string, string>
     {
         public string? InvokedMessage { get; private set; } = string.Empty;
@@ -63,6 +68,7 @@ public class ActivityExecutionTests
             return Task.FromResult(ReturnedMessage);
         }
     }
+    [WorkflowName("Basic Workflow")]
     private sealed class BasicWorkflow : IWorkflow<string>
     {
         public static string? FinalResult { get; private set; } = string.Empty;
@@ -119,6 +125,7 @@ public class ActivityExecutionTests
         Assert.AreEqual(BasicWorkflow.FinalResult, basicActivityWithInputAndReturn.ReturnedMessage);
     }
 
+    [ActivityName("Generate Random String")]
     private sealed class GenerateRandomString : IActivityWithReturn<string>
     {
         public string GeneratedString { get; private set; } = string.Empty;
@@ -129,6 +136,7 @@ public class ActivityExecutionTests
             return Task.FromResult(GeneratedString);
         }
     }
+    [ActivityName("Recieve Random String From Context By Class")]
     private sealed class RecieveRandomStringFromContextByClass : IActivity
     {
         public string? RecievedString { get; private set; } = string.Empty;
@@ -139,15 +147,17 @@ public class ActivityExecutionTests
 
         }
     }
+    [ActivityName("Recieve Random String From Context By Name")]
     private sealed class RecieveRandomStringFromContextByName : IActivity
     {
         public string? RecievedString { get; private set; } = string.Empty;
 
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
-            RecievedString = (await state.GetActivityResultValueAsync<string>("GenerateRandomString"))?.FirstOrDefault();
+            RecievedString = (await state.GetActivityResultValueAsync<string>("Generate Random String"))?.FirstOrDefault();
         }
     }
+    [WorkflowName("Activity Context Workflow")]
     private sealed class ActivityContextWorkflow : IWorkflow
     {
         public static string? GeneratedString { get; private set; } = string.Empty;
@@ -197,11 +207,13 @@ public class ActivityExecutionTests
         Assert.AreEqual(ActivityContextWorkflow.GeneratedString, recieveRandomStringByName.RecievedString);
     }
 
+    [ActivityName("Generate Random String At Length")]
     private sealed class GenerateRandomStringAtLength : IActivityWithReturn<string, int>
     {
         Task<string> IActivityWithReturn<string, int>.ExecuteAsync(int input, IWorkflowState state, CancellationToken cancellationToken)
             =>Task.FromResult(TestsHelper.GenerateRandomString(input));
     }
+    [ActivityName("Recieve Random Strings From Context By Class")]
     private sealed class RecieveRandomStringsFromContextByClass : IActivity
     {
         public IEnumerable<string?>? RecievedStrings { get; private set; } = null;
@@ -212,15 +224,17 @@ public class ActivityExecutionTests
 
         }
     }
+    [ActivityName("Recieve Random Strings From Context By Name")]
     private sealed class RecieveRandomStringsFromContextByName : IActivity
     {
         public IEnumerable<string?>? RecievedStrings { get; private set; } = null;
 
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {
-            RecievedStrings = await state.GetActivityResultValueAsync<string>("GenerateRandomStringAtLength");
+            RecievedStrings = await state.GetActivityResultValueAsync<string>("Generate Random String At Length");
         }
     }
+    [WorkflowName("Parallel Activity Context Workflow")]
     private sealed class ParallelActivityContextWorkflow : IWorkflow
     {
         public static IEnumerable<string?>? GeneratedStrings { get; private set; } = null;

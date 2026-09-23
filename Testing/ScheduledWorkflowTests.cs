@@ -9,6 +9,7 @@ using NATS.Client.JetStream;
 using NATS.Net;
 using System.Diagnostics;
 using System.Text.Json;
+using JetFlow.Attributes;
 
 namespace JetFlow.Testing;
 
@@ -27,6 +28,7 @@ public class ScheduledWorkflowTests
     [ClassCleanup]
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
+    [WorkflowName("Cron Workflow No Input")]
     private sealed class CronWorkflowNoInput : IWorkflow
     {
         public static long? ExecutionTimestamp { get; private set; } = null;
@@ -77,6 +79,7 @@ public class ScheduledWorkflowTests
         Assert.IsGreaterThanOrEqualTo(1, Math.Ceiling(Stopwatch.GetElapsedTime(CronWorkflowNoInput.ExecutionTimestamp.Value).TotalMinutes));
     }
 
+    [WorkflowName("Cron Workflow With Input")]
     private sealed class CronWorkflowWithInput : IWorkflow<string>
     {
         public static long? ExecutionTimestamp { get; private set; } = null;
@@ -131,6 +134,7 @@ public class ScheduledWorkflowTests
         Assert.AreEqual(input, CronWorkflowWithInput.ProvidedInput);
     }
 
+    [WorkflowName("Delayed Workflow No Input")]
     private sealed class DelayedWorkflowNoInput : IWorkflow
     {
         public static long? ExecutionTimestamp { get; private set; } = null;
@@ -181,6 +185,7 @@ public class ScheduledWorkflowTests
         Assert.IsGreaterThanOrEqualTo(60, endTime.TotalSeconds);
     }
 
+    [WorkflowName("Delayed Workflow With Input")]
     private sealed class DelayedWorkflowWithInput : IWorkflow<string>
     {
         public static long? ExecutionTimestamp { get; private set; } = null;
@@ -235,6 +240,7 @@ public class ScheduledWorkflowTests
         Assert.AreEqual(input, DelayedWorkflowWithInput.ProvidedInput);
     }
 
+    [WorkflowName("Archivable Delayed Workflow With Input")]
     private sealed class ArchivableDelayedWorkflowWithInput : IWorkflow<string>
     {
         public static string? ProvidedInput { get; private set; } = null;

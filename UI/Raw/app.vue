@@ -14,15 +14,18 @@
                           :hasClose="ErrorMessage!=null"
                           :blockUser="ErrorMessage!=null" />
         <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth, ColumnContainerModifiers.fullHeight]"
-                 :columns="[{name:'menu',size:ColumnSizes.narrow,border:[BorderTypes.right]},{name:'content'}]">
+                 :columns="[{name:'menu',size:ColumnSizes.narrow},{name:'content'}]">
             <template #content>
                 <component :is="currentComponent"/>
             </template>
             <template #menu>
-                <Title text="JETFLOW" :level="4"/>
-                <Menu>
-                    <MenuList :items="mainMenu"/>
-                </Menu>
+                <Box>
+                    <Title text="JETFLOW" :level="4"/>
+                    <Select :values="namespaces" @valueChanged="namespaceChanged"  style="margin-bottom:15px;"/>
+                    <Menu>
+                        <MenuList :items="mainMenu"/>
+                    </Menu>
+                </Box>
             </template>
         </ColumnContainer>
     </div>
@@ -31,15 +34,16 @@
 <script setup>
     import { Animation, PageNotification, Modal, Progress, AnimationTypes, AnimationSpeeds,
         ColumnContainerModifiers, ColumnContainer, ColumnSizes, BorderTypes, Menu, MenuList,
-        Title
+        Title, Select, Box
      } from 'components';
-    import { Locked, ProgressMessage, Message, ErrorMessage, ClearProgress, Unlock} from 'mixins';
+    import { Locked, ProgressMessage, Message, ErrorMessage, ClearProgress, Unlock, Constants} from 'mixins';
     import { onMounted, shallowRef, computed, provide, ref } from 'vue';
     import dashboard from './screens/dashboard.vue';
     import activeFlows from './screens/activeFlows.vue';
     import completedFlows from './screens/completedFlows.vue';
     import scheduledFlows from './screens/scheduledFlows.vue';
     import settings from './screens/settings.vue';
+    import {GetNamespaces} from 'services';
 
     const menu = [
         {
@@ -73,12 +77,17 @@
             name:'settings'
         }
     ];
+
+    const currentNamespace = ref(null);
+
     provide('FontAwesomeCDN','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/');
     provide('IconSet', 'solid');
     provide('Language', 'en');
+    provide(Constants.namespaceName, currentNamespace);
 
     const currentComponent = shallowRef(null);
     const currentMenu = ref('dashboard');
+    const namespaces = ref([]);
 
     const mainMenu = computed(()=>{
         return menu.map(m=>{
@@ -102,8 +111,14 @@
         return ProgressMessage.value.substring(0, 27) + '...';
     });
 
+    const namespaceChanged = (val)=>{
+        currentNamespace.value = val.value;
+    };
+
     onMounted(async () => {
         document.getElementById('preload-modal').remove();
+        namespaces.value = (await GetNamespaces()).map((ns)=>({value:ns,label:ns}));
+
         currentComponent.value = dashboard;
         ClearProgress();
         Unlock();

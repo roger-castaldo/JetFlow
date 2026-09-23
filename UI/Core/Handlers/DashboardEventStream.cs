@@ -10,7 +10,10 @@ internal class DashboardEventStream(string? namespaceName, IActiveFlowService ac
 
     async IAsyncEnumerator<SseItem<object>> IAsyncEnumerable<SseItem<object>>.GetAsyncEnumerator(CancellationToken cancellationToken)
     {
-        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        yield return new SseItem<object>(
+            string.Empty,
+            "established"
+        );
         while (!cancellationToken.IsCancellationRequested)
         {
             yield return new SseItem<object>(
@@ -41,7 +44,7 @@ internal class DashboardEventStream(string? namespaceName, IActiveFlowService ac
                 await activeFlowService.GetActivityServiceability(namespaceName),
                 "activityServiceability"
             );
-            await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
         }
         yield break;
     }

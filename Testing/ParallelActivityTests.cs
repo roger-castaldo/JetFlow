@@ -8,6 +8,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Net;
 using System.Text.Json;
+using JetFlow.Attributes;
 
 namespace JetFlow.Testing;
 
@@ -30,6 +31,7 @@ public class ParallelActivityTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Empty Activity With Input")]
     private sealed class EmptyActivityWithInput : IActivity<string>
     {
         private readonly List<string?> inputs = [];
@@ -40,6 +42,7 @@ public class ParallelActivityTests
             return Task.CompletedTask;
         }
     }
+    [ActivityName("Parallel Activit yWorkflow Without Output")]
     private sealed class ParallelActivityWorkflowWithoutOutput : IWorkflow
     {
         private const int ParallelActivityCount = 10;
@@ -95,6 +98,7 @@ public class ParallelActivityTests
             Assert.Contains(input, emptyActivityWithInput.Inputs);
     }
 
+    [ActivityName("Empty Activity With Input And Output")]
     private sealed class EmptyActivityWithInputAndOutput : IActivityWithReturn<string, string>
     {
         private readonly List<string?> inputs = [];
@@ -111,6 +115,7 @@ public class ParallelActivityTests
             return Task.FromResult(result);
         }
     }
+    [WorkflowName("Parallel Activity Workflow With Output")]
     private sealed class ParallelActivityWorkflowWithOutput : IWorkflow
     {
         private const int ParallelActivityCount = 10;
@@ -244,6 +249,7 @@ public class ParallelActivityTests
 
     private sealed record EmptyActivityInput(int Index, string Input);
 
+    [ActivityName("Empty Activity With Problems")]
     private sealed class EmptyActivityWithProblems : IActivity<EmptyActivityInput>
     {
         private readonly List<string?> inputs = [];
@@ -257,6 +263,7 @@ public class ParallelActivityTests
                 throw new InvalidDataException("Simulated error occured");
         }
     }
+    [WorkflowName("Parallel Activity Workflow With Problems")]
     private sealed class ParallelActivityWorkflowWithProblems : IWorkflow
     {
         private const int ParallelActivityCount = 10;
@@ -324,6 +331,7 @@ public class ParallelActivityTests
             Assert.Contains(input, emptyActivityToTimeout.Inputs);
     }
 
+    [WorkflowName("Parallel Activity Workflow With Large Number Of Calls")]
     private sealed class ParallelActivityWorkflowWithLargeNumberOfCalls : IWorkflow
     {
         private const int ParallelActivityCount = 1002;

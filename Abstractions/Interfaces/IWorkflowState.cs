@@ -3,7 +3,7 @@
 /// <summary>
 /// Houses the state of a workflow, such as the current activity attempt and the results of completed activities. This interface allows workflow activities to access information about the workflow's execution state, enabling them to make informed decisions based on previous activity outcomes.
 /// </summary>
-public interface IWorkflowState
+public interface IWorkflowState : IContext
 {
     /// <summary>
     /// The current attempt number for the activity being executed. This value is incremented each time an activity is retried, allowing activities to determine how many times they have been attempted and to implement retry logic accordingly.

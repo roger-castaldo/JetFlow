@@ -1,4 +1,5 @@
-﻿using JetFlow.Helpers;
+﻿using JetFlow.Attributes;
+using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -22,12 +23,13 @@ public class ScheduledWorkflowTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [WorkflowName("Scheduled Workflow With No Input")]
     private sealed class ScheduledWorkflowWithNoInput : IWorkflow
     {
         ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
             => ValueTask.CompletedTask;
     }
-
+    [WorkflowName("Scheduled Workflow With Input")]
     private sealed class ScheduledWorkflowWithInput : IWorkflow<string>
     {
         ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string input)

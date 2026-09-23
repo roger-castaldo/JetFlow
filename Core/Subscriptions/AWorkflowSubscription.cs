@@ -1,6 +1,7 @@
 ﻿using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Serializers;
+using JetFlow.States;
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.JetStream;
 using System.Diagnostics;
@@ -80,13 +81,13 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             catch (Exception ex)
             {
                 Activity.Current?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                await MetricsHelper.EndWorkflowAsync(message.WorkflowSubjectName, false, CancellationToken);
+                await MetricsHelper.EndWorkflowAsync(message.WorkflowName, false, CancellationToken);
                 await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, ex.Message), CancellationToken);
             }
             await message.AckAsync(CancellationToken);
             if (isCompleted)
             {
-                await MetricsHelper.EndWorkflowAsync(message.WorkflowSubjectName, true, CancellationToken);
+                await MetricsHelper.EndWorkflowAsync(message.WorkflowName, true, CancellationToken);
                 await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, null), CancellationToken);
             }
         }
@@ -113,8 +114,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                     ServiceConnection.JSContext,
                     ServiceConnection.LargeMessageStore,
                     MessageSerializer,
-                    message.WorkflowName,
-                    message.WorkflowId,
+                    message,
                     CancellationToken
                 )),
                 CancellationToken

@@ -51,7 +51,7 @@ public class PostgresqlDbConnection(string connectionString)
             foreach (var arg in comm.Arguments)
                 command.Parameters.Add(arg);
             await using var reader = await command.ExecuteReaderAsync();
-            while(await reader.NextResultAsync())
+            while(await reader.ReadAsync())
             {
                 var row = new Dictionary<string, object>();
                 for(var x = 0; x<reader.FieldCount; x++)
@@ -112,7 +112,7 @@ public class PostgresqlDbConnection(string connectionString)
             new("@finished_at", archive.FinishedAt),
             new("@is_successful", archive.IsSuccessful),
             new("@error_message", archive.ErrorMessage),
-            new("@arguments", (archive.Arguments is null ? null : JsonSerializer.Serialize(archive.Arguments)))
+            new("@arguments", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = (archive.Arguments is null ? null : JsonSerializer.Serialize(archive.Arguments)) }
         ]),
         new(@"CALL set_archived_workflow_options(@id, @namespace, @workflow, @completion_action, @purge_delay, @error_on_activity_timeout, @error_on_activity_failure)", [
             new("@id", archive.ID),
@@ -145,10 +145,10 @@ public class PostgresqlDbConnection(string connectionString)
                     new("@step_name", step.Name),
                     new("@start_time", step.StartTime),
                     new("@end_time", step.EndTime),
-                    new("@input", (step.Input is null ? null : JsonSerializer.Serialize(step.Input))),
+                    new("@input", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = (step.Input is null ? null : JsonSerializer.Serialize(step.Input)) },
                     new("@result_status", step.Status),
                     new("@error_message", step.ErrorMessage),
-                    new("@result", (step.Result is null ? null : JsonSerializer.Serialize(step.Result)))
+                    new("@result", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = (step.Result is null ? null : JsonSerializer.Serialize(step.Result)) }
                 ]),
                 .. (step.Retries?.Select((retry, rindex)=>new SqlCommand("CALL add_archived_workflow_step_retry(@id, @namespace, @workflow, @step_id, @retry_index, @retry_type, @time_stamp)",[
                         new("@id", archive.ID),
@@ -176,8 +176,8 @@ public class PostgresqlDbConnection(string connectionString)
                 new("@completed", record.Completed),
                 new("@failed", record.Failed),
                 new("@timed_out", record.TimedOut),
-                new("@queue_latencies", JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.QueueLatencies)),
-                new("@durations", JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.Durations))
+                new("@queue_latencies", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.QueueLatencies) },
+                new("@durations", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.Durations) }
             ]);
     ValueTask IDbConnection.StoreWorkflowPerformanceRecordAsync(string? namespaceName, WorkflowPerformanceRecord record)
         => ExecuteCommand("CALL add_workflow_performance_entry(@window, @namespace,@workflow,@started,@completed,@failed,@purged,@queue_latencies)", [
@@ -188,33 +188,41 @@ public class PostgresqlDbConnection(string connectionString)
                 new("@completed", record.Completed),
                 new("@failed", record.Failed),
                 new("@purged", record.Purged),
-                new("@queue_latencies", JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.QueueLatencies))
+                new("@queue_latencies", NpgsqlTypes.NpgsqlDbType.Jsonb){Value =  JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.QueueLatencies) }
             ]);
     async ValueTask<IEnumerable<ActivityPerformanceRecord>> IDbConnection.PeakActivityPerformanceDataAsync(string? namespaceName)
         => (await ExecuteReader(new(
                 @"
-SELECT apr.window, 
+SELECT 
+    apr.window, 
     a.name AS ""activity_name"",
-    SUM(apr.started) AS ""started"",
-    SUM(apr.completed) AS ""completed"",
-    SUM(apr.failed) AS ""failed"",
-    SUM(apr.timed_out) AS ""timed_out"",
-    jsonb_agg(queue_latencies) AS ""queue_latencies"",
-    jsonb_agg(durations) as ""durations""
+    SUM(apr.started)::bigint AS ""started"",
+    SUM(apr.completed)::bigint AS ""completed"",
+    SUM(apr.failed)::bigint AS ""failed"",
+    SUM(apr.timed_out)::bigint AS ""timed_out"",
+
+    jsonb_path_query_array(
+        jsonb_agg(apr.queue_latencies),
+        '$[*][*]'
+    ) AS ""queue_latencies"",
+
+    jsonb_path_query_array(
+        jsonb_agg(apr.durations),
+        '$[*][*]'
+    ) AS ""durations""
+
 FROM ""activity_performance_raw"" apr
 INNER JOIN ""activities"" a 
     ON apr.activity_id = a.id
     AND apr.namespace_id = a.namespace_id
 INNER JOIN ""namespaces"" n
-    ON apr.namespace_id = n.id,
-LATERAL jsonb_array_elements(apr.queue_latencies) AS queue_latencies,
-LATERAL jsonb_array_elements(apr.durations) AS durations
+    ON apr.namespace_id = n.id
 WHERE n.name = @namespaceName
 GROUP BY apr.window, a.name
 ORDER BY apr.window DESC
                 ", [new NpgsqlParameter("@namespaceName", namespaceName)]
             ))).Select(row => new ActivityPerformanceRecord(
-                (DateTimeOffset)row["window"],
+                DateTimeOffset.Parse(row["window"].ToString()),
                 (string)row["activity_name"],
                 (long)row["started"],
                 (long)row["completed"],
@@ -228,24 +236,26 @@ ORDER BY apr.window DESC
                 @"
 SELECT wpr.window, 
     w.name AS ""workflow_name"",
-    SUM(wpr.started) AS ""started"",
-    SUM(wpr.completed) AS ""completed"",
-    SUM(wpr.failed) AS ""failed"",
-    SUM(wpr.purged) AS ""timed_out"",
-    jsonb_agg(queue_latencies) AS ""queue_latencies""
+    SUM(wpr.started)::bigint AS ""started"",
+    SUM(wpr.completed)::bigint AS ""completed"",
+    SUM(wpr.failed)::bigint AS ""failed"",
+    SUM(wpr.purged)::bigint AS ""purged"",
+    jsonb_path_query_array(
+        jsonb_agg(wpr.queue_latencies),
+        '$[*][*]'
+    ) AS ""queue_latencies""
 FROM ""workflow_performance_raw"" wpr
 INNER JOIN ""workflows"" w
     ON wpr.workflow_id = w.id
     AND wpr.namespace_id = w.namespace_id
 INNER JOIN ""namespaces"" n
-    ON wpr.namespace_id = n.id,
-LATERAL jsonb_array_elements(wpr.queue_latencies) AS queue_latencies
+    ON wpr.namespace_id = n.id
 WHERE n.name = @namespaceName
 GROUP BY wpr.window, w.name
 ORDER BY wpr.window DESC
                 ", [new NpgsqlParameter("@namespaceName", namespaceName)]
             ))).Select(row => new WorkflowPerformanceRecord(
-                (DateTimeOffset)row["window"],
+                DateTimeOffset.Parse(row["window"].ToString()),
                 (string)row["workflow_name"],
                 (long)row["started"],
                 (long)row["completed"],

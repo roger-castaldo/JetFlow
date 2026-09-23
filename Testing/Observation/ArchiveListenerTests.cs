@@ -1,4 +1,5 @@
-﻿using JetFlow.Helpers;
+﻿using JetFlow.Attributes;
+using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -23,6 +24,7 @@ public class ArchiveListenerTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Empty Activity")]
     private sealed class EmptyActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -30,6 +32,7 @@ public class ArchiveListenerTests
             return Task.CompletedTask;
         }
     }
+    [WorkflowName("Empty Activity Workflow")]
     private sealed class EmptyActivityWorkflow : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)

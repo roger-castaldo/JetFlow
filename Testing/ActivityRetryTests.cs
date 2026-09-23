@@ -9,6 +9,7 @@ using NATS.Client.JetStream;
 using NATS.Net;
 using System.Diagnostics;
 using System.Text.Json;
+using JetFlow.Attributes;
 
 namespace JetFlow.Testing;
 
@@ -28,6 +29,7 @@ public class ActivityRetryTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Timeout Activity")]
     private sealed class TimeoutActivity : IActivity
     {
         public int CallAttempts { get; private set; } = 0;
@@ -38,6 +40,7 @@ public class ActivityRetryTests
                 await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
         }
     }
+    [WorkflowName("Workflow With Activity Timeout")]
     private sealed class WorkflowWithActivityTimeout : IWorkflow
     {
         public static ActivityResult? RunResult { get; private set; } = null;
@@ -91,6 +94,7 @@ public class ActivityRetryTests
         Assert.AreEqual(ActivityResultStatus.Success, WorkflowWithActivityTimeout.RunResult.Status);
     }
 
+    [ActivityName("Unimplemented Activity")]
     private sealed class UnimplementedActivity : IActivity
     {
         public int CallAttempts { get; private set; } = 0;
@@ -102,6 +106,7 @@ public class ActivityRetryTests
             return Task.CompletedTask;
         }
     }
+    [WorkflowName("Workflow With Unimplmented Activity")]
     public class WorkflowWithUnimplmentedActivity : IWorkflow
     {
         public static ActivityResult? FirstCallResult { get; private set; } = null;
@@ -171,6 +176,7 @@ public class ActivityRetryTests
         Assert.AreEqual(new NotImplementedException().Message, WorkflowWithUnimplmentedActivity.SecondCallResult.ErrorMessage);
     }
 
+    [ActivityName("Unimplemented Activity With Timers")]
     private sealed class UnimplementedActivityWithTimers : IActivity
     {
         public List<long> TimeStamps { get; private set; } = [];
@@ -181,6 +187,7 @@ public class ActivityRetryTests
             throw new NotImplementedException();
         }
     }
+    [WorkflowName("Workflow With Unimplemented Activity With Timers")]
     public class WorkflowWithUnimplementedActivityWithTimers : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
@@ -238,6 +245,7 @@ public class ActivityRetryTests
         }
     }
 
+    [ActivityName("Multi Retry Activity")]
     private sealed class MultiRetryActivity : IActivity
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -251,6 +259,7 @@ public class ActivityRetryTests
             }
         }
     }
+    [WorkflowName("Workflow With Retry For Archiving")]
     private sealed class WorkflowWithRetryForArchiving : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)

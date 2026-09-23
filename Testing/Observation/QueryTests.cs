@@ -1,4 +1,5 @@
-﻿using JetFlow.Helpers;
+﻿using JetFlow.Attributes;
+using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
@@ -22,6 +23,7 @@ public class QueryTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Awaitable Activity")]
     private sealed class AwaitableActivity : IActivity
     {
         private TaskCompletionSource completionSource = new();
@@ -33,6 +35,7 @@ public class QueryTests
             await Task.Delay(TimeSpan.FromMinutes(1));
         }
     }
+    [WorkflowName("Observable Workflow With No Input")]
     private sealed class ObservableWorkflowWithNoInput : IWorkflow
     {
         private static TaskCompletionSource delayCompletionSource = new();
@@ -155,7 +158,7 @@ public class QueryTests
         await ((IAsyncDisposable)observationConnection).DisposeAsync();
     }
 
-
+    [WorkflowName("Suspending Workflow Without Input")]
     private sealed class SuspendingWorkflowWithoutInput : IWorkflow
     {
         public SuspendingWorkflowWithoutInput()
@@ -269,6 +272,7 @@ public class QueryTests
         await ((IAsyncDisposable)observationConnection).DisposeAsync();
     }
 
+    [WorkflowName("Suspending Workflow With Input")]
     private sealed class SuspendingWorkflowWithInput : IWorkflow<string>
     {
         async ValueTask IWorkflow<string>.ExecuteAsync(IWorkflowContext context, string input)

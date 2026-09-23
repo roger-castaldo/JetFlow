@@ -4,35 +4,30 @@ using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using NATS.Client.JetStream;
 
-namespace JetFlow;
+namespace JetFlow.States;
 
 internal class WorkflowContext 
-    : IWorkflowContext
+    : AContext, IWorkflowContext
 {
     private readonly ServiceConnection serviceConnection;
     private readonly SubjectMapper subjectMapper;
-    private readonly MessageSerializer messageSerializer;
     private readonly MetricsHelper metricsHelper;
     private readonly EventMessage message;
     private readonly IReadOnlyCollection<INatsJSMsg<byte[]>> messages = [];
     private int index = 0;
     private uint activityIndex = 0;
-    public INatsJSMsg<byte[]> StartMessage {  get; private init; }
     public WorkflowOptions Options { get; private init; }
-    public IReadOnlyDictionary<string, string[]>? MetaData { get; private init; }
 
     private WorkflowContext(ServiceConnection serviceConnection, SubjectMapper subjectMapper, 
-        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, IReadOnlyCollection<INatsJSMsg<byte[]>> messages, INatsJSMsg<byte[]> startMessage, WorkflowOptions options)
+        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, IReadOnlyCollection<INatsJSMsg<byte[]>> messages, EventMessage startMessage, WorkflowOptions options)
+        : base(startMessage, messageSerializer)
     {
         this.serviceConnection=serviceConnection;
         this.subjectMapper=subjectMapper;
-        this.messageSerializer=messageSerializer;
         this.metricsHelper=metricsHelper;
         this.message=message;
         this.messages=messages;
-        StartMessage=startMessage;
         Options=options;
-        MetaData = MetaDataHelper.ExtractMetaData(startMessage.Headers);
     }
 
     internal static async ValueTask<WorkflowContext> LoadAsync(ServiceConnection serviceConnection, SubjectMapper subjectMapper,
@@ -49,6 +44,7 @@ internal class WorkflowContext
         var msgs = new List<INatsJSMsg<byte[]>>();
         INatsJSMsg<byte[]>? startMessage = null;
         WorkflowOptions? options = null;
+        var add = true;
         await foreach(var msg in enumerable)
         {
             if (Equals(msg.Subject, subjectMapper.WorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId)))
@@ -58,13 +54,15 @@ internal class WorkflowContext
             }
             if (Equals(subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId), msg.Subject))
                 startMessage=msg;
-            else
+            else if (add)
                 msgs.Add(msg);
             if (Equals(msg.Metadata?.Sequence, message.Metadata?.Sequence))
+                add=false;
+            if (!add && startMessage!=null)
                 break;
         }
         return new(serviceConnection, subjectMapper, messageSerializer, metricsHelper,
-            message, msgs.ToArray(), startMessage!, options!);
+            message, msgs.ToArray(), await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, startMessage!, CancellationToken.None), options!);
     }
 
     private INatsJSMsg<byte[]>? GetNextMessage()
@@ -115,7 +113,7 @@ internal class WorkflowContext
             nextActivityMsg?.WorkflowStepResultStatus switch
             {
                 null => null,
-                ActivityResultStatus.Success => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success, Output: await messageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Data, nextActivityMsg.Headers)),
+                ActivityResultStatus.Success => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Success, Output: await MessageSerializer.DecodeAsync<TOutput>(nextActivityMsg.Data, nextActivityMsg.Headers)),
                 ActivityResultStatus.Failure => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Failure, nextActivityMsg.Data != null ? System.Text.Encoding.UTF8.GetString(nextActivityMsg.Data) : null),
                 ActivityResultStatus.Timeout => new(nextActivityMsg.ActivityID??0, ActivityResultStatus.Timeout),
                 _ => throw new InvalidWorkflowEventMessage(nextActivityMsg.Subject, InternalNatsConnection.GetMessageID(nextActivityMsg.Headers))

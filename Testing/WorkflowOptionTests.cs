@@ -8,6 +8,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using JetFlow.Attributes;
 
 namespace JetFlow.Testing;
 
@@ -27,6 +28,7 @@ public class WorkflowOptionTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Unregistered Activity")]
     private sealed class UnregisteredActivity : IActivity
     {
         Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -34,7 +36,7 @@ public class WorkflowOptionTests
             throw new NotImplementedException();
         }
     }
-
+    [WorkflowName("Workflow With Unregistered Activity")]
     private sealed class WorkflowWithUnregisteredActivity : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
@@ -72,6 +74,7 @@ public class WorkflowOptionTests
         Assert.AreEqual($"Activity {NameHelper.GetActivityName<UnregisteredActivity>().rawName} has timed out", endResult.ErrorMessage);
     }
 
+    [ActivityName("Slow Activity")]
     private sealed class SlowActivity : IActivity
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -79,7 +82,7 @@ public class WorkflowOptionTests
             await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
         }
     }
-
+    [WorkflowName("Workflow With Slow Activity")]
     private sealed class WorkflowWithSlowActivity : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
@@ -118,6 +121,7 @@ public class WorkflowOptionTests
         Assert.AreEqual($"Activity {NameHelper.GetActivityName<SlowActivity>().rawName} has timed out", endResult.ErrorMessage);
     }
 
+    [ActivityName("Activity That Throws An Error")]
     private sealed class ActivityThatThrowsAnError : IActivity
     {
         public Task ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -125,7 +129,7 @@ public class WorkflowOptionTests
             throw new NotImplementedException();
         }
     }
-
+    [WorkflowName("Workflow With Activity Error")]
     private sealed class WorkflowWithActivityError : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
@@ -164,6 +168,7 @@ public class WorkflowOptionTests
         Assert.AreEqual($"Activity {NameHelper.GetActivityName<ActivityThatThrowsAnError>().rawName} has failed with error: {new NotImplementedException().Message}", endResult.ErrorMessage);
     }
 
+    [WorkflowName("Workflow With No Steps")]
     private sealed class WorkflowWithNoSteps : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)

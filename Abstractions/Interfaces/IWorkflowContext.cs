@@ -3,12 +3,8 @@
 /// <summary>
 /// Used to execute activities and wait for a specified amount of time within a workflow. This interface is typically passed as a parameter to the workflow's main method, allowing the workflow to interact with the execution environment and manage its activities effectively.
 /// </summary>
-public interface IWorkflowContext
+public interface IWorkflowContext : IContext
 {
-    /// <summary>
-    /// Houses the MetaData values that were supplied at the start of the workflow execution, if any.
-    /// </summary>
-    IReadOnlyDictionary<string, string[]>? MetaData {get;}
     /// <summary>
     /// Called to suspend the current workflow and it will resume once a resume call has been received for this workflow
     /// </summary>

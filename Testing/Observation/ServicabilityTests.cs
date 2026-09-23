@@ -1,4 +1,5 @@
-﻿using JetFlow.Helpers;
+﻿using JetFlow.Attributes;
+using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
 
@@ -20,6 +21,7 @@ public class ServiceabilityTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [WorkflowName("Workflow With No Action")]
     private sealed class WorkflowWithNoAction : IWorkflow
     {
         public static TaskCompletionSource TaskCompletionSource { get; set; }
@@ -94,6 +96,7 @@ public class ServiceabilityTests
         await ((IAsyncDisposable)observationConnection).DisposeAsync();
     }
 
+    [ActivityName("Activity With No Action")]
     private sealed class ActivityWithNoAction : IActivity
     {
         public static TaskCompletionSource TaskCompletionSource { get; set; }
@@ -103,6 +106,7 @@ public class ServiceabilityTests
             await TaskCompletionSource.Task;
         }
     }
+    [WorkflowName("Workflow With Single Action")]
     private sealed class WorkflowWithSingleAction : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)

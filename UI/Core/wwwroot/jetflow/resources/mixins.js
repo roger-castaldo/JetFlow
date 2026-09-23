@@ -149,3 +149,7 @@ export const SlotRef = defineComponent({
         }
     }
 });
+
+export const Constants = {
+    namespaceName: 'namespace'
+};

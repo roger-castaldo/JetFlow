@@ -22,7 +22,7 @@ internal abstract class WorkflowQueryBase(IJetstreamQuery query,
     {
         var eventMessage = await EventMessage.CreateMessageAsync(largeMessageStore, msg, cancellationToken);
         if (CheckMeta(MetaDataHelper.ExtractMetaData(eventMessage.Headers)) && await DoesMessageMatchAsync(eventMessage))
-            return await WorkflowHelper.ProduceActiveWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, eventMessage.WorkflowName, eventMessage.WorkflowId, cancellationToken);
+            return await WorkflowHelper.ProduceActiveWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, eventMessage, cancellationToken);
         return null;
     }
 

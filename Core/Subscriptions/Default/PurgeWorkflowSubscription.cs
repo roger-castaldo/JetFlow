@@ -9,7 +9,7 @@ internal class PurgeWorkflowSubscription(MetricsHelper metricsHelper, ServiceCon
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
         await ServiceConnection.PurgeWorkflowAsync(message, CancellationToken);
-        metricsHelper.PurgeWorkflow(message.WorkflowSubjectName);
+        metricsHelper.PurgeWorkflow(message.WorkflowName);
         await message.AckAsync(CancellationToken);
     }
 }

@@ -1,4 +1,5 @@
-﻿using JetFlow.Configs;
+﻿using JetFlow.Attributes;
+using JetFlow.Configs;
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Testing.Helpers;
@@ -24,6 +25,7 @@ public class MetricsTests
     public static async Task Cleanup()
         => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
 
+    [ActivityName("Metrics Delayed Activity")]
     private sealed class MetricsDelayedActivity : IActivity
     {
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
@@ -31,6 +33,7 @@ public class MetricsTests
             await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
         }
     }
+    [WorkflowName("Metrics Workflow")]
     private sealed class MetricsWorkflow : IWorkflow
     {
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)

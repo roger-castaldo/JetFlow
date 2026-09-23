@@ -93,10 +93,13 @@
   - [ScheduleWorkflowAsync\`\`2(exectionRequest,schedule,cancellationToken)](#M-JetFlow-Interfaces-IConnection-ScheduleWorkflowAsync``2-JetFlow-WorkflowExecutionRequest{``1},JetFlow-Interfaces-IWorkflowSchedule,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.ScheduleWorkflowAsync``2(JetFlow.WorkflowExecutionRequest{``1},JetFlow.Interfaces.IWorkflowSchedule,System.Threading.CancellationToken)')
   - [StartWorkflowAsync\`\`1(exectionRequest,cancellationToken)](#M-JetFlow-Interfaces-IConnection-StartWorkflowAsync``1-JetFlow-WorkflowExecutionRequest,System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.StartWorkflowAsync``1(JetFlow.WorkflowExecutionRequest,System.Threading.CancellationToken)')
   - [StartWorkflowAsync\`\`2(exectionRequest,cancellationToken)](#M-JetFlow-Interfaces-IConnection-StartWorkflowAsync``2-JetFlow-WorkflowExecutionRequest{``1},System-Threading-CancellationToken- 'JetFlow.Interfaces.IConnection.StartWorkflowAsync``2(JetFlow.WorkflowExecutionRequest{``1},System.Threading.CancellationToken)')
+- [IContext](#T-JetFlow-Interfaces-IContext 'JetFlow.Interfaces.IContext')
+  - [MetaData](#P-JetFlow-Interfaces-IContext-MetaData 'JetFlow.Interfaces.IContext.MetaData')
+  - [WorkflowID](#P-JetFlow-Interfaces-IContext-WorkflowID 'JetFlow.Interfaces.IContext.WorkflowID')
+  - [GetWorkflowArgumentAsync\`\`1()](#M-JetFlow-Interfaces-IContext-GetWorkflowArgumentAsync``1 'JetFlow.Interfaces.IContext.GetWorkflowArgumentAsync``1')
 - [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow')
   - [ExecuteAsync(context)](#M-JetFlow-Interfaces-IWorkflow-ExecuteAsync-JetFlow-Interfaces-IWorkflowContext- 'JetFlow.Interfaces.IWorkflow.ExecuteAsync(JetFlow.Interfaces.IWorkflowContext)')
 - [IWorkflowContext](#T-JetFlow-Interfaces-IWorkflowContext 'JetFlow.Interfaces.IWorkflowContext')
-  - [MetaData](#P-JetFlow-Interfaces-IWorkflowContext-MetaData 'JetFlow.Interfaces.IWorkflowContext.MetaData')
   - [ExecuteActivitiesAsync\`\`2(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``2-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}},System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivitiesAsync``2(JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``1}},System.Threading.CancellationToken)')
   - [ExecuteActivitiesAsync\`\`3(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``3-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``2}},System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivitiesAsync``3(JetFlow.ActivityExecutionRequest{System.Collections.Generic.IEnumerable{``2}},System.Threading.CancellationToken)')
   - [ExecuteActivityAsync\`\`1(executionRequest,cancellationToken)](#M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivityAsync``1-JetFlow-ActivityExecutionRequest,System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowContext.ExecuteActivityAsync``1(JetFlow.ActivityExecutionRequest,System.Threading.CancellationToken)')
@@ -1521,6 +1524,52 @@ the started workflow instance.
 | TWorkflow | The type of workflow to start. Must implement IWorkflow<TInput>. |
 | TInput | The type of input data provided to the workflow. |
 
+<a name='T-JetFlow-Interfaces-IContext'></a>
+## IContext `type`
+
+##### Namespace
+
+JetFlow.Interfaces
+
+##### Summary
+
+Houses the baseline capabilities that a Workflow State or Context should hold.
+
+<a name='P-JetFlow-Interfaces-IContext-MetaData'></a>
+### MetaData `property`
+
+##### Summary
+
+Houses the MetaData values that were supplied at the start of the workflow execution, if any.
+
+<a name='P-JetFlow-Interfaces-IContext-WorkflowID'></a>
+### WorkflowID `property`
+
+##### Summary
+
+Houses the workflow Instance ID
+
+<a name='M-JetFlow-Interfaces-IContext-GetWorkflowArgumentAsync``1'></a>
+### GetWorkflowArgumentAsync\`\`1() `method`
+
+##### Summary
+
+Called to get the initial argument used to kick off the workflow if any.  If there is not one it will throw an error.
+
+##### Returns
+
+
+
+##### Parameters
+
+This method has no parameters.
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TInput | The type of the argument that was supplied |
+
 <a name='T-JetFlow-Interfaces-IWorkflow'></a>
 ## IWorkflow `type`
 
@@ -1559,13 +1608,6 @@ JetFlow.Interfaces
 ##### Summary
 
 Used to execute activities and wait for a specified amount of time within a workflow. This interface is typically passed as a parameter to the workflow's main method, allowing the workflow to interact with the execution environment and manage its activities effectively.
-
-<a name='P-JetFlow-Interfaces-IWorkflowContext-MetaData'></a>
-### MetaData `property`
-
-##### Summary
-
-Houses the MetaData values that were supplied at the start of the workflow execution, if any.
 
 <a name='M-JetFlow-Interfaces-IWorkflowContext-ExecuteActivitiesAsync``2-JetFlow-ActivityExecutionRequest{System-Collections-Generic-IEnumerable{``1}},System-Threading-CancellationToken-'></a>
 ### ExecuteActivitiesAsync\`\`2(executionRequest,cancellationToken) `method`

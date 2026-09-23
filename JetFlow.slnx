@@ -1,6 +1,12 @@
 <Solution>
   <Folder Name="/Sample/">
     <Project Path="Sample/AppHost/AppHost.csproj" Id="b0c75076-417e-44d5-b069-d2ca4820131a" />
+    <Project Path="Sample/InventoryService/InventoryService.csproj" Id="d0407a14-7d40-4a43-994c-d15c42f425f9" />
+    <Project Path="Sample/OrderProcessor/OrderProcessor.csproj" Id="5da51cf5-e514-4569-b1a8-2f5528120a99" />
+    <Project Path="Sample/OrderSubmitter/OrderSubmitter.csproj" Id="f2a24f8d-6634-4f81-ac1f-18cf484b9bb4" />
+    <Project Path="Sample/PaymentService/PaymentService.csproj" Id="9c59be5e-8a6c-41d2-b4c4-2b11b14ccedb" />
+    <Project Path="Sample/Shared/Shared.csproj" Id="9815bf42-b155-4911-97c0-67d5a25b0d39" />
+    <Project Path="Sample/ShippingService/ShippingService.csproj" Id="9c91fd93-9afc-44f1-af20-a1c194794159" />
     <Project Path="Sample/WebUI/WebUI.csproj" Id="fbfc3d3f-5d2d-4cd5-981c-3c70c39f4a40" />
   </Folder>
   <Folder Name="/UI/">

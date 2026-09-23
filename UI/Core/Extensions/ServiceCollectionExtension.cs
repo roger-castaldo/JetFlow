@@ -49,6 +49,7 @@ public static class ServiceCollectionExtension
         );
         var configService = new ConfigService(dbConnection);
         var activeFlowService = new ActiveFlowService(dbConnection, configService, observationConnection);
+        await activeFlowService.InitAsync();
         services.AddSingleton<IConfigService>(configService)
             .AddSingleton<IActiveFlowService>(activeFlowService)
             .TryAddSingleton<IDbConnection>(dbConnection);
