@@ -24,7 +24,7 @@ public class ServiceabilityTests
     [WorkflowName("Workflow With No Action")]
     private sealed class WorkflowWithNoAction : IWorkflow
     {
-        public static TaskCompletionSource TaskCompletionSource { get; set; }
+        public static TaskCompletionSource TaskCompletionSource { get; set; } = new();
 
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
@@ -99,7 +99,7 @@ public class ServiceabilityTests
     [ActivityName("Activity With No Action")]
     private sealed class ActivityWithNoAction : IActivity
     {
-        public static TaskCompletionSource TaskCompletionSource { get; set; }
+        public static TaskCompletionSource TaskCompletionSource { get; set; } = new();
 
         async Task IActivity.ExecuteAsync(IWorkflowState state, CancellationToken cancellationToken)
         {

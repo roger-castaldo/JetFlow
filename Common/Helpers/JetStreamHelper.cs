@@ -51,20 +51,26 @@ internal static class JetStreamHelper
         }
     }
 
-    public static async ValueTask<IJetstreamQuery> QueryStreamAsync(INatsJSContext jsContext, string streamName, bool headersOnly, params string[] filterSubjects)
+    public static ValueTask<IJetstreamQuery> QueryStreamAsync(INatsJSContext jsContext, string streamName, bool headersOnly, params string[] filterSubjects)
+        => QueryStreamAsync(jsContext, streamName, headersOnly, 0, filterSubjects);
+
+    public static async ValueTask<IJetstreamQuery> QueryStreamAsync(INatsJSContext jsContext, string streamName, bool headersOnly, ulong previousLastMessageOffset, params string[] filterSubjects)
     {
+        var config = new ConsumerConfig
+        {
+            Name = Guid.CreateVersion7().ToString(), // ephemeral identity
+            DeliverPolicy = (previousLastMessageOffset==0 ? ConsumerConfigDeliverPolicy.All : ConsumerConfigDeliverPolicy.ByStartSequence),
+            AckPolicy = ConsumerConfigAckPolicy.None,
+            FilterSubjects = filterSubjects,
+            HeadersOnly = headersOnly,
+            InactiveThreshold = TimeSpan.FromSeconds(10)
+        };
+        if (previousLastMessageOffset!=0)
+            config.OptStartSeq = previousLastMessageOffset+1;
         var consumer = await jsContext.CreateOrUpdateConsumerAsync(
             streamName,
-            new ConsumerConfig
-            {
-                Name = Guid.CreateVersion7().ToString(), // ephemeral identity
-                DeliverPolicy = ConsumerConfigDeliverPolicy.All,
-                AckPolicy = ConsumerConfigAckPolicy.None,
-                FilterSubjects = filterSubjects,
-                HeadersOnly = headersOnly,
-                InactiveThreshold = TimeSpan.FromSeconds(10)
-            }
+            config
         );
-        return new JetstreamQuery(consumer, async(consumer)=>_ = await jsContext.DeleteConsumerAsync(consumer.Info.StreamName, consumer.Info.Name));
+        return new JetstreamQuery(consumer, async (consumer) => _ = await jsContext.DeleteConsumerAsync(consumer.Info.StreamName, consumer.Info.Name));
     }
 }

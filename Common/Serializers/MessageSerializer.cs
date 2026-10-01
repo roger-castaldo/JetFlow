@@ -88,5 +88,6 @@ internal class MessageSerializer
     public ValueTask<TInput> DecodeAsync<TInput>(byte[]? data, NatsHeaders? headers)
         => DecodeObjectAsync<TInput>(data, headers);
     public ValueTask<object?> DecodeAsync(byte[]? data, NatsHeaders? headers)
-        => DecodeObjectAsync<object>(data, headers);
+        => DecodeObjectAsync<object?>(data, headers);
+
 }

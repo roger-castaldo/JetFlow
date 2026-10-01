@@ -3,6 +3,10 @@
 
 ## Contents
 
+- [ActivityPerformanceRecordEvent](#T-JetFlow-ActivityPerformanceRecordEvent 'JetFlow.ActivityPerformanceRecordEvent')
+  - [#ctor(namespaceName,PerformanceRecord)](#M-JetFlow-ActivityPerformanceRecordEvent-#ctor-System-String,JetFlow-Data-ActivityPerformanceRecord- 'JetFlow.ActivityPerformanceRecordEvent.#ctor(System.String,JetFlow.Data.ActivityPerformanceRecord)')
+  - [PerformanceRecord](#P-JetFlow-ActivityPerformanceRecordEvent-PerformanceRecord 'JetFlow.ActivityPerformanceRecordEvent.PerformanceRecord')
+  - [namespaceName](#P-JetFlow-ActivityPerformanceRecordEvent-namespaceName 'JetFlow.ActivityPerformanceRecordEvent.namespaceName')
 - [ArchivedWorkflowEvent](#T-JetFlow-ArchivedWorkflowEvent 'JetFlow.ArchivedWorkflowEvent')
   - [#ctor(WorkflowNamespace,Archive)](#M-JetFlow-ArchivedWorkflowEvent-#ctor-System-String,JetFlow-ArchivedWorkflow- 'JetFlow.ArchivedWorkflowEvent.#ctor(System.String,JetFlow.ArchivedWorkflow)')
   - [Archive](#P-JetFlow-ArchivedWorkflowEvent-Archive 'JetFlow.ArchivedWorkflowEvent.Archive')
@@ -17,8 +21,12 @@
   - [GetActiveActivityCountAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetActiveActivityCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetActiveActivityCountAsync(System.String)')
   - [GetActiveWorkflowCountAsync()](#M-JetFlow-Interfaces-IObservationConnection-GetActiveWorkflowCountAsync 'JetFlow.Interfaces.IObservationConnection.GetActiveWorkflowCountAsync')
   - [GetActiveWorkflowCountAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetActiveWorkflowCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetActiveWorkflowCountAsync(System.String)')
+  - [GetActivityServiceabilityAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetActivityServiceabilityAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetActivityServiceabilityAsync(System.String)')
+  - [GetActivityServiceabilityAsync\`\`1(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetActivityServiceabilityAsync``1-System-String- 'JetFlow.Interfaces.IObservationConnection.GetActivityServiceabilityAsync``1(System.String)')
   - [GetSuspendedWorkflowCountAsync()](#M-JetFlow-Interfaces-IObservationConnection-GetSuspendedWorkflowCountAsync 'JetFlow.Interfaces.IObservationConnection.GetSuspendedWorkflowCountAsync')
   - [GetSuspendedWorkflowCountAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetSuspendedWorkflowCountAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetSuspendedWorkflowCountAsync(System.String)')
+  - [GetWorkflowServiceabilityAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetWorkflowServiceabilityAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.GetWorkflowServiceabilityAsync(System.String)')
+  - [GetWorkflowServiceabilityAsync\`\`1(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-GetWorkflowServiceabilityAsync``1-System-String- 'JetFlow.Interfaces.IObservationConnection.GetWorkflowServiceabilityAsync``1(System.String)')
   - [ListScheduledWorkflowsAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.ListScheduledWorkflowsAsync(System.String)')
   - [ListScheduledWorkflowsAsync\`\`1(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync``1-System-String- 'JetFlow.Interfaces.IObservationConnection.ListScheduledWorkflowsAsync``1(System.String)')
   - [ListScheduledWorkflowsAsync\`\`2(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync``2-System-String- 'JetFlow.Interfaces.IObservationConnection.ListScheduledWorkflowsAsync``2(System.String)')
@@ -26,13 +34,22 @@
   - [LoadWorkflowAsync\`\`2(workflowNamespace,workflowId)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowAsync``2-System-String,System-Guid- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowAsync``2(System.String,System.Guid)')
   - [LoadWorkflowsAsync\`\`1(workflowNamespace,checkMetaData)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowsAsync``1-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowsAsync``1(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean})')
   - [LoadWorkflowsAsync\`\`2(workflowNamespace,checkMetaData,checkArguement)](#M-JetFlow-Interfaces-IObservationConnection-LoadWorkflowsAsync``2-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{``1,System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.LoadWorkflowsAsync``2(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean},System.Func{``1,System.Boolean})')
+  - [QueryWorkflowAsync(workflowNamespace,workflowName,checkMetaData,checkArguement)](#M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync-System-String,System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{System-Text-Json-JsonElement,System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.QueryWorkflowAsync(System.String,System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean},System.Func{System.Text.Json.JsonElement,System.Boolean})')
+  - [QueryWorkflowAsync(workflowNamespace,workflowName,take,lastOffset,checkMetaData,checkArguement)](#M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync-System-String,System-String,System-Int32,System-UInt64,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{System-Text-Json-JsonElement,System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.QueryWorkflowAsync(System.String,System.String,System.Int32,System.UInt64,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean},System.Func{System.Text.Json.JsonElement,System.Boolean})')
   - [QueryWorkflowAsync\`\`1(workflowNamespace,checkMetaData)](#M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``1-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.QueryWorkflowAsync``1(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean})')
+  - [QueryWorkflowAsync\`\`1(workflowNamespace,take,lastOffset,checkMetaData)](#M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``1-System-String,System-Int32,System-UInt64,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.QueryWorkflowAsync``1(System.String,System.Int32,System.UInt64,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean})')
   - [QueryWorkflowAsync\`\`2(workflowNamespace,checkMetaData,checkArguement)](#M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``2-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{``1,System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.QueryWorkflowAsync``2(System.String,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean},System.Func{``1,System.Boolean})')
+  - [QueryWorkflowAsync\`\`2(workflowNamespace,take,lastOffset,checkMetaData,checkArguement)](#M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``2-System-String,System-Int32,System-UInt64,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{``1,System-Boolean}- 'JetFlow.Interfaces.IObservationConnection.QueryWorkflowAsync``2(System.String,System.Int32,System.UInt64,System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean},System.Func{``1,System.Boolean})')
   - [RemoveDefaultNamespaceAsync()](#M-JetFlow-Interfaces-IObservationConnection-RemoveDefaultNamespaceAsync 'JetFlow.Interfaces.IObservationConnection.RemoveDefaultNamespaceAsync')
   - [RemoveNamespaceAsync(workflowNamespace)](#M-JetFlow-Interfaces-IObservationConnection-RemoveNamespaceAsync-System-String- 'JetFlow.Interfaces.IObservationConnection.RemoveNamespaceAsync(System.String)')
   - [RemoveNamespacesAsync(workflowNamespaces)](#M-JetFlow-Interfaces-IObservationConnection-RemoveNamespacesAsync-System-Collections-Generic-IEnumerable{System-String}- 'JetFlow.Interfaces.IObservationConnection.RemoveNamespacesAsync(System.Collections.Generic.IEnumerable{System.String})')
+- [IPagedWorkflowQuery](#T-JetFlow-Interfaces-IPagedWorkflowQuery 'JetFlow.Interfaces.IPagedWorkflowQuery')
+  - [LastOffset](#P-JetFlow-Interfaces-IPagedWorkflowQuery-LastOffset 'JetFlow.Interfaces.IPagedWorkflowQuery.LastOffset')
 - [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery')
   - [ToListAsync(cancellationToken)](#M-JetFlow-Interfaces-IWorkflowQuery-ToListAsync-System-Threading-CancellationToken- 'JetFlow.Interfaces.IWorkflowQuery.ToListAsync(System.Threading.CancellationToken)')
+- [NamedServiceabilityDetails](#T-JetFlow-NamedServiceabilityDetails 'JetFlow.NamedServiceabilityDetails')
+  - [#ctor(Name,IdleInstances,ActiveInstances,MessagesWaiting)](#M-JetFlow-NamedServiceabilityDetails-#ctor-System-String,System-Int32,System-Int32,System-UInt64- 'JetFlow.NamedServiceabilityDetails.#ctor(System.String,System.Int32,System.Int32,System.UInt64)')
+  - [Name](#P-JetFlow-NamedServiceabilityDetails-Name 'JetFlow.NamedServiceabilityDetails.Name')
 - [NamespaceNotRegisteredException](#T-JetFlow-NamespaceNotRegisteredException 'JetFlow.NamespaceNotRegisteredException')
 - [ObservationConnection](#T-JetFlow-ObservationConnection 'JetFlow.ObservationConnection')
   - [CreateInstanceAsync(options)](#M-JetFlow-ObservationConnection-CreateInstanceAsync-JetFlow-Configs-ObservationConnectionOptions- 'JetFlow.ObservationConnection.CreateInstanceAsync(JetFlow.Configs.ObservationConnectionOptions)')
@@ -49,6 +66,60 @@
   - [MetaData](#P-JetFlow-ScheduledWorkflow`1-MetaData 'JetFlow.ScheduledWorkflow`1.MetaData')
   - [Name](#P-JetFlow-ScheduledWorkflow`1-Name 'JetFlow.ScheduledWorkflow`1.Name')
   - [RunsAt](#P-JetFlow-ScheduledWorkflow`1-RunsAt 'JetFlow.ScheduledWorkflow`1.RunsAt')
+- [ServiceabilityDetails](#T-JetFlow-ServiceabilityDetails 'JetFlow.ServiceabilityDetails')
+  - [#ctor(IdleInstances,ActiveInstances,MessagesWaiting)](#M-JetFlow-ServiceabilityDetails-#ctor-System-Int32,System-Int32,System-UInt64- 'JetFlow.ServiceabilityDetails.#ctor(System.Int32,System.Int32,System.UInt64)')
+  - [ActiveInstances](#P-JetFlow-ServiceabilityDetails-ActiveInstances 'JetFlow.ServiceabilityDetails.ActiveInstances')
+  - [IdleInstances](#P-JetFlow-ServiceabilityDetails-IdleInstances 'JetFlow.ServiceabilityDetails.IdleInstances')
+  - [MessagesWaiting](#P-JetFlow-ServiceabilityDetails-MessagesWaiting 'JetFlow.ServiceabilityDetails.MessagesWaiting')
+- [WorkflowPerformanceRecordEvent](#T-JetFlow-WorkflowPerformanceRecordEvent 'JetFlow.WorkflowPerformanceRecordEvent')
+  - [#ctor(namespaceName,PerformanceRecord)](#M-JetFlow-WorkflowPerformanceRecordEvent-#ctor-System-String,JetFlow-Data-WorkflowPerformanceRecord- 'JetFlow.WorkflowPerformanceRecordEvent.#ctor(System.String,JetFlow.Data.WorkflowPerformanceRecord)')
+  - [PerformanceRecord](#P-JetFlow-WorkflowPerformanceRecordEvent-PerformanceRecord 'JetFlow.WorkflowPerformanceRecordEvent.PerformanceRecord')
+  - [namespaceName](#P-JetFlow-WorkflowPerformanceRecordEvent-namespaceName 'JetFlow.WorkflowPerformanceRecordEvent.namespaceName')
+
+<a name='T-JetFlow-ActivityPerformanceRecordEvent'></a>
+## ActivityPerformanceRecordEvent `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Event containing aggregated activity performance metrics for a sampling window.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| namespaceName | [T:JetFlow.ActivityPerformanceRecordEvent](#T-T-JetFlow-ActivityPerformanceRecordEvent 'T:JetFlow.ActivityPerformanceRecordEvent') | The namespace the record belongs to, or null for the default namespace. |
+
+<a name='M-JetFlow-ActivityPerformanceRecordEvent-#ctor-System-String,JetFlow-Data-ActivityPerformanceRecord-'></a>
+### #ctor(namespaceName,PerformanceRecord) `constructor`
+
+##### Summary
+
+Event containing aggregated activity performance metrics for a sampling window.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| namespaceName | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The namespace the record belongs to, or null for the default namespace. |
+| PerformanceRecord | [JetFlow.Data.ActivityPerformanceRecord](#T-JetFlow-Data-ActivityPerformanceRecord 'JetFlow.Data.ActivityPerformanceRecord') | The aggregated activity performance record. |
+
+<a name='P-JetFlow-ActivityPerformanceRecordEvent-PerformanceRecord'></a>
+### PerformanceRecord `property`
+
+##### Summary
+
+The aggregated activity performance record.
+
+<a name='P-JetFlow-ActivityPerformanceRecordEvent-namespaceName'></a>
+### namespaceName `property`
+
+##### Summary
+
+The namespace the record belongs to, or null for the default namespace.
 
 <a name='T-JetFlow-ArchivedWorkflowEvent'></a>
 ## ArchivedWorkflowEvent `type`
@@ -240,6 +311,46 @@ The number of active workflows in the requested namespace.
 | ---- | ---- | ----------- |
 | workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The workflow namespace to filter by, or `null` to use the default namespace. |
 
+<a name='M-JetFlow-Interfaces-IObservationConnection-GetActivityServiceabilityAsync-System-String-'></a>
+### GetActivityServiceabilityAsync(workflowNamespace) `method`
+
+##### Summary
+
+Gets serviceability details for all activity types in the specified namespace.
+
+##### Returns
+
+The serviceability details for all activity types in the specified namespace.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The namespace to scope the query. Use `null` to query the default namespace. |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-GetActivityServiceabilityAsync``1-System-String-'></a>
+### GetActivityServiceabilityAsync\`\`1(workflowNamespace) `method`
+
+##### Summary
+
+Gets serviceability details for the specified activity type in the given namespace.
+
+##### Returns
+
+The serviceability details for the specified activity type.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The namespace to scope the query. Use `null` to query the default namespace. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TActivity | The activity type to filter by. Must implement [IActivity](#T-JetFlow-Interfaces-IActivity 'JetFlow.Interfaces.IActivity'). |
+
 <a name='M-JetFlow-Interfaces-IObservationConnection-GetSuspendedWorkflowCountAsync'></a>
 ### GetSuspendedWorkflowCountAsync() `method`
 
@@ -271,6 +382,46 @@ The number of suspended workflows in the requested namespace.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The workflow namespace to filter by, or `null` to use the default namespace. |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-GetWorkflowServiceabilityAsync-System-String-'></a>
+### GetWorkflowServiceabilityAsync(workflowNamespace) `method`
+
+##### Summary
+
+Gets serviceability details for all workflow types in the specified namespace.
+
+##### Returns
+
+The serviceability details for all workflow types in the specified namespace.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The namespace to scope the query. Use `null` to query the default namespace. |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-GetWorkflowServiceabilityAsync``1-System-String-'></a>
+### GetWorkflowServiceabilityAsync\`\`1(workflowNamespace) `method`
+
+##### Summary
+
+Gets serviceability details for the specified workflow type in the given namespace.
+
+##### Returns
+
+The serviceability details for the specified workflow type.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The namespace to scope the query. Use `null` to query the default namespace. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow'). |
 
 <a name='M-JetFlow-Interfaces-IObservationConnection-ListScheduledWorkflowsAsync-System-String-'></a>
 ### ListScheduledWorkflowsAsync(workflowNamespace) `method`
@@ -437,6 +588,48 @@ A collection of [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkfl
 | TWorkflow | The workflow type to filter by. Must implement [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1'). |
 | TInput | The workflow input type used to apply an optional argument filter. |
 
+<a name='M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync-System-String,System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{System-Text-Json-JsonElement,System-Boolean}-'></a>
+### QueryWorkflowAsync(workflowNamespace,workflowName,checkMetaData,checkArguement) `method`
+
+##### Summary
+
+Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
+
+##### Returns
+
+An [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery') that yields matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the query. Use `null` to query the default namespace. |
+| workflowName | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The name of the workflow type to filter by. |
+| checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
+| checkArguement | [System.Func{System.Text.Json.JsonElement,System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Text.Json.JsonElement,System.Boolean}') | Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned. |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync-System-String,System-String,System-Int32,System-UInt64,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{System-Text-Json-JsonElement,System-Boolean}-'></a>
+### QueryWorkflowAsync(workflowNamespace,workflowName,take,lastOffset,checkMetaData,checkArguement) `method`
+
+##### Summary
+
+Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
+
+##### Returns
+
+An [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery') that yields matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the query. Use `null` to query the default namespace. |
+| workflowName | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The name of the workflow type to filter by. |
+| take | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | The maximum number of workflow instances to return in a single page. |
+| lastOffset | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | The offset of the last workflow instance from the previous page. |
+| checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
+| checkArguement | [System.Func{System.Text.Json.JsonElement,System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Text.Json.JsonElement,System.Boolean}') | Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned. |
+
 <a name='M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``1-System-String,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}-'></a>
 ### QueryWorkflowAsync\`\`1(workflowNamespace,checkMetaData) `method`
 
@@ -455,6 +648,34 @@ An [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWo
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the query. Use `null` to query the default namespace. |
+| checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TWorkflow | The workflow type to filter by. Must implement [IWorkflow](#T-JetFlow-Interfaces-IWorkflow 'JetFlow.Interfaces.IWorkflow'). |
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``1-System-String,System-Int32,System-UInt64,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean}-'></a>
+### QueryWorkflowAsync\`\`1(workflowNamespace,take,lastOffset,checkMetaData) `method`
+
+##### Summary
+
+Creates a query that enumerates active workflows of the specified workflow type within the
+optionally provided namespace. The returned [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery') can be consumed
+asynchronously to iterate matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Returns
+
+An [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery') that yields matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the query. Use `null` to query the default namespace. |
+| take | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | The maximum number of workflow instances to return in a single page. |
+| lastOffset | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | The offset of the last workflow instance from the previous page. |
 | checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
 
 ##### Generic Types
@@ -482,12 +703,30 @@ An [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWo
 | checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
 | checkArguement | [System.Func{\`\`1,System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{``1,System.Boolean}') | Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned. |
 
-##### Generic Types
+##### Remarks
 
-| Name | Description |
-| ---- | ----------- |
-| TWorkflow | The workflow type to filter by. Must implement [IWorkflow\`1](#T-JetFlow-Interfaces-IWorkflow`1 'JetFlow.Interfaces.IWorkflow`1'). |
-| TInput | The workflow input type used to apply an optional argument filter. |
+This overload accepts a workflow name and untyped JSON input for argument filtering.
+
+<a name='M-JetFlow-Interfaces-IObservationConnection-QueryWorkflowAsync``2-System-String,System-Int32,System-UInt64,System-Func{System-Collections-Generic-Dictionary{System-String,System-String[]},System-Boolean},System-Func{``1,System-Boolean}-'></a>
+### QueryWorkflowAsync\`\`2(workflowNamespace,take,lastOffset,checkMetaData,checkArguement) `method`
+
+##### Summary
+
+Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
+
+##### Returns
+
+An [IWorkflowQuery](#T-JetFlow-Interfaces-IWorkflowQuery 'JetFlow.Interfaces.IWorkflowQuery') that yields matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 'JetFlow.ActiveWorkflow') instances.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workflowNamespace | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Optional namespace to scope the query. Use `null` to query the default namespace. |
+| take | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | The maximum number of workflow instances to return in a single page. |
+| lastOffset | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | The offset of the last workflow instance from the previous page. |
+| checkMetaData | [System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{System.Collections.Generic.Dictionary{System.String,System.String[]},System.Boolean}') | Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or `null`. |
+| checkArguement | [System.Func{\`\`1,System.Boolean}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Func 'System.Func{``1,System.Boolean}') | Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned. |
 
 <a name='M-JetFlow-Interfaces-IObservationConnection-RemoveDefaultNamespaceAsync'></a>
 ### RemoveDefaultNamespaceAsync() `method`
@@ -526,6 +765,25 @@ Removes multiple namespaces from the set of namespaces being observed.
 | ---- | ---- | ----------- |
 | workflowNamespaces | [System.Collections.Generic.IEnumerable{System.String}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Collections.Generic.IEnumerable 'System.Collections.Generic.IEnumerable{System.String}') | The namespaces to remove. |
 
+<a name='T-JetFlow-Interfaces-IPagedWorkflowQuery'></a>
+## IPagedWorkflowQuery `type`
+
+##### Namespace
+
+JetFlow.Interfaces
+
+##### Summary
+
+Represents a materialized, paged collection of active workflows with a marker
+indicating the last observed offset in the underlying event stream.
+
+<a name='P-JetFlow-Interfaces-IPagedWorkflowQuery-LastOffset'></a>
+### LastOffset `property`
+
+##### Summary
+
+The last stream offset that was included in this page of results.
+
 <a name='T-JetFlow-Interfaces-IWorkflowQuery'></a>
 ## IWorkflowQuery `type`
 
@@ -554,6 +812,46 @@ A collection containing the matching [ActiveWorkflow](#T-JetFlow-ActiveWorkflow 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | cancellationToken | [System.Threading.CancellationToken](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Threading.CancellationToken 'System.Threading.CancellationToken') | Cancellation token used to cancel the operation. |
+
+<a name='T-JetFlow-NamedServiceabilityDetails'></a>
+## NamedServiceabilityDetails `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Serviceability details including the name of the worker or queue these metrics relate to.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Name | [T:JetFlow.NamedServiceabilityDetails](#T-T-JetFlow-NamedServiceabilityDetails 'T:JetFlow.NamedServiceabilityDetails') | Name of the service or queue. |
+
+<a name='M-JetFlow-NamedServiceabilityDetails-#ctor-System-String,System-Int32,System-Int32,System-UInt64-'></a>
+### #ctor(Name,IdleInstances,ActiveInstances,MessagesWaiting) `constructor`
+
+##### Summary
+
+Serviceability details including the name of the worker or queue these metrics relate to.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | Name of the service or queue. |
+| IdleInstances | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | Number of idle instances available. |
+| ActiveInstances | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | Number of active instances currently processing messages. |
+| MessagesWaiting | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | Number of messages waiting to be processed. |
+
+<a name='P-JetFlow-NamedServiceabilityDetails-Name'></a>
+### Name `property`
+
+##### Summary
+
+Name of the service or queue.
 
 <a name='T-JetFlow-NamespaceNotRegisteredException'></a>
 ## NamespaceNotRegisteredException `type`
@@ -741,3 +1039,101 @@ The name of the scheduled workflow
 ##### Summary
 
 The timestamp to indicate when the workflow will run, if it was a delayed workflow
+
+<a name='T-JetFlow-ServiceabilityDetails'></a>
+## ServiceabilityDetails `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Details about serviceability for a named worker type, used to report idle/active counts and queue depth.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| IdleInstances | [T:JetFlow.ServiceabilityDetails](#T-T-JetFlow-ServiceabilityDetails 'T:JetFlow.ServiceabilityDetails') | Number of idle instances available. |
+
+<a name='M-JetFlow-ServiceabilityDetails-#ctor-System-Int32,System-Int32,System-UInt64-'></a>
+### #ctor(IdleInstances,ActiveInstances,MessagesWaiting) `constructor`
+
+##### Summary
+
+Details about serviceability for a named worker type, used to report idle/active counts and queue depth.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| IdleInstances | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | Number of idle instances available. |
+| ActiveInstances | [System.Int32](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int32 'System.Int32') | Number of active instances currently processing messages. |
+| MessagesWaiting | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | Number of messages waiting to be processed. |
+
+<a name='P-JetFlow-ServiceabilityDetails-ActiveInstances'></a>
+### ActiveInstances `property`
+
+##### Summary
+
+Number of active instances currently processing messages.
+
+<a name='P-JetFlow-ServiceabilityDetails-IdleInstances'></a>
+### IdleInstances `property`
+
+##### Summary
+
+Number of idle instances available.
+
+<a name='P-JetFlow-ServiceabilityDetails-MessagesWaiting'></a>
+### MessagesWaiting `property`
+
+##### Summary
+
+Number of messages waiting to be processed.
+
+<a name='T-JetFlow-WorkflowPerformanceRecordEvent'></a>
+## WorkflowPerformanceRecordEvent `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Event containing aggregated workflow performance metrics for a sampling window.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| namespaceName | [T:JetFlow.WorkflowPerformanceRecordEvent](#T-T-JetFlow-WorkflowPerformanceRecordEvent 'T:JetFlow.WorkflowPerformanceRecordEvent') | The namespace the record belongs to, or null for the default namespace. |
+
+<a name='M-JetFlow-WorkflowPerformanceRecordEvent-#ctor-System-String,JetFlow-Data-WorkflowPerformanceRecord-'></a>
+### #ctor(namespaceName,PerformanceRecord) `constructor`
+
+##### Summary
+
+Event containing aggregated workflow performance metrics for a sampling window.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| namespaceName | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The namespace the record belongs to, or null for the default namespace. |
+| PerformanceRecord | [JetFlow.Data.WorkflowPerformanceRecord](#T-JetFlow-Data-WorkflowPerformanceRecord 'JetFlow.Data.WorkflowPerformanceRecord') | The aggregated workflow performance record. |
+
+<a name='P-JetFlow-WorkflowPerformanceRecordEvent-PerformanceRecord'></a>
+### PerformanceRecord `property`
+
+##### Summary
+
+The aggregated workflow performance record.
+
+<a name='P-JetFlow-WorkflowPerformanceRecordEvent-namespaceName'></a>
+### namespaceName `property`
+
+##### Summary
+
+The namespace the record belongs to, or null for the default namespace.

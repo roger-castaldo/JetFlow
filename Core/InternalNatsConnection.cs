@@ -12,6 +12,7 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
     public INatsJSContext JSContext => jsContext;
 
     public record PublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, TimeSpan? Timeout = null);
+
     public record ScheduledPublishMessage(byte[] Data, string Subject, NatsHeaders Headers, string Id, string DelayString, string DestinationSubject, TimeSpan? Timeout = null)
         : PublishMessage(Data, Subject, Headers, Id, Timeout)
     {

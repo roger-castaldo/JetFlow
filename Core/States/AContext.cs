@@ -12,7 +12,7 @@ internal abstract class AContext(EventMessage startMessage, MessageSerializer me
     private readonly IReadOnlyDictionary<string, string[]>? metaData = MetaDataHelper.ExtractMetaData(startMessage.Headers);
 
     string IContext.WorkflowID 
-        => startMessage?.WorkflowId;
+        => startMessage.WorkflowId;
 
     IReadOnlyDictionary<string, string[]>? IContext.MetaData
         => metaData;

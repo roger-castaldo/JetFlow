@@ -95,7 +95,7 @@ public class ParallelActivityTests
         //Verify
         Assert.HasCount(ParallelActivityWorkflowWithoutOutput.Inputs.Count, emptyActivityWithInput.Inputs);
         foreach (var input in ParallelActivityWorkflowWithoutOutput.Inputs)
-            Assert.Contains(input, emptyActivityWithInput.Inputs);
+            Assert.Contains<string?>(input, emptyActivityWithInput.Inputs);
     }
 
     [ActivityName("Empty Activity With Input And Output")]
@@ -177,11 +177,11 @@ public class ParallelActivityTests
         //Verify
         Assert.HasCount(ParallelActivityWorkflowWithOutput.Inputs.Count, emptyActivityWithInputAndOutput.Inputs);
         foreach (var input in ParallelActivityWorkflowWithOutput.Inputs)
-            Assert.Contains(input, emptyActivityWithInputAndOutput.Inputs);
+            Assert.Contains<string?>(input, emptyActivityWithInputAndOutput.Inputs);
 
         Assert.HasCount(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs);
         foreach (var output in ParallelActivityWorkflowWithOutput.Outputs)
-            Assert.Contains(output, emptyActivityWithInputAndOutput.Outputs);
+            Assert.Contains<string?>(output, emptyActivityWithInputAndOutput.Outputs);
     }
 
     [TestMethod]
@@ -220,11 +220,11 @@ public class ParallelActivityTests
         //Verify
         Assert.HasCount(ParallelActivityWorkflowWithOutput.Inputs.Count, emptyActivityWithInputAndOutput.Inputs);
         foreach (var input in ParallelActivityWorkflowWithOutput.Inputs)
-            Assert.Contains(input, emptyActivityWithInputAndOutput.Inputs);
+            Assert.Contains<string?>(input, emptyActivityWithInputAndOutput.Inputs);
 
         Assert.HasCount(ParallelActivityWorkflowWithOutput.Outputs.Count, emptyActivityWithInputAndOutput.Outputs);
         foreach (var output in ParallelActivityWorkflowWithOutput.Outputs)
-            Assert.Contains(output, emptyActivityWithInputAndOutput.Outputs);
+            Assert.Contains<string?>(output, emptyActivityWithInputAndOutput.Outputs);
 
         var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);
         var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>().cleanedName}/{runId}", TestContext.CancellationToken);
@@ -328,7 +328,7 @@ public class ParallelActivityTests
         //Verify
         Assert.HasCount(ParallelActivityWorkflowWithProblems.Inputs.Count(), emptyActivityToTimeout.Inputs);
         foreach (var input in ParallelActivityWorkflowWithProblems.Inputs)
-            Assert.Contains(input, emptyActivityToTimeout.Inputs);
+            Assert.Contains<string?>(input, emptyActivityToTimeout.Inputs);
     }
 
     [WorkflowName("Parallel Activity Workflow With Large Number Of Calls")]
@@ -384,7 +384,7 @@ public class ParallelActivityTests
         //Verify
         Assert.HasCount(ParallelActivityWorkflowWithLargeNumberOfCalls.Inputs.Count, emptyActivityWithInput.Inputs);
         foreach (var input in ParallelActivityWorkflowWithLargeNumberOfCalls.Inputs)
-            Assert.Contains(input, emptyActivityWithInput.Inputs);
+            Assert.Contains<string?>(input, emptyActivityWithInput.Inputs);
     }
 
     public TestContext TestContext { get; set; }

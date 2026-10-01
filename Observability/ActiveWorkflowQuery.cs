@@ -18,6 +18,8 @@ internal abstract class WorkflowQueryBase(IJetstreamQuery query,
     ValueTask IAsyncDisposable.DisposeAsync()
         => query.DisposeAsync();
 
+    public ulong CurrentOffset { get; private set; }
+
     private async Task<ActiveWorkflow?> GetActiveWorkflowAsync(INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
     {
         var eventMessage = await EventMessage.CreateMessageAsync(largeMessageStore, msg, cancellationToken);
@@ -32,6 +34,7 @@ internal abstract class WorkflowQueryBase(IJetstreamQuery query,
         {
             await foreach (var msg in query)
             {
+                CurrentOffset = Math.Max(CurrentOffset,msg.Metadata?.Sequence.Stream??0);
                 var workflow = await GetActiveWorkflowAsync(msg, cancellationToken);
                 if (workflow.HasValue)
                     yield return workflow.Value;
@@ -83,6 +86,11 @@ internal class WorkflowQuery<TInput>(IJetstreamQuery query,
         checkMetaData)
 {
     private readonly Func<TInput, bool> CheckArg = checkArguement ?? ((arg) => true);
+    private readonly bool HasCheckArg = checkArguement!=null;
     protected override async ValueTask<bool> DoesMessageMatchAsync(EventMessage eventMessage)
-        => CheckArg(await MessageSerializer.DecodeAsync<TInput>(eventMessage.Data, eventMessage.Headers));
+    {
+        if (HasCheckArg && eventMessage.Data==null)
+            return false;
+        return CheckArg(await MessageSerializer.DecodeAsync<TInput>(eventMessage.Data, eventMessage.Headers));
+    }
 }

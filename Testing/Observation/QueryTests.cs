@@ -100,6 +100,15 @@ public class QueryTests
             Assert.AreEqual(NameHelper.GetActivityName<AwaitableActivity>().rawName, workflow.Steps[0].Name);
             Assert.IsNull(workflow.Steps[0].EndTime);
         }
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Observable Workflow With No Input");
+        await foreach (var workflow in workflowQuery)
+        {
+            Assert.AreEqual(instanceId, workflow.ID);
+            Assert.HasCount(1, workflow.Steps);
+            Assert.AreEqual(WorkflowStepTypes.Action, workflow.Steps[0].Type);
+            Assert.AreEqual(NameHelper.GetActivityName<AwaitableActivity>().rawName, workflow.Steps[0].Name);
+            Assert.IsNull(workflow.Steps[0].EndTime);
+        }
         var workflowList = await observationConnection.LoadWorkflowsAsync<ObservableWorkflowWithNoInput>(instanceNamespace);
         Assert.HasCount(1, workflowList);
         var workflowInstance = workflowList.First();
@@ -111,6 +120,15 @@ public class QueryTests
         //validate delays are being observed
         await ObservableWorkflowWithNoInput.DelayTask;
         workflowQuery = await observationConnection.QueryWorkflowAsync<ObservableWorkflowWithNoInput>(instanceNamespace);
+        await foreach (var workflow in workflowQuery)
+        {
+            Assert.AreEqual(instanceId, workflow.ID);
+            Assert.HasCount(2, workflow.Steps);
+            Assert.AreEqual(WorkflowStepTypes.Delay, workflow.Steps[1].Type);
+            Assert.IsNull(workflow.Steps[1].Name);
+            Assert.IsNull(workflow.Steps[1].EndTime);
+        }
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Observable Workflow With No Input");
         await foreach (var workflow in workflowQuery)
         {
             Assert.AreEqual(instanceId, workflow.ID);
@@ -131,6 +149,15 @@ public class QueryTests
         await ObservableWorkflowWithNoInput.SuspendTask;
         await Task.Delay(TimeSpan.FromMinutes(1));
         workflowQuery = await observationConnection.QueryWorkflowAsync<ObservableWorkflowWithNoInput>(instanceNamespace);
+        await foreach (var workflow in workflowQuery)
+        {
+            Assert.AreEqual(instanceId, workflow.ID);
+            Assert.HasCount(3, workflow.Steps);
+            Assert.AreEqual(WorkflowStepTypes.Suspended, workflow.Steps[2].Type);
+            Assert.IsNull(workflow.Steps[2].Name);
+            Assert.IsNull(workflow.Steps[2].EndTime);
+        }
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Observable Workflow With No Input");
         await foreach (var workflow in workflowQuery)
         {
             Assert.AreEqual(instanceId, workflow.ID);
@@ -225,6 +252,12 @@ public class QueryTests
         await foreach (var workflow in workflowQuery)
             cnt++;
         Assert.AreEqual(1, cnt);
+        cnt = 0;
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Suspending Workflow Without Input",
+            (meta) => MetaDataAreEqual(meta, firstMeta));
+        await foreach (var workflow in workflowQuery)
+            cnt++;
+        Assert.AreEqual(1, cnt);
         var workflowList = await observationConnection.LoadWorkflowsAsync<SuspendingWorkflowWithoutInput>(instanceNamespace,
             (meta) => MetaDataAreEqual(meta, firstMeta));
         Assert.HasCount(1, workflowList);
@@ -236,6 +269,12 @@ public class QueryTests
         await foreach (var workflow in workflowQuery)
             cnt++;
         Assert.AreEqual(1, cnt);
+        cnt = 0;
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Suspending Workflow Without Input",
+            (meta) => MetaDataAreEqual(meta, secondMeta));
+        await foreach (var workflow in workflowQuery)
+            cnt++;
+        Assert.AreEqual(1, cnt);
         workflowList = await observationConnection.LoadWorkflowsAsync<SuspendingWorkflowWithoutInput>(instanceNamespace,
             (meta) => MetaDataAreEqual(meta, secondMeta));
         Assert.HasCount(1, workflowList);
@@ -243,6 +282,12 @@ public class QueryTests
         Assert.AreEqual(secondInstance, workflowInstance.ID);
         cnt = 0;
         workflowQuery = await observationConnection.QueryWorkflowAsync<SuspendingWorkflowWithoutInput>(instanceNamespace,
+            (meta) => MetaDataAreEqual(meta, thirdMeta));
+        await foreach (var workflow in workflowQuery)
+            cnt++;
+        Assert.AreEqual(1, cnt);
+        cnt = 0;
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Suspending Workflow Without Input",
             (meta) => MetaDataAreEqual(meta, thirdMeta));
         await foreach (var workflow in workflowQuery)
             cnt++;
@@ -339,6 +384,13 @@ public class QueryTests
         await foreach (var workflow in workflowQuery)
             cnt++;
         Assert.AreEqual(1, cnt);
+        cnt=0;
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Suspending Workflow With Input",
+            (meta) => MetaDataAreEqual(meta, firstMeta),
+            (input) => firstArg.Equals(input.ToString()));
+        await foreach (var workflow in workflowQuery)
+            cnt++;
+        Assert.AreEqual(1, cnt);
         var workflowList = await observationConnection.LoadWorkflowsAsync<SuspendingWorkflowWithInput,string>(instanceNamespace,
             (meta) => MetaDataAreEqual(meta, firstMeta),
             (input) => firstArg.Equals(input));
@@ -352,6 +404,13 @@ public class QueryTests
         await foreach (var workflow in workflowQuery)
             cnt++;
         Assert.AreEqual(1, cnt);
+        cnt = 0;
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Suspending Workflow With Input",
+            (meta) => MetaDataAreEqual(meta, secondMeta),
+            (input) => secondArg.Equals(input.ToString()));
+        await foreach (var workflow in workflowQuery)
+            cnt++;
+        Assert.AreEqual(1, cnt);
         workflowList = await observationConnection.LoadWorkflowsAsync<SuspendingWorkflowWithInput, string>(instanceNamespace,
             (meta) => MetaDataAreEqual(meta, secondMeta),
             (input) => secondArg.Equals(input));
@@ -362,6 +421,13 @@ public class QueryTests
         workflowQuery = await observationConnection.QueryWorkflowAsync<SuspendingWorkflowWithInput, string>(instanceNamespace,
             (meta) => MetaDataAreEqual(meta, thirdMeta),
             (input) => thirdArg.Equals(input));
+        await foreach (var workflow in workflowQuery)
+            cnt++;
+        Assert.AreEqual(1, cnt);
+        cnt = 0;
+        workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Suspending Workflow With Input",
+            (meta) => MetaDataAreEqual(meta, thirdMeta),
+            (input) => thirdArg.Equals(input.ToString()));
         await foreach (var workflow in workflowQuery)
             cnt++;
         Assert.AreEqual(1, cnt);

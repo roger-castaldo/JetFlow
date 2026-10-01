@@ -63,3 +63,10 @@ public class InvalidDelayStepException : InvalidOperationException
         base($"Expected delay finished event but recieved {subject}")
     { }
 }
+
+internal class UnableToLocateStartMessageException : Exception
+{
+    internal UnableToLocateStartMessageException(string activityName, string workflowName, string instanceID)
+        : base($"Unable to locate start message for activity {activityName} in workflow {workflowName}:{instanceID}")
+    { }
+}

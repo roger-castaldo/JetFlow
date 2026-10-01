@@ -78,7 +78,7 @@ public class ActivityExecutionTests
             _ = await context.ExecuteActivityAsync<BasicActivity>(new());
             _ = await context.ExecuteActivityAsync<BasicActivityWithInput, string>(new(input));
             var result = await context.ExecuteActivityAsync<BasicActivityWithReturn, string>(new());
-            result = await context.ExecuteActivityAsync<BasicActivityWithInputAndReturn, string, string>(new(result.Output));
+            result = await context.ExecuteActivityAsync<BasicActivityWithInputAndReturn, string, string>(new(result.Output??string.Empty));
             FinalResult = result.Output;
         }
     }

@@ -23,6 +23,16 @@
 - [ActivityNameAttribute](#T-JetFlow-Attributes-ActivityNameAttribute 'JetFlow.Attributes.ActivityNameAttribute')
   - [#ctor(name)](#M-JetFlow-Attributes-ActivityNameAttribute-#ctor-System-String- 'JetFlow.Attributes.ActivityNameAttribute.#ctor(System.String)')
   - [Name](#P-JetFlow-Attributes-ActivityNameAttribute-Name 'JetFlow.Attributes.ActivityNameAttribute.Name')
+- [ActivityPerformanceRecord](#T-JetFlow-Data-ActivityPerformanceRecord 'JetFlow.Data.ActivityPerformanceRecord')
+  - [#ctor(Window,Name,Started,Completed,Failed,TimedOut,QueueLatencies,Durations)](#M-JetFlow-Data-ActivityPerformanceRecord-#ctor-System-DateTimeOffset,System-String,System-Int64,System-Int64,System-Int64,System-Int64,System-Collections-Generic-IEnumerable{System-TimeSpan},System-Collections-Generic-IEnumerable{System-TimeSpan}- 'JetFlow.Data.ActivityPerformanceRecord.#ctor(System.DateTimeOffset,System.String,System.Int64,System.Int64,System.Int64,System.Int64,System.Collections.Generic.IEnumerable{System.TimeSpan},System.Collections.Generic.IEnumerable{System.TimeSpan})')
+  - [Completed](#P-JetFlow-Data-ActivityPerformanceRecord-Completed 'JetFlow.Data.ActivityPerformanceRecord.Completed')
+  - [Durations](#P-JetFlow-Data-ActivityPerformanceRecord-Durations 'JetFlow.Data.ActivityPerformanceRecord.Durations')
+  - [Failed](#P-JetFlow-Data-ActivityPerformanceRecord-Failed 'JetFlow.Data.ActivityPerformanceRecord.Failed')
+  - [Name](#P-JetFlow-Data-ActivityPerformanceRecord-Name 'JetFlow.Data.ActivityPerformanceRecord.Name')
+  - [QueueLatencies](#P-JetFlow-Data-ActivityPerformanceRecord-QueueLatencies 'JetFlow.Data.ActivityPerformanceRecord.QueueLatencies')
+  - [Started](#P-JetFlow-Data-ActivityPerformanceRecord-Started 'JetFlow.Data.ActivityPerformanceRecord.Started')
+  - [TimedOut](#P-JetFlow-Data-ActivityPerformanceRecord-TimedOut 'JetFlow.Data.ActivityPerformanceRecord.TimedOut')
+  - [Window](#P-JetFlow-Data-ActivityPerformanceRecord-Window 'JetFlow.Data.ActivityPerformanceRecord.Window')
 - [ActivityResult](#T-JetFlow-ActivityResult 'JetFlow.ActivityResult')
   - [#ctor(Index,Status,ErrorMessage)](#M-JetFlow-ActivityResult-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String- 'JetFlow.ActivityResult.#ctor(System.UInt64,JetFlow.ActivityResultStatus,System.String)')
   - [ErrorMessage](#P-JetFlow-ActivityResult-ErrorMessage 'JetFlow.ActivityResult.ErrorMessage')
@@ -137,6 +147,15 @@
   - [ErrorOnActivityFailure](#P-JetFlow-Configs-WorkflowOptions-ErrorOnActivityFailure 'JetFlow.Configs.WorkflowOptions.ErrorOnActivityFailure')
   - [ErrorOnActivityTimeout](#P-JetFlow-Configs-WorkflowOptions-ErrorOnActivityTimeout 'JetFlow.Configs.WorkflowOptions.ErrorOnActivityTimeout')
   - [PurgeDelay](#P-JetFlow-Configs-WorkflowOptions-PurgeDelay 'JetFlow.Configs.WorkflowOptions.PurgeDelay')
+- [WorkflowPerformanceRecord](#T-JetFlow-Data-WorkflowPerformanceRecord 'JetFlow.Data.WorkflowPerformanceRecord')
+  - [#ctor(Window,Name,Started,Completed,Failed,Purged,QueueLatencies)](#M-JetFlow-Data-WorkflowPerformanceRecord-#ctor-System-DateTimeOffset,System-String,System-Int64,System-Int64,System-Int64,System-Int64,System-Collections-Generic-IEnumerable{System-TimeSpan}- 'JetFlow.Data.WorkflowPerformanceRecord.#ctor(System.DateTimeOffset,System.String,System.Int64,System.Int64,System.Int64,System.Int64,System.Collections.Generic.IEnumerable{System.TimeSpan})')
+  - [Completed](#P-JetFlow-Data-WorkflowPerformanceRecord-Completed 'JetFlow.Data.WorkflowPerformanceRecord.Completed')
+  - [Failed](#P-JetFlow-Data-WorkflowPerformanceRecord-Failed 'JetFlow.Data.WorkflowPerformanceRecord.Failed')
+  - [Name](#P-JetFlow-Data-WorkflowPerformanceRecord-Name 'JetFlow.Data.WorkflowPerformanceRecord.Name')
+  - [Purged](#P-JetFlow-Data-WorkflowPerformanceRecord-Purged 'JetFlow.Data.WorkflowPerformanceRecord.Purged')
+  - [QueueLatencies](#P-JetFlow-Data-WorkflowPerformanceRecord-QueueLatencies 'JetFlow.Data.WorkflowPerformanceRecord.QueueLatencies')
+  - [Started](#P-JetFlow-Data-WorkflowPerformanceRecord-Started 'JetFlow.Data.WorkflowPerformanceRecord.Started')
+  - [Window](#P-JetFlow-Data-WorkflowPerformanceRecord-Window 'JetFlow.Data.WorkflowPerformanceRecord.Window')
 - [WorkflowScheduleBuilder](#T-JetFlow-WorkflowScheduleBuilder 'JetFlow.WorkflowScheduleBuilder')
   - [AtDay(day)](#M-JetFlow-WorkflowScheduleBuilder-AtDay-System-Int32- 'JetFlow.WorkflowScheduleBuilder.AtDay(System.Int32)')
   - [AtDayOfWeek(dayOfWeek)](#M-JetFlow-WorkflowScheduleBuilder-AtDayOfWeek-System-Int32- 'JetFlow.WorkflowScheduleBuilder.AtDayOfWeek(System.Int32)')
@@ -415,6 +434,99 @@ Specifies a custom name for an activity class. This attribute can be applied to 
 ##### Summary
 
 Gets the custom name specified for the activity class. This property returns the name provided when the attribute was applied, allowing for easy access to the activity's identifier in code or during runtime operations.
+
+<a name='T-JetFlow-Data-ActivityPerformanceRecord'></a>
+## ActivityPerformanceRecord `type`
+
+##### Namespace
+
+JetFlow.Data
+
+##### Summary
+
+Aggregated activity-level performance metrics for a sampling window.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Window | [T:JetFlow.Data.ActivityPerformanceRecord](#T-T-JetFlow-Data-ActivityPerformanceRecord 'T:JetFlow.Data.ActivityPerformanceRecord') | The window timestamp for the sampled metrics. |
+
+<a name='M-JetFlow-Data-ActivityPerformanceRecord-#ctor-System-DateTimeOffset,System-String,System-Int64,System-Int64,System-Int64,System-Int64,System-Collections-Generic-IEnumerable{System-TimeSpan},System-Collections-Generic-IEnumerable{System-TimeSpan}-'></a>
+### #ctor(Window,Name,Started,Completed,Failed,TimedOut,QueueLatencies,Durations) `constructor`
+
+##### Summary
+
+Aggregated activity-level performance metrics for a sampling window.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Window | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The window timestamp for the sampled metrics. |
+| Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The name of the activity these metrics relate to. |
+| Started | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of activity starts during the window. |
+| Completed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of successful completions during the window. |
+| Failed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of failures during the window. |
+| TimedOut | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of timeouts during the window. |
+| QueueLatencies | [System.Collections.Generic.IEnumerable{System.TimeSpan}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Collections.Generic.IEnumerable 'System.Collections.Generic.IEnumerable{System.TimeSpan}') | Observed queue latencies during the window. |
+| Durations | [System.Collections.Generic.IEnumerable{System.TimeSpan}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Collections.Generic.IEnumerable 'System.Collections.Generic.IEnumerable{System.TimeSpan}') | Observed activity durations during the window. |
+
+<a name='P-JetFlow-Data-ActivityPerformanceRecord-Completed'></a>
+### Completed `property`
+
+##### Summary
+
+Number of successful completions during the window.
+
+<a name='P-JetFlow-Data-ActivityPerformanceRecord-Durations'></a>
+### Durations `property`
+
+##### Summary
+
+Observed activity durations during the window.
+
+<a name='P-JetFlow-Data-ActivityPerformanceRecord-Failed'></a>
+### Failed `property`
+
+##### Summary
+
+Number of failures during the window.
+
+<a name='P-JetFlow-Data-ActivityPerformanceRecord-Name'></a>
+### Name `property`
+
+##### Summary
+
+The name of the activity these metrics relate to.
+
+<a name='P-JetFlow-Data-ActivityPerformanceRecord-QueueLatencies'></a>
+### QueueLatencies `property`
+
+##### Summary
+
+Observed queue latencies during the window.
+
+<a name='P-JetFlow-Data-ActivityPerformanceRecord-Started'></a>
+### Started `property`
+
+##### Summary
+
+Number of activity starts during the window.
+
+<a name='P-JetFlow-Data-ActivityPerformanceRecord-TimedOut'></a>
+### TimedOut `property`
+
+##### Summary
+
+Number of timeouts during the window.
+
+<a name='P-JetFlow-Data-ActivityPerformanceRecord-Window'></a>
+### Window `property`
+
+##### Summary
+
+The window timestamp for the sampled metrics.
 
 <a name='T-JetFlow-ActivityResult'></a>
 ## ActivityResult `type`
@@ -2149,6 +2261,91 @@ Gets the optional delay before purging items.
 
 If set, items will not be purged until the specified delay has elapsed. If null, items may be
 purged immediately according to the default policy.
+
+<a name='T-JetFlow-Data-WorkflowPerformanceRecord'></a>
+## WorkflowPerformanceRecord `type`
+
+##### Namespace
+
+JetFlow.Data
+
+##### Summary
+
+Aggregated workflow-level performance metrics for a sampling window.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Window | [T:JetFlow.Data.WorkflowPerformanceRecord](#T-T-JetFlow-Data-WorkflowPerformanceRecord 'T:JetFlow.Data.WorkflowPerformanceRecord') | The window timestamp for the sampled metrics. |
+
+<a name='M-JetFlow-Data-WorkflowPerformanceRecord-#ctor-System-DateTimeOffset,System-String,System-Int64,System-Int64,System-Int64,System-Int64,System-Collections-Generic-IEnumerable{System-TimeSpan}-'></a>
+### #ctor(Window,Name,Started,Completed,Failed,Purged,QueueLatencies) `constructor`
+
+##### Summary
+
+Aggregated workflow-level performance metrics for a sampling window.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Window | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The window timestamp for the sampled metrics. |
+| Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The name of the workflow these metrics relate to. |
+| Started | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of workflow starts during the window. |
+| Completed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of successful completions during the window. |
+| Failed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of failures during the window. |
+| Purged | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of purged workflow records during the window. |
+| QueueLatencies | [System.Collections.Generic.IEnumerable{System.TimeSpan}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Collections.Generic.IEnumerable 'System.Collections.Generic.IEnumerable{System.TimeSpan}') | Observed queue latencies during the window. |
+
+<a name='P-JetFlow-Data-WorkflowPerformanceRecord-Completed'></a>
+### Completed `property`
+
+##### Summary
+
+Number of successful completions during the window.
+
+<a name='P-JetFlow-Data-WorkflowPerformanceRecord-Failed'></a>
+### Failed `property`
+
+##### Summary
+
+Number of failures during the window.
+
+<a name='P-JetFlow-Data-WorkflowPerformanceRecord-Name'></a>
+### Name `property`
+
+##### Summary
+
+The name of the workflow these metrics relate to.
+
+<a name='P-JetFlow-Data-WorkflowPerformanceRecord-Purged'></a>
+### Purged `property`
+
+##### Summary
+
+Number of purged workflow records during the window.
+
+<a name='P-JetFlow-Data-WorkflowPerformanceRecord-QueueLatencies'></a>
+### QueueLatencies `property`
+
+##### Summary
+
+Observed queue latencies during the window.
+
+<a name='P-JetFlow-Data-WorkflowPerformanceRecord-Started'></a>
+### Started `property`
+
+##### Summary
+
+Number of workflow starts during the window.
+
+<a name='P-JetFlow-Data-WorkflowPerformanceRecord-Window'></a>
+### Window `property`
+
+##### Summary
+
+The window timestamp for the sampled metrics.
 
 <a name='T-JetFlow-WorkflowScheduleBuilder'></a>
 ## WorkflowScheduleBuilder `type`

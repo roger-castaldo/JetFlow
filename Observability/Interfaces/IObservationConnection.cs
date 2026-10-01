@@ -1,5 +1,7 @@
 ﻿using JetFlow.Data;
 using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace JetFlow.Interfaces;
 
@@ -113,14 +115,58 @@ public interface IObservationConnection
     /// <summary>
     /// Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
     /// </summary>
-    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow{TInput}"/>.</typeparam>
-    /// <typeparam name="TInput">The workflow input type used to apply an optional argument filter.</typeparam>
+    /// <remarks>This overload accepts a workflow name and untyped JSON input for argument filtering.</remarks>
     /// <param name="workflowNamespace">Optional namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
     /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
     /// <param name="checkArguement">Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned.</param>
     /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
     ValueTask<IWorkflowQuery> QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<TInput, bool>? checkArguement = null)
         where TWorkflow : class, IWorkflow<TInput>;
+    /// <summary>
+    /// Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
+    /// </summary>
+    /// <param name="workflowNamespace">Optional namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <param name="workflowName">The name of the workflow type to filter by.</param>
+    /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
+    /// <param name="checkArguement">Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned.</param>
+    /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
+    ValueTask<IWorkflowQuery> QueryWorkflowAsync(string? workflowNamespace, string workflowName, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<JsonElement, bool>? checkArguement = null);
+    /// <summary>
+    /// Creates a query that enumerates active workflows of the specified workflow type within the
+    /// optionally provided namespace. The returned <see cref="IWorkflowQuery"/> can be consumed
+    /// asynchronously to iterate matching <see cref="ActiveWorkflow"/> instances.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow"/>.</typeparam>
+    /// <param name="workflowNamespace">Optional namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <param name="take">The maximum number of workflow instances to return in a single page.</param>
+    /// <param name="lastOffset">The offset of the last workflow instance from the previous page.</param>
+    /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
+    /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
+    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, int take, ulong lastOffset=0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null)
+        where TWorkflow : class, IWorkflow;
+
+    /// <summary>
+    /// Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
+    /// </summary>
+    /// <param name="workflowNamespace">Optional namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <param name="take">The maximum number of workflow instances to return in a single page.</param>
+    /// <param name="lastOffset">The offset of the last workflow instance from the previous page.</param>
+    /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
+    /// <param name="checkArguement">Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned.</param>
+    /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
+    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, int take, ulong lastOffset = 0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<TInput, bool>? checkArguement = null)
+        where TWorkflow : class, IWorkflow<TInput>;
+    /// <summary>
+    /// Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
+    /// </summary>
+    /// <param name="workflowNamespace">Optional namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <param name="workflowName">The name of the workflow type to filter by.</param>
+    /// <param name="take">The maximum number of workflow instances to return in a single page.</param>
+    /// <param name="lastOffset">The offset of the last workflow instance from the previous page.</param>
+    /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
+    /// <param name="checkArguement">Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned.</param>
+    /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
+    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync(string? workflowNamespace, string workflowName, int take, ulong lastOffset = 0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<JsonElement, bool>? checkArguement = null);
 
     /// <summary>
     /// Loads all active workflows of the specified workflow type in the optional namespace into a materialized collection.
@@ -193,9 +239,31 @@ public interface IObservationConnection
     ValueTask<IEnumerable<ScheduledWorkflow<TInput>>> ListScheduledWorkflowsAsync<TWorkflow, TInput>(string? workflowNamespace)
         where TWorkflow : class, IWorkflow<TInput>;
 
+    /// <summary>
+    /// Gets serviceability details for the specified workflow type in the given namespace.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The workflow type to filter by. Must implement <see cref="IWorkflow"/>.</typeparam>
+    /// <param name="workflowNamespace">The namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <returns>The serviceability details for the specified workflow type.</returns>
     ValueTask<ServiceabilityDetails> GetWorkflowServiceabilityAsync<TWorkflow>(string? workflowNamespace);
+    /// <summary>
+    /// Gets serviceability details for all workflow types in the specified namespace.
+    /// </summary>
+    /// <param name="workflowNamespace">The namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <returns>The serviceability details for all workflow types in the specified namespace.</returns>
     ValueTask<IEnumerable<NamedServiceabilityDetails>> GetWorkflowServiceabilityAsync(string? workflowNamespace);
+    /// <summary>
+    /// Gets serviceability details for the specified activity type in the given namespace.
+    /// </summary>
+    /// <typeparam name="TActivity">The activity type to filter by. Must implement <see cref="IActivity"/>.</typeparam>
+    /// <param name="workflowNamespace">The namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <returns>The serviceability details for the specified activity type.</returns>
     ValueTask<ServiceabilityDetails> GetActivityServiceabilityAsync<TActivity>(string? workflowNamespace);
+    /// <summary>
+    /// Gets serviceability details for all activity types in the specified namespace.
+    /// </summary>
+    /// <param name="workflowNamespace">The namespace to scope the query. Use <c>null</c> to query the default namespace.</param>
+    /// <returns>The serviceability details for all activity types in the specified namespace.</returns>
     ValueTask<IEnumerable<NamedServiceabilityDetails>> GetActivityServiceabilityAsync(string? workflowNamespace);
 
 }

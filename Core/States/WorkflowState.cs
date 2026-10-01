@@ -52,6 +52,8 @@ internal class WorkflowState
                 }
             }
         }
+        if (start==null)
+            throw new UnableToLocateStartMessageException(message.ActivityName??message.ActivitySubjectName!, message.WorkflowName, message.WorkflowId);
         return new WorkflowState(start!, messages, messageSerializer, message.ActivityAttempt);
     }
     ushort IWorkflowState.ActivityAttempt => activityAttempt;

@@ -54,6 +54,7 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
             else
                 ackMessage=false;
         }
+        catch (UnableToLocateStartMessageException) { /* if this occurs the system potentially has already purged the workflow and the activity was missed */}
         catch (WorkflowSuspendedException) { /* handle workflow suspension by doing nothing */}
         catch (OperationCanceledException) when (timeoutCts?.IsCancellationRequested??false)
         {

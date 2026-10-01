@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
@@ -252,7 +253,10 @@ public static class ObservationConnection
         ValueTask IObservationConnection.RemoveDefaultNamespaceAsync()
             => ((IObservationConnection)this).RemoveNamespaceAsync(string.Empty);
 
-        private async ValueTask<(INatsObjStore largeMessageStore, SubjectMapper subjectMapper, IJetstreamQuery query)> CreateWorkflowQueryAsync<TWorkflow>(string? workflowNamespace,string workflowId = "*")
+        private ValueTask<(INatsObjStore largeMessageStore, SubjectMapper subjectMapper, IJetstreamQuery query)> CreateWorkflowQueryAsync<TWorkflow>(string? workflowNamespace, ulong previousLastMessageOffset = 0, string workflowId = "*")
+            => CreateWorkflowQueryAsync(workflowNamespace, NameHelper.GetWorkflowName<TWorkflow>().cleanedName, previousLastMessageOffset, workflowId);
+
+        private async ValueTask<(INatsObjStore largeMessageStore, SubjectMapper subjectMapper, IJetstreamQuery query)> CreateWorkflowQueryAsync(string? workflowNamespace, string workflowName, ulong previousLastMessageOffset = 0, string workflowId = "*")
         {
             if (!namespaces.TryGetValue(workflowNamespace??string.Empty, out var mapper))
                 throw new NamespaceNotRegisteredException(workflowNamespace);
@@ -262,27 +266,28 @@ public static class ObservationConnection
                 jsContext,
                 mapper.WorkflowEventsStreamsName,
                 false,
-                mapper.WorkflowStart(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, workflowId)
+                previousLastMessageOffset,
+                mapper.WorkflowStart(workflowName, workflowId)
             );
             return (largeMessageStore, mapper, query);
         }
 
-        async ValueTask<IWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData)
+        private async ValueTask<WorkflowQuery> CreateWorkflowAsync<TWorkflow>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData, ulong offsetStart=0)
         {
-            var (largeMessageStore, subjectMapper, query) = await CreateWorkflowQueryAsync<TWorkflow>(workflowNamespace);
+            var (largeMessageStore, subjectMapper, query) = await CreateWorkflowQueryAsync<TWorkflow>(workflowNamespace,offsetStart);
             return new WorkflowQuery(
                 query,
                 largeMessageStore,
-                new(CompressionTypes.Brotli,null),
+                new(CompressionTypes.Brotli, null),
                 subjectMapper,
                 jsContext,
                 checkMetaData
             );
         }
 
-        async ValueTask<IWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<TInput, bool>? checkArguement)
+        private async ValueTask<WorkflowQuery<TInput>> CreateWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<TInput, bool>? checkArguement, ulong offsetStart=0)
         {
-            var (largeMessageStore, subjectMapper, query) = await CreateWorkflowQueryAsync<TWorkflow>(workflowNamespace);
+            var (largeMessageStore, subjectMapper, query) = await CreateWorkflowQueryAsync<TWorkflow>(workflowNamespace, offsetStart);
             return new WorkflowQuery<TInput>(
                 query,
                 largeMessageStore,
@@ -293,6 +298,58 @@ public static class ObservationConnection
                 checkArguement
             );
         }
+
+        private async ValueTask<WorkflowQuery<JsonElement>> CreateWorkflowAsync(string? workflowNamespace, string workflowName, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement, ulong offsetStart = 0)
+        {
+            var (largeMessageStore, subjectMapper, query) = await CreateWorkflowQueryAsync(workflowNamespace, NameHelper.CleanName(workflowName), previousLastMessageOffset: offsetStart);
+            return new WorkflowQuery<JsonElement>(
+                query,
+                largeMessageStore,
+                new(CompressionTypes.Brotli, null),
+                subjectMapper,
+                jsContext,
+                checkMetaData,
+                checkArguement
+            );
+        }
+
+        async ValueTask<IWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData)
+            => await CreateWorkflowAsync<TWorkflow>(workflowNamespace, checkMetaData);
+
+        async ValueTask<IWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<TInput, bool>? checkArguement)
+            => await CreateWorkflowAsync<TWorkflow, TInput>(workflowNamespace, checkMetaData, checkArguement);
+
+        async ValueTask<IWorkflowQuery> IObservationConnection.QueryWorkflowAsync(string? workflowNamespace, string workflowName, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement)
+            => await CreateWorkflowAsync(workflowNamespace, workflowName, checkMetaData, checkArguement);
+
+        private static async ValueTask<IPagedWorkflowQuery> ProcessPagedQueryAsync(WorkflowQueryBase query, int take)
+        {
+            var data = new List<ActiveWorkflow>();
+            ulong offset = 0;
+            await foreach(var workflow in query)
+            {
+                offset = query.CurrentOffset;
+                data.Add(workflow);
+                if (data.Count>=take)
+                    break;
+            }
+            return new PagedWorkflowQuery(data, offset);
+        }
+
+        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, int take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData)
+            => await ProcessPagedQueryAsync(
+                await CreateWorkflowAsync<TWorkflow>(workflowNamespace, checkMetaData, lastOffest),
+                take);
+
+        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, int take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<TInput, bool>? checkArguement)
+            => await ProcessPagedQueryAsync(
+                await CreateWorkflowAsync<TWorkflow, TInput>(workflowNamespace, checkMetaData, checkArguement, lastOffest),
+                take);
+
+        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync(string? workflowNamespace, string workflowName, int take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement)
+            => await ProcessPagedQueryAsync(
+                await CreateWorkflowAsync(workflowNamespace, workflowName, checkMetaData, checkArguement, lastOffest),
+                take);
 
         async ValueTask<IEnumerable<ActiveWorkflow>> IObservationConnection.LoadWorkflowsAsync<TWorkflow>(string? workflowNamespace, Func<Dictionary<string, string[]>?, bool>? checkMetaData)
             => await (await ((IObservationConnection)this).QueryWorkflowAsync<TWorkflow>(workflowNamespace, checkMetaData)).ToListAsync();
@@ -307,7 +364,7 @@ public static class ObservationConnection
 
         private async ValueTask<ActiveWorkflow?> LoadWorkflowAsync<TWorkflow>(string? workflowNamespace, string workflowId)
         {
-            var (largeMessageStore, subjectMapper, query) = await CreateWorkflowQueryAsync<TWorkflow>(workflowNamespace, workflowId);
+            var (largeMessageStore, subjectMapper, query) = await CreateWorkflowQueryAsync<TWorkflow>(workflowNamespace, workflowId: workflowId);
             await using var workflowQuery = new WorkflowQuery(
                 query,
                 largeMessageStore,
