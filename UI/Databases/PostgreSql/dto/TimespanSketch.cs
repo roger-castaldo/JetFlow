@@ -1,6 +1,6 @@
-﻿namespace JetFlow.UI;
+﻿namespace JetFlow.UI.dto;
 
-internal class LatencySketch
+internal class TimespanSketch
 {
     private static readonly double multiplier = 1.0/Math.Log(1.01/0.99);
 
@@ -8,6 +8,12 @@ internal class LatencySketch
     private long zeroCount = 0;
     public TimeSpan Min { get; private set; } = TimeSpan.MaxValue;
     public TimeSpan Max { get; private set; } = TimeSpan.MinValue;
+
+    public void Add(IEnumerable<TimeSpan> timeSpans)
+    {
+        foreach (var span in timeSpans)
+            Add(span);
+    }
 
     public void Add(TimeSpan timeSpan)
     {
@@ -40,7 +46,7 @@ internal class LatencySketch
         return ms.ToArray();
     }
 
-    public static LatencySketch ReadFromByte(byte[] data)
+    public static TimespanSketch ReadFromByte(byte[] data)
     {
         using var ms = new MemoryStream(data);
         var br = new BinaryReader(ms);
@@ -53,7 +59,7 @@ internal class LatencySketch
             counts.Add(br.ReadInt32(), br.ReadInt64());
         }
         br.Close();
-        return new LatencySketch()
+        return new TimespanSketch()
         {
             Min=min,
             Max=max,
@@ -61,7 +67,7 @@ internal class LatencySketch
         };
     }
 
-    public void Merge(LatencySketch other)
+    public void Merge(TimespanSketch other)
     {
         zeroCount+=other.zeroCount;
         Min = TimeSpan.FromMicroseconds(Math.Min(Min.TotalMicroseconds, other.Min.TotalMicroseconds));

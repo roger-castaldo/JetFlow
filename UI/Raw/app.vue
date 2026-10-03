@@ -16,7 +16,9 @@
         <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth, ColumnContainerModifiers.fullHeight]"
                  :columns="[{name:'menu',size:ColumnSizes.narrow},{name:'content'}]">
             <template #content>
-                <component :is="currentComponent"/>
+                <div style="overflow-y:auto;height:calc(100vh - var(--bulma-column-gap) - var(--bulma-column-gap));">
+                    <component :is="currentComponent"/>
+                </div>
             </template>
             <template #menu>
                 <Box>
@@ -36,6 +38,7 @@
         ColumnContainerModifiers, ColumnContainer, ColumnSizes, BorderTypes, Menu, MenuList,
         Title, Select, Box
      } from 'components';
+    import { Config } from 'mixins';
     import { Locked, ProgressMessage, Message, ErrorMessage, ClearProgress, Unlock, Constants} from 'mixins';
     import { onMounted, shallowRef, computed, provide, ref } from 'vue';
     import dashboard from './screens/dashboard.vue';
@@ -78,7 +81,7 @@
         }
     ];
 
-    const currentNamespace = ref(null);
+    const currentNamespace = ref(Config.defaultNamespace);
 
     provide('FontAwesomeCDN','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/');
     provide('IconSet', 'solid');

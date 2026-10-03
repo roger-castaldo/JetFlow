@@ -99,6 +99,7 @@ public class QueryTests
             Assert.AreEqual(WorkflowStepTypes.Action, workflow.Steps[0].Type);
             Assert.AreEqual(NameHelper.GetActivityName<AwaitableActivity>().rawName, workflow.Steps[0].Name);
             Assert.IsNull(workflow.Steps[0].EndTime);
+            Assert.IsNotNull(workflow.Options);
         }
         workflowQuery = await observationConnection.QueryWorkflowAsync(instanceNamespace, "Observable Workflow With No Input");
         await foreach (var workflow in workflowQuery)

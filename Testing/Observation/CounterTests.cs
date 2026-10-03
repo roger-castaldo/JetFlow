@@ -182,7 +182,7 @@ public class CounterTests
             Assert.AreEqual(BigInteger.Zero, counter.Value);
             var counterValue = await observationConnection.GetActiveActivityCountAsync(input);
             Assert.AreEqual(BigInteger.Zero, counterValue);
-            await context.ExecuteActivityAsync<EmptyActivity, string>(new(input??string.Empty));
+            await context.ExecuteActivityAsync<EmptyActivity, string?>(new(input));
             counters = await observationConnection.GetActiveActivityCountAsync();
             Assert.IsNotEmpty(counters);
             Assert.HasCount(1, counters);

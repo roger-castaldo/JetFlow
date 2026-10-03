@@ -15,16 +15,16 @@ internal partial class ServiceConnection
         configData ??= InternalsSerializer.SerializeWorkflowOptions(await GetWorkflowOptions(cleanedName));
         await connection.PublishMessagesAsync([
             new InternalNatsConnection.PublishMessage(
-                configData,
-                subjectMapper.WorkflowConfigure(cleanedName, id.ToString()),
-                new(headers.ToDictionary()),
-                $"{cleanedName}-{id}-configure"
-            ),
-            new InternalNatsConnection.PublishMessage(
                 data,
                 subjectMapper.WorkflowStart(cleanedName, id.ToString()),
                 new(MetaDataHelper.EncodeMetaData(metaData, headers).ToDictionary()),
                 $"{cleanedName}-{id}-start"
+            ),
+            new InternalNatsConnection.PublishMessage(
+                configData,
+                subjectMapper.WorkflowConfigure(cleanedName, id.ToString()),
+                new(headers.ToDictionary()),
+                $"{cleanedName}-{id}-configure"
             )
         ], cancellationToken);
         return id;
@@ -77,7 +77,7 @@ internal partial class ServiceConnection
         using var activity = TraceHelper.StartDelay(message);
         await connection.PublishMessagesAsync([
             new InternalNatsConnection.PublishMessage(
-                [],
+                System.Text.UTF8Encoding.UTF8.GetBytes(delay.ToString()),
                 subjectMapper.WorkflowDelayStart(message.WorkflowSubjectName, message.WorkflowId),
                 message.InjectHeaders(null),
                 $"{message.WorkflowSubjectName}-{message.WorkflowId}-{id}-delaystart"

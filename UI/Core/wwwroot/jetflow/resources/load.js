@@ -3,6 +3,6 @@ import { setSkin } from 'components';
 import { createApp } from 'vue';
 import App from 'app';
 
-setSkin('lumen');
+setSkin(Config.skin.toLowerCase());
 
 createApp(App).mount('#body');

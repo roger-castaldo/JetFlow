@@ -14,12 +14,12 @@ internal class BigIntegerConverter
         {
             // Read raw number text if possible or use standard parsing
             if (reader.TryGetInt64(out long lVal)) return new BigInteger(lVal);
-            return BigInteger.Parse(reader.GetString(), NumberFormatInfo.InvariantInfo);
+            return BigInteger.Parse(reader.GetString()!, NumberFormatInfo.InvariantInfo);
         }
 
         if (reader.TokenType == JsonTokenType.String)
         {
-            string str = reader.GetString();
+            string str = reader.GetString()!;
             if (BigInteger.TryParse(str, NumberFormatInfo.InvariantInfo, out BigInteger result))
             {
                 return result;

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace JetFlow.Interfaces;
+﻿namespace JetFlow.Interfaces;
 
 /// <summary>
 /// Represents a materialized, paged collection of active workflows with a marker

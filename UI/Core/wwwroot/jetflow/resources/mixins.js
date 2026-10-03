@@ -1,4 +1,5 @@
 ﻿import { readonly, shallowRef, nextTick, watch, computed, defineComponent, cloneVNode } from 'vue';
+import {GetConfig} from 'services';
 
 export const css = (val) => {
     if (!Array.isArray(val)) {
@@ -76,9 +77,12 @@ window.addEventListener("resize", () => {
     _isDesktop.value = window.matchMedia(desktopQuery).matches;
 });
 
+let config = await GetConfig();
+
 export const Config = readonly({
     IsMobile: readonly(_isMobile),
-    IsDesktop: readonly(_isDesktop)
+    IsDesktop: readonly(_isDesktop),
+    ...config
 });
 export const Locked = computed(() => _locks.value!==-1);
 export const ProgressMessage = readonly(_progressMessage);
@@ -151,5 +155,6 @@ export const SlotRef = defineComponent({
 });
 
 export const Constants = {
-    namespaceName: 'namespace'
+    namespaceName: 'namespace',
+    timeFormatter: new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' })
 };

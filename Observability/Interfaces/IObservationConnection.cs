@@ -1,7 +1,6 @@
 ﻿using JetFlow.Data;
 using System.Numerics;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace JetFlow.Interfaces;
 
@@ -11,7 +10,7 @@ namespace JetFlow.Interfaces;
 /// counters, manage observed namespaces, and subscribe to periodic performance
 /// records.
 /// </summary>
-public interface IObservationConnection
+public interface IObservationConnection : IAsyncDisposable
 {
     /// <summary>
     /// Gets the current active workflow counts grouped by a performance counter key.
@@ -142,7 +141,7 @@ public interface IObservationConnection
     /// <param name="lastOffset">The offset of the last workflow instance from the previous page.</param>
     /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
     /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
-    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, int take, ulong lastOffset=0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null)
+    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, uint take, ulong lastOffset=0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null)
         where TWorkflow : class, IWorkflow;
 
     /// <summary>
@@ -154,7 +153,7 @@ public interface IObservationConnection
     /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
     /// <param name="checkArguement">Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned.</param>
     /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
-    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, int take, ulong lastOffset = 0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<TInput, bool>? checkArguement = null)
+    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, uint take, ulong lastOffset = 0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<TInput, bool>? checkArguement = null)
         where TWorkflow : class, IWorkflow<TInput>;
     /// <summary>
     /// Creates a query that enumerates active workflows of the specified workflow type with a strongly-typed input.
@@ -166,7 +165,7 @@ public interface IObservationConnection
     /// <param name="checkMetaData">Optional predicate to filter workflows based on their metadata. The predicate receives the metadata dictionary or <c>null</c>.</param>
     /// <param name="checkArguement">Optional predicate to filter the workflow input. If provided, only workflows whose input satisfies the predicate are returned.</param>
     /// <returns>An <see cref="IWorkflowQuery"/> that yields matching <see cref="ActiveWorkflow"/> instances.</returns>
-    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync(string? workflowNamespace, string workflowName, int take, ulong lastOffset = 0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<JsonElement, bool>? checkArguement = null);
+    ValueTask<IPagedWorkflowQuery> QueryWorkflowAsync(string? workflowNamespace, string workflowName, uint take, ulong lastOffset = 0, Func<Dictionary<string, string[]>?, bool>? checkMetaData = null, Func<JsonElement, bool>? checkArguement = null);
 
     /// <summary>
     /// Loads all active workflows of the specified workflow type in the optional namespace into a materialized collection.

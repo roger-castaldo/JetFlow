@@ -61,6 +61,8 @@ internal class WorkflowContext
             if (!add && startMessage!=null)
                 break;
         }
+        if (startMessage==null)
+            throw new UnableToLocateStartMessageException(message.ActivityName??message.ActivitySubjectName!, message.WorkflowName, message.WorkflowId);
         return new(serviceConnection, subjectMapper, messageSerializer, metricsHelper,
             message, msgs.ToArray(), await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, startMessage!, CancellationToken.None), options!);
     }

@@ -1,7 +1,7 @@
 
 DO $$ 
 BEGIN
-    CREATE TYPE "performance_aggregation_types" AS ENUM ('1Minute', '5Minute', '1Hour', '1Day');
+    CREATE TYPE "performance_aggregation_types" AS ENUM ('OneMinute', 'FiveMinute', 'OneHour', 'OneDay');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS "archived_workflow_steps" (
     "id" uuid NOT NULL,
     "workflow_id" uuid NOT NULL,
     "namespace_id" uuid NOT NULL,
-    "step_id" bigint NOT NULL,
+    "step_id" int NOT NULL,
     "step_type" workflow_step_types NOT NULL,
     "step_index" bigint,
     "activity_id" uuid,
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS "archived_workflow_step_retries" (
     "id" uuid NOT NULL,
     "workflow_id" uuid NOT NULL,
     "namespace_id" uuid NOT NULL,
-    "step_id" bigint NOT NULL,
+    "step_id" int NOT NULL,
     "retry_index" integer NOT NULL,
     "retry_type" workflow_retry_types NOT NULL,
     "time_stamp" timestamp NOT NULL,
@@ -189,15 +189,15 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
 	DELETE FROM workflow_performance WHERE 
-		( aggregation_type = '1Minute' AND bucket_start < NOW() - INTERVAL '3 days' )
-		OR ( aggregation_type = '5Minute' AND bucket_start < NOW() - INTERVAL '15 days' )
-		OR ( aggregation_type = '1Hour' AND bucket_start < NOW() - INTERVAL '30 days' )
-		OR ( aggregation_type = '1Day' AND bucket_start < NOW() - INTERVAL '365 days' );
+		( aggregation_type = 'OneMinute' AND bucket_start < NOW() - INTERVAL '3 days' )
+		OR ( aggregation_type = 'FiveMinute' AND bucket_start < NOW() - INTERVAL '15 days' )
+		OR ( aggregation_type = 'OneHour' AND bucket_start < NOW() - INTERVAL '30 days' )
+		OR ( aggregation_type = 'OneDay' AND bucket_start < NOW() - INTERVAL '365 days' );
 	DELETE FROM activity_performance WHERE 
-		( aggregation_type = '1Minute' AND bucket_start < NOW() - INTERVAL '3 days' )
-		OR ( aggregation_type = '5Minute' AND bucket_start < NOW() - INTERVAL '15 days' )
-		OR ( aggregation_type = '1Hour' AND bucket_start < NOW() - INTERVAL '30 days' )
-		OR ( aggregation_type = '1Day' AND bucket_start < NOW() - INTERVAL '365 days' );
+		( aggregation_type = 'OneMinute' AND bucket_start < NOW() - INTERVAL '3 days' )
+		OR ( aggregation_type = 'FiveMinute' AND bucket_start < NOW() - INTERVAL '15 days' )
+		OR ( aggregation_type = 'OneHour' AND bucket_start < NOW() - INTERVAL '30 days' )
+		OR ( aggregation_type = 'OneDay' AND bucket_start < NOW() - INTERVAL '365 days' );
 END;
 $$;
 
@@ -395,7 +395,7 @@ CREATE OR REPLACE PROCEDURE "add_archived_workflow_step" (
     IN p_id uuid ,
     IN p_namespace character varying ,
     IN p_workflow character varying ,
-    IN p_step_id bigint ,
+    IN p_step_id int ,
     IN p_step_type workflow_step_types ,
     IN p_step_index bigint,
     IN p_step_name character varying(512),

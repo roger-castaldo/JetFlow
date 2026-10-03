@@ -74,6 +74,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                 await HandleWorkflowEventAsync(context);
                 isCompleted=true;
             }
+            catch (UnableToLocateStartMessageException) { /* if this occurs the system potentially has already purged the workflow and the activity was missed */}
             catch (WorkflowSuspendedException)
             {
                 // handle workflow suspension by doing nothing

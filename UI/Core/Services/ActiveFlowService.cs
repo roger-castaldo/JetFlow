@@ -1,6 +1,7 @@
 ﻿using JetFlow.Interfaces;
 using JetFlow.UI.Data;
 using JetFlow.UI.Interfaces;
+using System.Text.Json;
 
 namespace JetFlow.UI.Services;
 
@@ -44,4 +45,7 @@ internal class ActiveFlowService(
         => observationConnection.GetWorkflowServiceabilityAsync(workflowNamespace);
     ValueTask<IEnumerable<NamedServiceabilityDetails>> IActiveFlowService.GetActivityServiceability(string? workflowNamespace)
         => observationConnection.GetActivityServiceabilityAsync(workflowNamespace);
+
+    ValueTask<IPagedWorkflowQuery> IActiveFlowService.QueryActiveFlowsAsync(string? workflowNamespace, string workflowName, uint take, ulong lastOffset, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement)
+        => observationConnection.QueryWorkflowAsync(workflowNamespace, workflowName, take, lastOffset, checkMetaData, checkArguement);
 }

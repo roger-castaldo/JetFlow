@@ -1,74 +1,21 @@
 ﻿using JetFlow.Data;
+using JetFlow.UI.dto;
+using JetFlow.UI.Helpers;
 using JetFlow.UI.Interfaces;
 using Npgsql;
 using System.Text.Json;
 
 namespace JetFlow.UI;
 
+/// <summary>
+/// Represents a PostgreSQL database connection for JetFlow UI, implementing the IDbConnection and IAsyncDisposable interfaces.
+/// </summary>
+/// <param name="connectionString">The connection string to the PostgreSQL database</param>
 public class PostgresqlDbConnection(string connectionString) 
-    : IDbConnection
+    : IDbConnection, IAsyncDisposable
 {
-    private record SqlCommand(string Command, NpgsqlParameter[] Arguments);
-
-    private async ValueTask ExecuteCommands(IEnumerable<SqlCommand> commands)
-    {
-        await using var dataSource = NpgsqlDataSource.Create(connectionString);
-        await using var connection = await dataSource.OpenConnectionAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
-        await using var batch = connection.CreateBatch();
-        batch.Transaction = transaction;
-        foreach(var comm in commands)
-        {
-            var command = new NpgsqlBatchCommand(comm.Command);
-            foreach (var arg in comm.Arguments)
-                command.Parameters.Add(arg);
-            batch.BatchCommands.Add(command);
-        }
-        try
-        {
-            await batch.ExecuteNonQueryAsync();
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
-    }
-
-    private ValueTask ExecuteCommand(string sql, params NpgsqlParameter[] arguments)
-        => ExecuteCommands([new SqlCommand(sql, arguments)]);
-
-    private async ValueTask<IEnumerable<IEnumerable<Dictionary<string,object>>>> ExecuteReaders(IEnumerable<SqlCommand> commands)
-    {
-        await using var dataSource = NpgsqlDataSource.Create(connectionString);
-        IEnumerable<Dictionary<string, object>>[] results = new IEnumerable<Dictionary<string, object>>[commands.Count()];
-        var idx = 0;
-        foreach(var comm in commands)
-        {
-            List<Dictionary<string, object>> rows = [];
-            var command = dataSource.CreateCommand(comm.Command);
-            foreach (var arg in comm.Arguments)
-                command.Parameters.Add(arg);
-            await using var reader = await command.ExecuteReaderAsync();
-            while(await reader.ReadAsync())
-            {
-                var row = new Dictionary<string, object>();
-                for(var x = 0; x<reader.FieldCount; x++)
-                {
-                    if (!reader.IsDBNull(x))
-                        row.Add(reader.GetName(x), reader.GetValue(x));
-                }
-                rows.Add(row);
-            }
-            results[idx] = rows;
-            idx++;
-        }
-        return results;
-    }
-
-    private async ValueTask<IEnumerable<Dictionary<string, object>>> ExecuteReader(SqlCommand command)
-        => (await ExecuteReaders([command])).First();
+    private readonly LatencyAggregator latencyAggregator = new(connectionString);
+    private readonly QueryHelper queryHelper = new(connectionString);
 
     async ValueTask IDbConnection.InitAsync()
     {
@@ -90,74 +37,75 @@ public class PostgresqlDbConnection(string connectionString)
             await transaction.RollbackAsync();
             throw;
         }
+        latencyAggregator.Start();
     }
 
     async ValueTask<IEnumerable<string?>> IDbConnection.ListNamespacesAsync()
     {
-        var queryResults = await ExecuteReader(new(@"SELECT ""name"" FROM ""namespaces"" WHERE ""enabled"" = @enabled;", [new("@enabled", true)]));
-        return queryResults.Select(row => (string?)row["name"]);
+        var queryResults = await queryHelper.ExecuteReader(new(@"SELECT ""name"" FROM ""namespaces"" WHERE ""enabled"" = @enabled;", [new("@enabled", true)]));
+        return queryResults?.Select(row => (string?)row["name"])?? [];
     }
 
     ValueTask IDbConnection.RegisterNamespaceAsync(string? namespaceName)
-    => ExecuteCommand("CALL register_namespace(@namespace)", new NpgsqlParameter("@namespace", namespaceName));
+    => queryHelper.ExecuteCommand("CALL register_namespace(@namespace)", new NpgsqlParameter("@namespace", namespaceName));
 
     ValueTask IDbConnection.StoreArchiveAsync(ArchivedWorkflow archive, string? namespaceName)
-    => ExecuteCommands([
+    => queryHelper.ExecuteCommands([
         new("CALL create_archived_workflow(@id, @namespace, @workflow, @scheduler_id, @started_at, @finished_at, @is_successful, @error_message, @arguments)",[
-            new("@id", archive.ID),
-            new("@namespace", namespaceName),
-            new("@workflow", archive.Name),
-            new("@scheduler_id", archive.SchedulerId),
-            new("@started_at", archive.StartedAt),
-            new("@finished_at", archive.FinishedAt),
-            new("@is_successful", archive.IsSuccessful),
-            new("@error_message", archive.ErrorMessage),
-            new("@arguments", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = (archive.Arguments is null ? null : JsonSerializer.Serialize(archive.Arguments)) }
+            QueryHelper.CreateParameter("@id", archive.ID),
+            QueryHelper.CreateParameter("@namespace", namespaceName),
+            QueryHelper.CreateParameter("@workflow", archive.Name),
+            QueryHelper.CreateParameter("@scheduler_id", archive.SchedulerId),
+            QueryHelper.CreateParameter("@started_at", archive.StartedAt),
+            QueryHelper.CreateParameter("@finished_at", archive.FinishedAt),
+            QueryHelper.CreateParameter("@is_successful", archive.IsSuccessful),
+            QueryHelper.CreateParameter("@error_message", archive.ErrorMessage),
+            QueryHelper.CreateJsonParameter("@arguments", archive.Arguments)
         ]),
-        new(@"CALL set_archived_workflow_options(@id, @namespace, @workflow, @completion_action, @purge_delay, @error_on_activity_timeout, @error_on_activity_failure)", [
-            new("@id", archive.ID),
-            new("@namespace", namespaceName),
-            new("@workflow", archive.Name),
-            new("@completion_action", archive.Options.CompletionAction),
-            new("@purge_delay", archive.Options.PurgeDelay?.ToString()),
-            new("@error_on_activity_timeout", archive.Options.ErrorOnActivityFailure),
-            new("@error_on_activity_failure", archive.Options.ErrorOnActivityTimeout)
+        new(@"CALL set_archived_workflow_options(@id, @namespace, @workflow, @completion_action::workflow_completion_actions, @purge_delay, @error_on_activity_timeout, @error_on_activity_failure)", [
+            QueryHelper.CreateParameter("@id", archive.ID),
+            QueryHelper.CreateParameter("@namespace", namespaceName),
+            QueryHelper.CreateParameter("@workflow", archive.Name),
+            QueryHelper.CreateParameter("@completion_action", archive.Options.CompletionAction),
+            QueryHelper.CreateParameter("@purge_delay", archive.Options.PurgeDelay?.ToString()),
+            QueryHelper.CreateParameter("@error_on_activity_timeout", archive.Options.ErrorOnActivityFailure),
+            QueryHelper.CreateParameter("@error_on_activity_failure", archive.Options.ErrorOnActivityTimeout)
         ]),
         .. (archive.MetaData?.SelectMany(pair=>
             pair.Value.Select((value,index)=> new SqlCommand("CALL add_archived_workflow_metadata_entry(@id, @namespace, @workflow, @key_name, @value_index, @value)",[
-                    new("@id", archive.ID),
-                    new("@namespace", namespaceName),
-                    new("@workflow", archive.Name),
-                    new("@key_name", pair.Key),
-                    new("@value_index", index),
-                    new("@value", value)
+                    QueryHelper.CreateParameter("@id", archive.ID),
+                    QueryHelper.CreateParameter("@namespace", namespaceName),
+                    QueryHelper.CreateParameter("@workflow", archive.Name),
+                    QueryHelper.CreateParameter("@key_name", pair.Key),
+                    QueryHelper.CreateParameter("@value_index", index),
+                    QueryHelper.CreateParameter("@value", value)
                 ])
             ))??[]),
         .. archive.Steps.SelectMany<WorkflowStep, SqlCommand>((step, index)=>
             [
-                new SqlCommand("CALL add_archived_workflow_step(@id, @namespace, @workflow, @step_id, @step_type, @step_index, @step_name, @start_time, @end_time, @input, @result_status, @error_message, @result)", [
-                    new("@id", archive.ID),
-                    new("@namespace", namespaceName),
-                    new("@workflow", archive.Name),
-                    new("@step_id", index),
-                    new("@step_type", step.Type),
-                    new("@step_index", step.Index),
-                    new("@step_name", step.Name),
-                    new("@start_time", step.StartTime),
-                    new("@end_time", step.EndTime),
-                    new("@input", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = (step.Input is null ? null : JsonSerializer.Serialize(step.Input)) },
-                    new("@result_status", step.Status),
-                    new("@error_message", step.ErrorMessage),
-                    new("@result", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = (step.Result is null ? null : JsonSerializer.Serialize(step.Result)) }
+                new SqlCommand("CALL add_archived_workflow_step(@id, @namespace, @workflow, @step_id, @step_type::workflow_step_types, @step_index, @step_name, @start_time, @end_time, @input, @result_status::workflow_completion_actions, @error_message, @result)", [
+                    QueryHelper.CreateParameter("@id", archive.ID),
+                    QueryHelper.CreateParameter("@namespace", namespaceName),
+                    QueryHelper.CreateParameter("@workflow", archive.Name),
+                    QueryHelper.CreateParameter("@step_id", index),
+                    QueryHelper.CreateParameter("@step_type", step.Type),
+                    QueryHelper.CreateParameter("@step_index", step.Index),
+                    QueryHelper.CreateParameter("@step_name", step.Name),
+                    QueryHelper.CreateParameter("@start_time", step.StartTime),
+                    QueryHelper.CreateParameter("@end_time", step.EndTime),
+                    QueryHelper.CreateJsonParameter("@input", step.Input),
+                    QueryHelper.CreateParameter("@result_status", step.Status),
+                    QueryHelper.CreateParameter("@error_message", step.ErrorMessage),
+                    QueryHelper.CreateJsonParameter("@result", step.Result)
                 ]),
-                .. (step.Retries?.Select((retry, rindex)=>new SqlCommand("CALL add_archived_workflow_step_retry(@id, @namespace, @workflow, @step_id, @retry_index, @retry_type, @time_stamp)",[
-                        new("@id", archive.ID),
-                        new("@namespace", namespaceName),
-                        new("@workflow", archive.Name),
-                        new("@step_id", index),
-                        new("@retry_index", rindex),
-                        new("@retry_type", retry.RetryType),
-                        new("@time_stamp", retry.Timestamp)
+                .. (step.Retries?.Select((retry, rindex)=>new SqlCommand("CALL add_archived_workflow_step_retry(@id, @namespace, @workflow, @step_id, @retry_index, @retry_type::workflow_retry_types, @time_stamp)",[
+                        QueryHelper.CreateParameter("@id", archive.ID),
+                        QueryHelper.CreateParameter("@namespace", namespaceName),
+                        QueryHelper.CreateParameter("@workflow", archive.Name),
+                        QueryHelper.CreateParameter("@step_id", index),
+                        QueryHelper.CreateParameter("@retry_index", rindex),
+                        QueryHelper.CreateParameter("@retry_type", retry.RetryType),
+                        QueryHelper.CreateParameter("@time_stamp", retry.Timestamp)
                     ]))
                     ??[])
             ]
@@ -165,33 +113,33 @@ public class PostgresqlDbConnection(string connectionString)
     ]);
 
     ValueTask IDbConnection.UnregisterNamespaceAsync(string? namespaceName)
-        => ExecuteCommand("CALL unregister_namespace(@namespace)", new NpgsqlParameter("@namespace", namespaceName));
+        => queryHelper.ExecuteCommand("CALL unregister_namespace(@namespace)", new NpgsqlParameter("@namespace", namespaceName));
 
     ValueTask IDbConnection.StoreActivityPerformanceRecordAsync(string? namespaceName, ActivityPerformanceRecord record)
-        => ExecuteCommand("CALL add_activity_performance_entry(@window, @namespace,@activity,@started,@completed,@failed,@timed_out,@queue_latencies,@durations)", [
-                new("@window", record.Window),
-                new("@namespace", namespaceName),
-                new("@activity", record.Name),
-                new("@started", record.Started),
-                new("@completed", record.Completed),
-                new("@failed", record.Failed),
-                new("@timed_out", record.TimedOut),
-                new("@queue_latencies", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.QueueLatencies) },
-                new("@durations", NpgsqlTypes.NpgsqlDbType.Jsonb){Value = JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.Durations) }
+        => queryHelper.ExecuteCommand("CALL add_activity_performance_entry(@window, @namespace,@activity,@started,@completed,@failed,@timed_out,@queue_latencies,@durations)", [
+                QueryHelper.CreateParameter("@window", record.Window),
+                QueryHelper.CreateParameter("@namespace", namespaceName),
+                QueryHelper.CreateParameter("@activity", record.Name),
+                QueryHelper.CreateParameter("@started", record.Started),
+                QueryHelper.CreateParameter("@completed", record.Completed),
+                QueryHelper.CreateParameter("@failed", record.Failed),
+                QueryHelper.CreateParameter("@timed_out", record.TimedOut),
+                QueryHelper.CreateJsonParameter("@queue_latencies", record.QueueLatencies),
+                QueryHelper.CreateJsonParameter("@durations", record.Durations)
             ]);
     ValueTask IDbConnection.StoreWorkflowPerformanceRecordAsync(string? namespaceName, WorkflowPerformanceRecord record)
-        => ExecuteCommand("CALL add_workflow_performance_entry(@window, @namespace,@workflow,@started,@completed,@failed,@purged,@queue_latencies)", [
-                new("@window", record.Window),
-                new("@namespace", namespaceName),
-                new("@workflow", record.Name),
-                new("@started", record.Started),
-                new("@completed", record.Completed),
-                new("@failed", record.Failed),
-                new("@purged", record.Purged),
-                new("@queue_latencies", NpgsqlTypes.NpgsqlDbType.Jsonb){Value =  JsonSerializer.Serialize<IEnumerable<TimeSpan>>(record.QueueLatencies) }
+        => queryHelper.ExecuteCommand("CALL add_workflow_performance_entry(@window, @namespace,@workflow,@started,@completed,@failed,@purged,@queue_latencies)", [
+                QueryHelper.CreateParameter("@window", record.Window),
+                QueryHelper.CreateParameter("@namespace", namespaceName),
+                QueryHelper.CreateParameter("@workflow", record.Name),
+                QueryHelper.CreateParameter("@started", record.Started),
+                QueryHelper.CreateParameter("@completed", record.Completed),
+                QueryHelper.CreateParameter("@failed", record.Failed),
+                QueryHelper.CreateParameter("@purged", record.Purged),
+                QueryHelper.CreateJsonParameter("@queue_latencies", record.QueueLatencies)
             ]);
     async ValueTask<IEnumerable<ActivityPerformanceRecord>> IDbConnection.PeakActivityPerformanceDataAsync(string? namespaceName)
-        => (await ExecuteReader(new(
+        => (await queryHelper.ExecuteReader(new(
                 @"
 SELECT 
     apr.window, 
@@ -220,9 +168,9 @@ INNER JOIN ""namespaces"" n
 WHERE n.name = @namespaceName
 GROUP BY apr.window, a.name
 ORDER BY apr.window DESC
-                ", [new NpgsqlParameter("@namespaceName", namespaceName)]
-            ))).Select(row => new ActivityPerformanceRecord(
-                DateTimeOffset.Parse(row["window"].ToString()),
+                ", [QueryHelper.CreateParameter("@namespaceName", namespaceName)]
+            )))?.Select(row => new ActivityPerformanceRecord(
+                DateTimeOffset.Parse(row["window"].ToString()!),
                 (string)row["activity_name"],
                 (long)row["started"],
                 (long)row["completed"],
@@ -230,9 +178,9 @@ ORDER BY apr.window DESC
                 (long)row["timed_out"],
                 JsonSerializer.Deserialize<IEnumerable<TimeSpan>>((string)row["queue_latencies"])!,
                 JsonSerializer.Deserialize<IEnumerable<TimeSpan>>((string)row["durations"])!)
-            );
+            )?? [];
     async ValueTask<IEnumerable<WorkflowPerformanceRecord>> IDbConnection.PeakWorkflowPerformanceDataAsync(string? namespaceName)
-    => (await ExecuteReader(new(
+    => (await queryHelper.ExecuteReader(new(
                 @"
 SELECT wpr.window, 
     w.name AS ""workflow_name"",
@@ -253,14 +201,115 @@ INNER JOIN ""namespaces"" n
 WHERE n.name = @namespaceName
 GROUP BY wpr.window, w.name
 ORDER BY wpr.window DESC
-                ", [new NpgsqlParameter("@namespaceName", namespaceName)]
-            ))).Select(row => new WorkflowPerformanceRecord(
-                DateTimeOffset.Parse(row["window"].ToString()),
+                ", [QueryHelper.CreateParameter("@namespaceName", namespaceName)]
+            )))?.Select(row => new WorkflowPerformanceRecord(
+                DateTimeOffset.Parse(row["window"].ToString()!),
                 (string)row["workflow_name"],
                 (long)row["started"],
                 (long)row["completed"],
                 (long)row["failed"],
                 (long)row["purged"],
                 JsonSerializer.Deserialize<IEnumerable<TimeSpan>>((string)row["queue_latencies"])!)
-            );
+            )?? [];
+
+    private PerformanceAggregationType CalculateAggregationType(DateTime startTime, DateTime endTime)
+        => (DateTime.Now.Subtract(startTime).TotalDays, endTime.Subtract(startTime).TotalDays) switch {
+            var (historyDays, diffDays) when historyDays <= 3 && diffDays <= 0.5 => PerformanceAggregationType.OneMinute,
+            var (historyDays, diffDays) when historyDays <= 3 && diffDays <= 1 => PerformanceAggregationType.FiveMinute,
+            var (historyDays, _) when historyDays <= 3 => PerformanceAggregationType.OneHour,
+            var (historyDays, diffDays) when historyDays <= 15 && diffDays <= 1 => PerformanceAggregationType.FiveMinute,
+            var (historyDays, diffDays) when historyDays <= 15 && diffDays <= 3 => PerformanceAggregationType.OneHour,
+            var (historyDays, _) when historyDays <= 15 => PerformanceAggregationType.OneDay,
+            var (historyDays, diffDays) when historyDays <= 30 && diffDays <= 3 => PerformanceAggregationType.OneHour,
+            _ => PerformanceAggregationType.OneDay
+        };
+
+async ValueTask<IEnumerable<WorkflowPerformanceSample>> IDbConnection.ExtractWorkflowPerformanceDataAsync(string? namespaceName, string workflowName, DateTime startTime, DateTime endTime)
+        => (await ExtractWorkflowPerformanceAsync(namespaceName, startTime, endTime, workflowName))
+                .Cast<WorkflowPerformanceSample>();
+
+    ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> IDbConnection.ExtractWorkflowPerformanceDataAsync(string? namespaceName, DateTime startTime, DateTime endTime)
+        => ExtractWorkflowPerformanceAsync(namespaceName, startTime, endTime);
+
+    private async ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> ExtractWorkflowPerformanceAsync(string? namespaceName, DateTime startTime, DateTime endTime, string? workflowName = null)
+        => (await queryHelper.ExecuteReader(new(
+                @"SELECT wf.name, wp.started, wp.completed, wp.failed, wp.purged, wp.queue_latency_digest 
+FROM ""workflow_performance"" wp 
+INNER JOIN ""workflows"" wf 
+    ON wp.namespace_id = wf.namespace_id 
+    AND wp.workflow_id = wf.id 
+INNER JOIN ""namespaces"" n
+    ON wp.namespace_id = n.id
+WHERE wp.bucket_start >= @startTime
+AND wp.bucket_start <= @endTime 
+AND wp.aggregation_type = @aggregationType::performance_aggregation_types
+AND (n.name = @namespace OR (@namespace IS NULL AND n.name IS NULL))
+AND (@workflowName IS NULL OR wf.name = @workflowName)
+ORDER BY wp.bucket_start ASC", 
+                [
+                    QueryHelper.CreateParameter("@startTime", startTime),
+                    QueryHelper.CreateParameter("@endTime", endTime),
+                    QueryHelper.CreateParameter("@aggregationType", CalculateAggregationType(startTime, endTime)),
+                    QueryHelper.CreateParameter("@namespace", namespaceName),
+                    QueryHelper.CreateParameter("@workflowName", workflowName)
+                ]
+            )))?.Select(result=> {
+                var sketch = TimespanSketch.ReadFromByte((byte[])result["queue_latency_digest"]);
+                return new NamedWorkflowPerformanceSample(
+                    (string)result["name"],
+                    (long)result["started"],
+                    (long)result["completed"],
+                    (long)result["failed"],
+                    (long)result["purged"],
+                    new(sketch.GetQuantile(0.50), sketch.GetQuantile(0.95), sketch.GetQuantile(0.99))
+                );
+            })?? [];
+
+    async ValueTask<IEnumerable<ActivityPerformanceSample>> IDbConnection.ExtractActivityPerformanceDataAsync(string? namespaceName, string activityName, DateTime startTime, DateTime endTime)
+        => (await ExtractActivityPerformanceAsync(namespaceName, startTime, endTime, activityName))
+            .Cast<ActivityPerformanceSample>();
+
+    ValueTask<IEnumerable<NamedActivityPerformanceSample>> IDbConnection.ExtractActivityPerformanceDataAsync(string? namespaceName, DateTime startTime, DateTime endTime)
+        => ExtractActivityPerformanceAsync(namespaceName, startTime, endTime);
+
+    private async ValueTask<IEnumerable<NamedActivityPerformanceSample>> ExtractActivityPerformanceAsync(string? namespaceName, DateTime startTime, DateTime endTime, string? activityName = null)
+        => (await queryHelper.ExecuteReader(new(
+                @"SELECT a.name, ap.started, ap.completed, ap.failed, ap.timed_out, ap.queue_latency_digest, ap.duration_digest
+FROM ""activity_performance"" ap 
+INNER JOIN ""activities"" a
+    ON ap.namespace_id = a.namespace_id 
+    AND ap.activity_id = a.id 
+INNER JOIN ""namespaces"" n
+    ON ap.namespace_id = n.id
+WHERE ap.bucket_start >= @startTime
+AND ap.bucket_start <= @endTime 
+AND ap.aggregation_type = @aggregationType::performance_aggregation_types
+AND (n.name = @namespace OR (@namespace IS NULL AND n.name IS NULL))
+AND (@activityName IS NULL OR a.name = @activityName)
+ORDER BY ap.bucket_start ASC",
+                [
+                    QueryHelper.CreateParameter("@startTime", startTime),
+                    QueryHelper.CreateParameter("@endTime", endTime),
+                    QueryHelper.CreateParameter("@aggregationType", CalculateAggregationType(startTime, endTime)),
+                    QueryHelper.CreateParameter("@namespace", namespaceName),
+                    QueryHelper.CreateParameter("@activityName", activityName)
+                ]
+            )))?.Select(result => {
+                var queueSketch = TimespanSketch.ReadFromByte((byte[])result["queue_latency_digest"]);
+                var durationSketch = TimespanSketch.ReadFromByte((byte[])result["duration_digest"]);
+                return new NamedActivityPerformanceSample(
+                    (string)result["name"],
+                    (long)result["started"],
+                    (long)result["completed"],
+                    (long)result["failed"],
+                    (long)result["timed_out"],
+                    new(queueSketch.GetQuantile(0.50), queueSketch.GetQuantile(0.95), queueSketch.GetQuantile(0.99)),
+                    new(durationSketch.GetQuantile(0.50), durationSketch.GetQuantile(0.95), durationSketch.GetQuantile(0.99))
+                );
+            })?? [];
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        await ((IAsyncDisposable)latencyAggregator).DisposeAsync();
+    }
 }

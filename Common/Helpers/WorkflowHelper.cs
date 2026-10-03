@@ -21,25 +21,28 @@ internal static class WorkflowHelper
     );
 
     private static async ValueTask<ExtractedWorkflow> ExtractWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
-        string workflowName, string workflowId, CancellationToken cancellationToken)
+        EventMessage sourceMessage, CancellationToken cancellationToken)
     {
-        Guid? schedulerId = null;
+        Guid? schedulerId = (sourceMessage.WorkflowEventType == WorkflowEventTypes.Start && sourceMessage.Headers?.TryGetValue(Constants.SchedulerSourceID, out var scheduleIdString) == true && Guid.TryParse(scheduleIdString.ToString(), out var schedId) ? schedId : null);
         WorkflowOptions? options = null;
-        DateTimeOffset? start = null;
+        DateTimeOffset? start = (sourceMessage.WorkflowEventType == WorkflowEventTypes.Start ? sourceMessage.Metadata?.Timestamp : null);
         DateTimeOffset? end = null;
         WorkflowEnd? workflowEnd = null;
         List<EventMessage> events = [];
-        object? arguments = null;
+        object? arguments = (sourceMessage.WorkflowEventType == WorkflowEventTypes.Start ? await messageSerializer.DecodeAsync(sourceMessage.Data, sourceMessage.Headers) : null);
         List<WorkflowStep> steps = [];
-        Dictionary<string, string[]>? metaData = null;
+        Dictionary<string, string[]>? metaData = (sourceMessage.WorkflowEventType == WorkflowEventTypes.Start ? MetaDataHelper.ExtractMetaData(sourceMessage.Headers) : null);
         await using var query = await JetStreamHelper.QueryStreamAsync(
             jsContext,
             subjectMapper.WorkflowEventsStreamsName,
             false,
-            subjectMapper.WorkflowPurgeFilter(workflowName, workflowId)
+            (sourceMessage.WorkflowEventType == WorkflowEventTypes.Start ? (sourceMessage.Metadata?.Sequence.Stream-1)??0 : 0),
+            subjectMapper.WorkflowPurgeFilter(sourceMessage.WorkflowSubjectName, sourceMessage.WorkflowId)
         );
         await foreach (var msg in query)
         {
+            if (Equals(msg.Subject, subjectMapper.WorkflowPurged(sourceMessage.WorkflowSubjectName, sourceMessage.WorkflowId)))
+                continue;
             var eventMessage = await EventMessage.CreateMessageAsync(largeMessageStore, msg, cancellationToken);
             switch (eventMessage.WorkflowEventType!)
             {
@@ -49,7 +52,7 @@ internal static class WorkflowHelper
                 case WorkflowEventTypes.Start:
                     start = eventMessage.Metadata?.Timestamp;
                     arguments = await messageSerializer.DecodeAsync(eventMessage.Data, eventMessage.Headers);
-                    if ((eventMessage.Headers?.TryGetValue(Constants.SchedulerSourceID, out var scheduleIdString)??false) && Guid.TryParse(scheduleIdString.ToString(), out var schedId))
+                    if ((eventMessage.Headers?.TryGetValue(Constants.SchedulerSourceID, out scheduleIdString)??false) && Guid.TryParse(scheduleIdString.ToString(), out schedId))
                         schedulerId = schedId;
                     metaData = MetaDataHelper.ExtractMetaData(eventMessage.Headers);
                     break;
@@ -65,31 +68,17 @@ internal static class WorkflowHelper
                     break;
                 case WorkflowEventTypes.DelayEnd:
                     var startMessage = FindMatchingMessages(eventMessage, ref events).FirstOrDefault(e => Equals(e.WorkflowEventType, WorkflowEventTypes.DelayStart));
-                    steps.Add(new(
-                        WorkflowStepTypes.Delay,
-                        null,
-                        null,
+                    steps.Add(WorkflowStep.CreateDelayStep(
                         startMessage!.Metadata!.Value.Timestamp,
                         eventMessage!.Metadata!.Value.Timestamp,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null
-                    ));
+                        (startMessage.Data?.Length??0)>0 ? TimeSpan.Parse(UTF8Encoding.UTF8.GetString(startMessage.Data!)) : null)
+                    );
                     break;
                 case WorkflowEventTypes.Resumed:
                     var suspendMessage = FindMatchingMessages(eventMessage, ref events).FirstOrDefault(e => Equals(e.WorkflowEventType, WorkflowEventTypes.Suspended));
-                    steps.Add(new(
-                        WorkflowStepTypes.Suspended,
-                        null,
-                        null,
+                    steps.Add(WorkflowStep.CreateSuspendStep(
                         suspendMessage!.Metadata!.Value.Timestamp,
-                        suspendMessage!.Metadata!.Value.Timestamp,
-                        null,
-                        null,
-                        null,
-                        null,
+                        eventMessage!.Metadata!.Value.Timestamp,
                         (eventMessage.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Data, eventMessage.Headers) : null
                     ));
                     break;
@@ -117,16 +106,14 @@ internal static class WorkflowHelper
             switch (eventMessage.WorkflowEventType)
             {
                 case WorkflowEventTypes.DelayStart:
-                case WorkflowEventTypes.Suspended:
-                    steps.Add(new(
-                        (eventMessage.WorkflowEventType==WorkflowEventTypes.DelayStart ? WorkflowStepTypes.Delay : WorkflowStepTypes.Suspended),
-                        null,
-                        null,
+                    steps.Add(WorkflowStep.CreateDelayStep(
                         eventMessage!.Metadata!.Value.Timestamp,
                         null,
-                        null,
-                        null,
-                        null,
+                        (eventMessage.Data?.Length??0)>0 ? TimeSpan.Parse(UTF8Encoding.UTF8.GetString(eventMessage.Data!)) : null));
+                    break;
+                case WorkflowEventTypes.Suspended:
+                    steps.Add(WorkflowStep.CreateSuspendStep(
+                        eventMessage!.Metadata!.Value.Timestamp,
                         null,
                         (eventMessage.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(eventMessage.Data, eventMessage.Headers) : null
                     ));
@@ -145,7 +132,7 @@ internal static class WorkflowHelper
     public static async ValueTask<ArchivedWorkflow> ProduceArchivedWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
         EventMessage message, CancellationToken cancellationToken)
     {
-        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, message.WorkflowSubjectName, message.WorkflowId, cancellationToken);
+        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, message, cancellationToken);
         return new ArchivedWorkflow(
             Guid.Parse(message.WorkflowId),
             extractedData.SchedulerId,
@@ -164,7 +151,7 @@ internal static class WorkflowHelper
     public static async ValueTask<ActiveWorkflow> ProduceActiveWorkflowAsync(SubjectMapper subjectMapper, INatsJSContext jsContext, INatsObjStore largeMessageStore, MessageSerializer messageSerializer,
         EventMessage message, CancellationToken cancellationToken)
     {
-        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, message.WorkflowSubjectName, message.WorkflowId, cancellationToken);
+        var extractedData = await ExtractWorkflowAsync(subjectMapper, jsContext, largeMessageStore, messageSerializer, message, cancellationToken);
         return new ActiveWorkflow(
             Guid.Parse(message.WorkflowId),
             extractedData.SchedulerId,

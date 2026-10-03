@@ -13,7 +13,6 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Numerics;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
@@ -35,7 +34,7 @@ public static class ObservationConnection
     public static ValueTask<IObservationConnection> CreateInstanceAsync(ObservationConnectionOptions options)
         => ConnectionInstance.CreateAsync(options);
 
-    private class ConnectionInstance(INatsConnection connection, INatsJSContext jsContext, string groupName, bool canDisposeConnection) : IObservationConnection, IAsyncDisposable
+    private class ConnectionInstance(INatsConnection connection, INatsJSContext jsContext, string groupName, bool canDisposeConnection) : IObservationConnection
     {
         private readonly JsonSerializerOptions jsonOptions = new()
         {
@@ -322,7 +321,7 @@ public static class ObservationConnection
         async ValueTask<IWorkflowQuery> IObservationConnection.QueryWorkflowAsync(string? workflowNamespace, string workflowName, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement)
             => await CreateWorkflowAsync(workflowNamespace, workflowName, checkMetaData, checkArguement);
 
-        private static async ValueTask<IPagedWorkflowQuery> ProcessPagedQueryAsync(WorkflowQueryBase query, int take)
+        private static async ValueTask<IPagedWorkflowQuery> ProcessPagedQueryAsync(WorkflowQueryBase query, uint take)
         {
             var data = new List<ActiveWorkflow>();
             ulong offset = 0;
@@ -336,17 +335,17 @@ public static class ObservationConnection
             return new PagedWorkflowQuery(data, offset);
         }
 
-        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, int take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData)
+        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow>(string? workflowNamespace, uint take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData)
             => await ProcessPagedQueryAsync(
                 await CreateWorkflowAsync<TWorkflow>(workflowNamespace, checkMetaData, lastOffest),
                 take);
 
-        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, int take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<TInput, bool>? checkArguement)
+        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync<TWorkflow, TInput>(string? workflowNamespace, uint take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<TInput, bool>? checkArguement)
             => await ProcessPagedQueryAsync(
                 await CreateWorkflowAsync<TWorkflow, TInput>(workflowNamespace, checkMetaData, checkArguement, lastOffest),
                 take);
 
-        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync(string? workflowNamespace, string workflowName, int take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement)
+        async ValueTask<IPagedWorkflowQuery> IObservationConnection.QueryWorkflowAsync(string? workflowNamespace, string workflowName, uint take, ulong lastOffest, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement)
             => await ProcessPagedQueryAsync(
                 await CreateWorkflowAsync(workflowNamespace, workflowName, checkMetaData, checkArguement, lastOffest),
                 take);

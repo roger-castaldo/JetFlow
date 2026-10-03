@@ -74,7 +74,35 @@ public record struct WorkflowStep(
     ActivityResultStatus? Status,
     string? ErrorMessage,
     object? Result
-);
+)
+{
+    internal static WorkflowStep CreateDelayStep(DateTimeOffset startTime, DateTimeOffset? endTime, TimeSpan? delayDuration)
+        => new(
+                WorkflowStepTypes.Delay,
+                null,
+                null,
+                startTime,
+                endTime,
+                null,
+                delayDuration,
+                null,
+                null,
+                null
+            );
+    internal static WorkflowStep CreateSuspendStep(DateTimeOffset startTime, DateTimeOffset? endTime, object? resumeMessage)
+        => new(
+                WorkflowStepTypes.Suspended,
+                null,
+                null,
+                startTime,
+                endTime,
+                null,
+                resumeMessage,
+                null,
+                null,
+                null
+            );
+};
 
 /// <summary>
 /// Represents a workflow instance that is currently executing, including its metadata, execution

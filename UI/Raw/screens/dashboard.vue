@@ -75,14 +75,14 @@
                             <th>Started</th>
                             <th>Completed</th>
                             <th>Failed</th>
-                            <th>TimedOut</th>
+                            <th>Timed Out</th>
                             <th>Avg. Queue Latencies</th>
                             <th>Avg. Durations</th>
                         </tr>
                     </template>
                     <template #tbody>
                         <tr v-for="perf in activityPerformance">
-                            <td>{{ timeFormatter.format(new Date(perf.window)) }}</td>
+                            <td>{{ Constants.timeFormatter.format(new Date(perf.window)) }}</td>
                             <td>{{ perf.name }}</td>
                             <td>{{ perf.started }}</td>
                             <td>{{ perf.completed }}</td>
@@ -112,7 +112,7 @@
                     </template>
                     <template #tbody>
                         <tr v-for="perf in workflowPerformance">
-                            <td>{{ timeFormatter.format(new Date(perf.window)) }}</td>
+                            <td>{{ Constants.timeFormatter.format(new Date(perf.window)) }}</td>
                             <td>{{ perf.name }}</td>
                             <td>{{ perf.started }}</td>
                             <td>{{ perf.completed }}</td>
@@ -132,8 +132,6 @@
     import {ref, onUnmounted, inject, watch} from "vue";
     import {ColumnContainerModifiers, ColumnContainer, ColumnSizes, Card, Table} from "components";
     import {Constants} from "mixins";
-
-    const timeFormatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' });
 
     const performanceCounters = ref({
         activeWorkflows:0,
