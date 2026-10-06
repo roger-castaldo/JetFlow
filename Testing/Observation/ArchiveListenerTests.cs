@@ -78,6 +78,7 @@ public class ArchiveListenerTests
                 taskSource.TrySetResult();
             return ValueTask.FromResult(delete);
         });
+        await Task.Delay(TimeSpan.FromSeconds(10)); // small delay to ensure subscriptions are created
 
         // Assert
         var run1 = await connection.StartWorkflowAsync<EmptyActivityWorkflow>();

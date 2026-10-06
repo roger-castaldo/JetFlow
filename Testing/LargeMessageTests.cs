@@ -179,7 +179,7 @@ public class LargeMessageTests
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<LargeMessageWorkflow>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
-        Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
+        Assert.AreNotEqual(archive.StartedAt.ToString("yyyy-MM-dd HH:mm:ss.fff"), archive.FinishedAt.ToString("yyyy-MM-dd HH:mm:ss.fff"));
         Assert.IsNotEmpty(archive.Steps);
         Assert.AreEqual(start, archive.Arguments?.ToString());
         Assert.HasCount(1, archive.Steps);

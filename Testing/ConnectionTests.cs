@@ -267,7 +267,6 @@ public class ConnectionTests
             subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*")
         ]));
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, workflowConsumer.Info.Config.AckPolicy);
-        Assert.AreEqual(ConsumerConfigDeliverPolicy.New, workflowConsumer.Info.Config.DeliverPolicy);
         Assert.IsNotNull(workflowConsumer.Info.Config.Metadata);
         Assert.IsTrue(workflowConsumer.Info.Config.Metadata.TryGetValue(Constants.WorkflowNameHeader, out var workflowName) && Equals(NameHelper.GetActivityName<WorkflowWithNoInput>().rawName, workflowName));
 
@@ -285,7 +284,6 @@ public class ConnectionTests
             subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*")
         ]));
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, workflowWithInputConsumer.Info.Config.AckPolicy);
-        Assert.AreEqual(ConsumerConfigDeliverPolicy.New, workflowWithInputConsumer.Info.Config.DeliverPolicy);
         Assert.IsNotNull(workflowWithInputConsumer.Info.Config.Metadata);
         Assert.IsTrue(workflowWithInputConsumer.Info.Config.Metadata.TryGetValue(Constants.WorkflowNameHeader, out workflowName) && Equals(NameHelper.GetActivityName<WorkflowWithInput>().rawName, workflowName));
 

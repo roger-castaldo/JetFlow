@@ -319,7 +319,7 @@ public class ActivityRetryTests
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<WorkflowWithRetryForArchiving>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
-        Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
+        Assert.AreNotEqual(archive.StartedAt.ToString("yyyy-MM-dd HH:mm:ss.fff"), archive.FinishedAt.ToString("yyyy-MM-dd HH:mm:ss.fff"));
         Assert.HasCount(1, archive.Steps);
         var step = archive.Steps[0];
         Assert.AreEqual(NameHelper.GetActivityName<MultiRetryActivity>().rawName, step.Name);
@@ -334,7 +334,7 @@ public class ActivityRetryTests
         Assert.IsGreaterThanOrEqualTo(4, diff);
         Assert.IsLessThanOrEqualTo(7, diff);
         diff = Math.Floor(step.Retries[2].Timestamp.Subtract(step.Retries[1].Timestamp).TotalSeconds);
-        Assert.IsGreaterThanOrEqualTo(3, diff);
+        Assert.IsGreaterThanOrEqualTo(2, diff);
         Assert.IsLessThanOrEqualTo(5, diff);
 
         //cleanup

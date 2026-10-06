@@ -8,7 +8,11 @@ internal static class JetStreamHelper
 {
     private sealed class JetstreamQuery(INatsJSConsumer consumer, Func<INatsJSConsumer, ValueTask> deleteCallback) : IJetstreamQuery
     {
-        private const int MaxMessages = 64;
+        private static readonly NatsJSConsumeOpts consumeOpts = new()
+        {
+            MaxMsgs = 1000,
+            ThresholdMsgs = 750
+        };
         private bool disposed = false;
 
         async ValueTask IAsyncDisposable.DisposeAsync()
@@ -29,22 +33,17 @@ internal static class JetStreamHelper
 
         private async IAsyncEnumerator<INatsJSMsg<byte[]>> GetAllMessagesAsync(CancellationToken cancellationToken)
         {
-            // Fetch batches from the consumer and yield all available messages.
-            // If a fetch returns no messages, treat the query as complete and exit the enumerator.
-            while (!cancellationToken.IsCancellationRequested)
+            await consumer.RefreshAsync(cancellationToken: cancellationToken);
+            if (consumer.Info.NumPending == 0 || cancellationToken.IsCancellationRequested)
+                yield break;
+            await foreach (var msg in consumer.ConsumeAsync<byte[]>(opts: consumeOpts, cancellationToken: cancellationToken))
             {
-                var cnt = 0;
-                ulong numPending = ulong.MaxValue;
-                await foreach (var msg in consumer.FetchAsync<byte[]>(new() { MaxMsgs = MaxMessages, Expires = TimeSpan.FromSeconds(1) }, cancellationToken: cancellationToken))
+                if (cancellationToken.IsCancellationRequested)
+                    yield break;
+                yield return msg;
+                if (msg.Metadata?.NumPending == 0 || cancellationToken.IsCancellationRequested)
                 {
-                    cnt++;
-                    yield return msg;
-                    numPending = msg.Metadata?.NumPending ?? ulong.MaxValue;
-                }
-
-                if (cnt!=MaxMessages || numPending == 0)
-                {
-                    // No messages in this fetch, end the query.
+                    // No more messages in the stream, end the query.
                     yield break;
                 }
             }

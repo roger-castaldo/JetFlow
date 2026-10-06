@@ -234,7 +234,7 @@ public class ParallelActivityTests
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<ParallelActivityWorkflowWithOutput>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
-        Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
+        Assert.AreNotEqual(archive.StartedAt.ToString("yyyy-MM-dd HH:mm:ss.fff"), archive.FinishedAt.ToString("yyyy-MM-dd HH:mm:ss.fff"));
         Assert.IsNotEmpty(archive.Steps);
         Assert.HasCount(emptyActivityWithInputAndOutput.Inputs.Count, archive.Steps);
         var stepIndex = archive.Steps[0].Index;

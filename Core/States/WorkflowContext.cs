@@ -58,7 +58,7 @@ internal class WorkflowContext
                 msgs.Add(msg);
             if (Equals(msg.Metadata?.Sequence, message.Metadata?.Sequence))
                 add=false;
-            if (!add && startMessage!=null)
+            if (!add && startMessage!=null && options!=null)
                 break;
         }
         if (startMessage==null)

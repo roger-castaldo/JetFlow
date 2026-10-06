@@ -167,7 +167,6 @@ public static class Connection
                             subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*", "*"),
                             subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*")
                         ],
-                        DeliverPolicy = NATS.Client.JetStream.Models.ConsumerConfigDeliverPolicy.New,
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit,
                         Metadata = new Dictionary<string,string>()
                         {

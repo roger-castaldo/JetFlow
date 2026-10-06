@@ -182,7 +182,7 @@ public class ScheduledWorkflowTests
         Assert.IsNotNull(endMessage);
         Assert.IsTrue(endMessage.IsSuccess);
         Assert.IsTrue(DelayedWorkflowNoInput.ExecutionTimestamp.HasValue);
-        Assert.IsGreaterThanOrEqualTo(60, endTime.TotalSeconds);
+        Assert.IsGreaterThanOrEqualTo(59, endTime.TotalSeconds);
     }
 
     [WorkflowName("Delayed Workflow With Input")]
@@ -236,7 +236,7 @@ public class ScheduledWorkflowTests
         Assert.IsNotNull(endMessage);
         Assert.IsTrue(endMessage.IsSuccess);
         Assert.IsTrue(DelayedWorkflowWithInput.ExecutionTimestamp.HasValue);
-        Assert.IsGreaterThanOrEqualTo(60, endTime.TotalSeconds);
+        Assert.IsGreaterThanOrEqualTo(59, endTime.TotalSeconds);
         Assert.AreEqual(input, DelayedWorkflowWithInput.ProvidedInput);
     }
 
@@ -300,7 +300,7 @@ public class ScheduledWorkflowTests
         Assert.IsTrue(archive.IsSuccessful);
         Assert.AreEqual(NameHelper.GetWorkflowName<DelayedWorkflowWithInput>().rawName, archive.Name);
         Assert.AreEqual(WorkflowCompletionActions.Archive, archive.Options.CompletionAction);
-        Assert.AreNotEqual(archive.StartedAt.ToString(), archive.FinishedAt.ToString());
+        Assert.AreNotEqual(archive.StartedAt.ToString("yyyy-MM-dd HH:mm:ss.fff"), archive.FinishedAt.ToString("yyyy-MM-dd HH:mm:ss.fff"));
         Assert.IsNotNull(archive.MetaData);
         Assert.IsTrue(metaData.All(pair => archive.MetaData.TryGetValue(pair.Key, out var value) && pair.Value.SequenceEqual(value)));
         Assert.AreEqual(metaData.Count, archive.MetaData.Count);

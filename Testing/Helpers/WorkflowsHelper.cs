@@ -73,6 +73,13 @@ internal static class WorkflowsHelper
         return await completion.Task;
     }
 
+    public static async Task<INatsJSMsg<byte[]>?> WaitForWorkflowCompletion<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Guid runId)
+    {
+        var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, runId.ToString()));
+        return await StartWorkflowAndWait(consumer, close, () => new ValueTask<Guid?>(runId),
+            (id, subject) => Equals(subject, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, runId.ToString())));
+    }
+
     public static async Task<INatsJSMsg<byte[]>?> StartWorkflowAndWaitForCompletion<TWorkflow>(INatsConnection natsConnection, SubjectMapper subjectMapper, Func<ValueTask<Guid?>> startCall)
     {
         var (consumer, close) = await ProduceConsumerAsync(natsConnection, subjectMapper.WorkflowEventsStreamsName, subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"));
