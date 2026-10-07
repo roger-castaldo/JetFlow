@@ -48,4 +48,7 @@ internal class ActiveFlowService(
 
     ValueTask<IPagedWorkflowQuery> IActiveFlowService.QueryActiveFlowsAsync(string? workflowNamespace, string workflowName, uint take, ulong lastOffset, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement)
         => observationConnection.QueryWorkflowAsync(workflowNamespace, workflowName, take, lastOffset, checkMetaData, checkArguement);
+
+    ValueTask<IEnumerable<ScheduledWorkflow<object>>> IActiveFlowService.ListScheduledWorkflowsAsync(string? workflowNamespace)
+        => observationConnection.ListScheduledWorkflowsAsync(workflowNamespace);
 }

@@ -34,7 +34,8 @@ public static class EndpointRouteBuilderExtension
             .RegisterWebFiles()
             .RegisterPerformanceEndpoints()
             .RegisterNamespaceEndpoints()
-            .RegisterQueryEndpoints();
+            .RegisterQueryEndpoints()
+            .RegisterScheduledEndpoints();
 
     private static IFileInfo LocateFile(IFileProvider fileProvider, string path)
     {
@@ -118,7 +119,7 @@ public static class EndpointRouteBuilderExtension
     private static IEndpointRouteBuilder RegisterNamespaceEndpoints(this IEndpointRouteBuilder routeBuilder)
     {
         routeBuilder
-            .MapGet("/jetflow/namespaces", async (string? ns, [FromServices] IConfigService configService, CancellationToken cancellation) =>
+            .MapGet("/jetflow/namespaces", async ([FromServices] IConfigService configService, CancellationToken cancellation) =>
             {
                 return await configService.GetCurrentNamespacesAsync();
             });
@@ -153,6 +154,17 @@ public static class EndpointRouteBuilderExtension
                     (Func<JsonElement, bool>?)(!query.Argument.HasValue ? null : (arg) => CheckArgument(arg, query.Argument.Value))
                 );
                 return Results.Ok(new WorkflowQueryResponse(result, result.LastOffset));
+            });
+        return routeBuilder;
+    }
+
+    private static IEndpointRouteBuilder RegisterScheduledEndpoints(this IEndpointRouteBuilder routeBuilder)
+    {
+        routeBuilder
+            .MapGet("/jetflow/scheduledflows", async ([FromQuery]string ? ns, [FromServices] IActiveFlowService activeFlowService, CancellationToken cancellation) =>
+            {
+                var result = await activeFlowService.ListScheduledWorkflowsAsync(ns);
+                return Results.Ok(result);
             });
         return routeBuilder;
     }

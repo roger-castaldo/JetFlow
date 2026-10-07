@@ -425,7 +425,7 @@ BEGIN
     ELSE
         SELECT id INTO v_workflow_id FROM workflows WHERE name = p_workflow AND namespace_id = v_namespace_id;
     END IF;
-    IF step_name IS NOT NULL THEN
+    IF p_step_name IS NOT NULL THEN
         IF NOT EXISTS (SELECT 1 FROM activities WHERE name = p_step_name AND namespace_id = v_namespace_id) THEN
             v_activity_id := gen_random_uuid();
             INSERT INTO activities (id, namespace_id, name) VALUES (v_activity_id, v_namespace_id, p_step_name);
@@ -435,7 +435,7 @@ BEGIN
     ELSE
         v_activity_id := NULL;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM archived_workflow_metadata_entry WHERE id = p_id AND workflow_id = v_workflow_id AND namespace_id = v_namespace_id AND step_id = p_step_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM archived_workflow_steps WHERE id = p_id AND workflow_id = v_workflow_id AND namespace_id = v_namespace_id AND step_id = p_step_id) THEN
         INSERT INTO archived_workflow_steps (id, workflow_id, namespace_id, step_id, step_type, step_index, activity_id, start_time, end_time, input, result_status, error_message, result) 
         VALUES (p_id, v_workflow_id, v_namespace_id, p_step_id, p_step_type, p_step_index, v_activity_id, p_start_time, p_end_time, p_input, p_result_status, p_error_message, p_result);
     END IF;
@@ -469,7 +469,7 @@ BEGIN
     ELSE
         SELECT id INTO v_workflow_id FROM workflows WHERE name = p_workflow AND namespace_id = v_namespace_id;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM archived_workflow_metadata_entry WHERE id = p_id AND workflow_id = v_workflow_id AND namespace_id = v_namespace_id AND step_id = p_step_id AND retry_index = p_retry_index) THEN
+    IF NOT EXISTS (SELECT 1 FROM archived_workflow_step_retries WHERE id = p_id AND workflow_id = v_workflow_id AND namespace_id = v_namespace_id AND step_id = p_step_id AND retry_index = p_retry_index) THEN
         INSERT INTO archived_workflow_step_retries (id, workflow_id, namespace_id, step_id, retry_index, retry_type, time_stamp) 
         VALUES (p_id, v_workflow_id, v_namespace_id, p_step_id, p_retry_index, p_retry_type, p_time_stamp);
     END IF;

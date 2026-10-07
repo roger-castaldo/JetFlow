@@ -48,3 +48,12 @@ export const GetActiveFlows = async (namespace, workflowName, metadata, argument
         return await result.json();
     throw 'Unable to list active flows';
 };
+
+export const GetScheduledFlows = async(namespace) => {
+    let result = await fetch(`/jetflow/scheduledflows${namespace ? `?ns=${namespace}` : ''}`,{
+        method:'GET',
+    });
+    if (result.ok)
+        return await result.json();
+    throw 'Unable to list scheduled flows';
+}

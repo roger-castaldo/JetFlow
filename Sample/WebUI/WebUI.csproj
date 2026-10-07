@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\UI\Core\UI.Core.csproj" />
     <ProjectReference Include="..\..\UI\Databases\PostgreSql\PostgreSql.csproj" />
+    <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

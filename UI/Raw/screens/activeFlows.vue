@@ -39,7 +39,7 @@
     import InfiniteTable from '../components/InfiniteTable.vue';
     import WorkflowDetails from '../components/WorkflowDetails.vue';
     import {GetActiveFlows} from 'services';
-    import {Constants} from 'mixins';
+    import {Constants, shrinkString} from 'mixins';
     import {ref, inject} from 'vue';
     import {Button, Sizes} from 'components';
 
@@ -69,13 +69,6 @@
             case 'Suspended':
                 return `Suspended @${Constants.timeFormatter.format(new Date(currentStep.startTime))}`;
         }
-    };
-
-    const shrinkString = (str, maxLength) => {
-        if (str.length > maxLength) {
-            return str.substring(0, maxLength) + '...';
-        }
-        return str;
     };
     
 </script>

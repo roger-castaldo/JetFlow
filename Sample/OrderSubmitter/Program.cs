@@ -3,6 +3,7 @@ using JetFlow;
 using Microsoft.Extensions.Configuration;
 using Shared.dto;
 using Shared.Workflows;
+using System.Security.Cryptography;
 
 var itemGenerator = new Faker<OrderItem>()
     .CustomInstantiator(f => new(
@@ -67,12 +68,33 @@ var secondaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Clie
     Namespace = Shared.Constants.SecondayNamespace
 });
 
+var cron = new WorkflowScheduleBuilder()
+    .MonthlyOnAt(15, 16, 30)
+    .Build();
+
+foreach(var order in orderGenerator.GenerateBetween(2, 10))
+{
+    await primaryConnection.ScheduleWorkflowAsync<IPlaceOrder, Order>(new(order), cron);
+}
+
+foreach(var order in orderGenerator.GenerateBetween(2, 10))
+{
+    await primaryConnection.DelayStartWorkflowAsync<IPlaceOrder, Order>(new(order), TimeSpan.FromMinutes(RandomNumberGenerator.GetInt32(30, 60*24)));
+}
+
 while (!sourceCancel.IsCancellationRequested)
 {
+    Guid id = Guid.Empty;
     foreach (var order in orderGenerator.GenerateBetween(2, 10))
-        await primaryConnection.StartWorkflowAsync<IPlaceOrder, Order>(new(order));
+    {
+        id = await primaryConnection.StartWorkflowAsync<IPlaceOrder, Order>(new(order));
+        Console.WriteLine($"Submitting order: {id} on {Shared.Constants.PrimaryNamespace}");
+    }
     foreach (var order in orderGenerator.GenerateBetween(2, 10))
-        await secondaryConnection.StartWorkflowAsync<IPlaceOrder, Order>(new(order));
+    {
+        id = await secondaryConnection.StartWorkflowAsync<IPlaceOrder, Order>(new(order));
+        Console.WriteLine($"Submitting order: {id} on {Shared.Constants.SecondayNamespace}");
+    }
     try
     {
         await Task.Delay(TimeSpan.FromMinutes(1), sourceCancel.Token);

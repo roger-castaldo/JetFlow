@@ -10,4 +10,5 @@ internal interface IActiveFlowService
     ValueTask<IEnumerable<NamedServiceabilityDetails>> GetWorkflowServiceability(string? workflowNamespace);
     ValueTask<IEnumerable<NamedServiceabilityDetails>> GetActivityServiceability(string? workflowNamespace);
     ValueTask<IPagedWorkflowQuery> QueryActiveFlowsAsync(string? workflowNamespace, string workflowName, uint take, ulong lastOffset, Func<Dictionary<string, string[]>?, bool>? checkMetaData, Func<JsonElement, bool>? checkArguement);
+    ValueTask<IEnumerable<ScheduledWorkflow<object>>> ListScheduledWorkflowsAsync(string? workflowNamespace);
 }

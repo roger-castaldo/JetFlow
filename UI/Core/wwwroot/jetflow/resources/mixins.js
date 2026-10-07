@@ -158,3 +158,10 @@ export const Constants = {
     namespaceName: 'namespace',
     timeFormatter: new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' })
 };
+
+export const shrinkString = (str, maxLength) => {
+    if (str.length > maxLength) {
+        return str.substring(0, maxLength) + '...';
+    }
+    return str;
+};

@@ -1,5 +1,7 @@
 using JetFlow.UI;
 using JetFlow.UI.Extensions;
+using JetFlow.UI.Interfaces;
+using Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,10 +9,15 @@ builder.Configuration
     .AddJsonFile("appsettings.json")
     .AddEnvironmentVariables();
 
+IDbConnection connection = new PostgresqlDbConnection(builder.Configuration.GetConnectionString("jetflow")!);
+await connection.InitAsync();
+await connection.RegisterNamespaceAsync(Constants.PrimaryNamespace);
+await connection.RegisterNamespaceAsync(Constants.SecondayNamespace);
+
 await builder.Services
     .RegisterJetflowUIAsync(
         new() { Url = builder.Configuration.GetValue<string>("nats_Uri")!},
-        new PostgresqlDbConnection(builder.Configuration.GetConnectionString("jetflow")!)
+        connection
     );
 
 var app = builder.Build();

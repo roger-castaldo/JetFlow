@@ -11,7 +11,14 @@ internal class ArchivingObserver(IDbConnection dbConnection, IConfigService conf
     {
         await observationConnection.AddArchivingListenerAsync(async archiveEvent =>
         {
-            await dbConnection.StoreArchiveAsync(archiveEvent.Archive, archiveEvent.WorkflowNamespace);
+            try
+            {
+                await dbConnection.StoreArchiveAsync(archiveEvent.Archive, archiveEvent.WorkflowNamespace);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to store archive for workflow namespace: {archiveEvent.WorkflowNamespace}, Error: {ex.Message}");
+            }
             return true;
         });
     }

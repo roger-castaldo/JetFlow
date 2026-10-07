@@ -27,7 +27,7 @@ internal abstract class AObserverService(IConfigService configService, NatsOpts 
                 await observationConnection.RemoveNamespaceAsync(namespaceName);
         });
         var currentNamespaces = await configService.GetCurrentNamespacesAsync();
-        await observationConnection.RemoveNamespacesAsync(currentNamespaces.Where(ns => !string.IsNullOrWhiteSpace(ns)).OfType<string>());
+        await observationConnection.AddNamespacesAsync(currentNamespaces.Where(ns => !string.IsNullOrWhiteSpace(ns)).OfType<string>());
         if (currentNamespaces.Any(ns => string.IsNullOrWhiteSpace(ns)))
             await observationConnection.AddDefaultNamespaceAsync();
         await RegisterActionsAsync(observationConnection);

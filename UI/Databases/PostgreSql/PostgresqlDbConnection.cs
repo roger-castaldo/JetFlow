@@ -83,7 +83,7 @@ public class PostgresqlDbConnection(string connectionString)
             ))??[]),
         .. archive.Steps.SelectMany<WorkflowStep, SqlCommand>((step, index)=>
             [
-                new SqlCommand("CALL add_archived_workflow_step(@id, @namespace, @workflow, @step_id, @step_type::workflow_step_types, @step_index, @step_name, @start_time, @end_time, @input, @result_status::workflow_completion_actions, @error_message, @result)", [
+                new SqlCommand("CALL add_archived_workflow_step(@id, @namespace, @workflow, @step_id, @step_type::workflow_step_types, @step_index, @step_name, @start_time, @end_time, @input, @result_status::workflow_step_result_status, @error_message, @result)", [
                     QueryHelper.CreateParameter("@id", archive.ID),
                     QueryHelper.CreateParameter("@namespace", namespaceName),
                     QueryHelper.CreateParameter("@workflow", archive.Name),
