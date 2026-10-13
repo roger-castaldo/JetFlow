@@ -22,7 +22,7 @@
             </template>
             <template #menu>
                 <Box>
-                    <Title text="JETFLOW" :level="4"/>
+                    <Title :text="translate('title')" :level="4"/>
                     <Select :values="namespaces" @valueChanged="namespaceChanged"  style="margin-bottom:15px;"/>
                     <Menu>
                         <MenuList :items="mainMenu"/>
@@ -47,35 +47,36 @@
     import scheduledFlows from './screens/scheduledFlows.vue';
     import settings from './screens/settings.vue';
     import {GetNamespaces} from 'services';
+    import { translate } from './i18n';
 
     const menu = [
         {
             icon:'gauge',
-            title:'Dashboard',
+            title:'menu.dashboard',
             component:dashboard,
             name:'dashboard'
         },
         {
             icon:'box-open',
-            title:'Active Flows',
+            title:'menu.activeflows',
             component:activeFlows,
             name:'activeflows'
         },
         {
             icon:'box-archive',
-            title:'Completed Flows',
+            title:'menu.completedflows',
             component:completedFlows,
             name:'completedflows'
         },
         {
             icon:'boxes-stacked',
-            title:'Scheduled Flows',
+            title:'scheduledflows',
             component:scheduledFlows,
             name:'scheduledflows'
         },
         {
             icon:'cog',
-            title:'Settings',
+            title:'settings',
             component:settings,
             name:'settings'
         }
@@ -96,7 +97,7 @@
         return menu.map(m=>{
             return {
                 icon:m.icon,
-                title:m.title,
+                title:translate(m.title),
                 onClick:()=>{
                     currentMenu.value = m.name;
                     currentComponent.value = m.component;

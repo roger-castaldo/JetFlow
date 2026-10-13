@@ -1,0 +1,88 @@
+{
+    "title":"JETFLOW",
+    "menu":{
+        "dashboard":"Dashboard",
+        "activeflows":"Active Flows",
+        "completedflows":"Completed Flows",
+        "scheduledflows":"Scheduled Flows",
+        "settings":"Settings"
+    },
+    "common":{
+        "name":"Name",
+        "argument" : "Argument",
+        "metadata": "MetaData",
+        "yes":"Yes",
+        "no":"No",
+        "worfklowid":"Workflow ID",
+        "schedulerid":"Scheduler ID",
+        "startedat":"Started At",
+        "completedat":"Completed At",
+        "oncomplete":"On Complete",
+        "onactivitytimeout":"On Activity Timeout",
+        "onactivityerror":"On Activity Error",
+        "fail":"Fail",
+        "continue":"Continue"
+    },
+    "screens":{
+        "scheduledFlows":{
+            "scheduledAt":"Scheduled At",
+            "noflows":"No scheduled flows found"
+        },
+        "activeFlows":{
+            "stepcount":"Step Count",
+            "currentstep":"Current Step",
+            "purgedelay":" (Purge Delay: {delay})",
+            "delayed":"Delayed @{startime} {endtime}",
+            "delayedfor":"for {time}",
+            "suspended":"Suspended @{starttime}"
+        },
+        "dashboard":{
+            "activeflows":"Active Flows",
+            "suspendedflows":"Suspended Flows",
+            "activeactivities":"Active Activities",
+            "idleinstances":"Idle Instances",
+            "activeinstances":"Active Instances",
+            "messageswaiting":"Messages Waiting",
+            "workflowserviceability":"Workflow Serviceability",
+            "activityserviceability":"Activity Serviceability",
+            "activityperformance":"Activity Performance",
+            "time":"Time",
+            "started":"Started",
+            "completed":"Completed",
+            "failed":"Failed",
+            "timedout":"Timed Out",
+            "avgqueuelatency":"Avg. Queue Latencies",
+            "avgduration":"Avg. Durations",
+            "workflowperformance":"Workflow Performance",
+            "purged":"Purged"
+        }
+    },
+    "components":{
+        "infinitetable":{
+            "loading":"Loading...",
+            "nomore":"No more results"
+        },
+        "workflowdetails":{
+            "title":"Workflow Details {name}",
+            "purgedelay":" (Purge Delay: {delay})",
+            "successful":"Successful",
+            "status":"Status",
+            "inprogress":"In Progress",
+            "failurereason":"Failure Reason",
+            "arguments":"Arguments",
+            "steps":"Steps",
+            "delayed":"Delayed @{startime} {endtime}",
+            "delayedfor":"for {time}",
+            "delayeduntil":"until {time}",
+            "suspended":"Suspended @{starttime} {endtime} {reason}",
+            "suspendeduntil":"until {time}",
+            "input":"Input",
+            "retries":"Retries",
+            "finishedat":"Finished At",
+            "resultstatus":"Result Status",
+            "errormessage":"Error Message",
+            "result":"Result",
+            "nodetails":"No Workflow details available."
+        }
+    }
+}

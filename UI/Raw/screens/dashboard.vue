@@ -8,9 +8,9 @@
                         <h1 :class="props.header_class">Active Counters</h1>
                     </template>
                     <template #content>
-                        Active Workflows: {{performanceCounters.activeWorkflows}}<br/>
-                        Suspended Workflows: {{performanceCounters.suspendedWorkflows}}<br/>
-                        Active Activities: {{performanceCounters.activeActivities}}
+                        {{ translate('screens.dashboard.activeflows') }}: {{performanceCounters.activeWorkflows}}<br/>
+                        {{ translate('screens.dashboard.suspendedflows') }}: {{performanceCounters.suspendedWorkflows}}<br/>
+                        {{ translate('screens.dashboard.activeactivities') }}: {{performanceCounters.activeActivities}}
                     </template>
                 </Card>
             </template>
@@ -18,13 +18,13 @@
                 <Table>
                     <template #thead>
                         <tr>
-                            <th colspan="100%" class="has-text-centered">Workflow Serviceability</th>
+                            <th colspan="100%" class="has-text-centered">{{ translate('screens.dashboard.workflowserviceability') }}</th>
                         </tr>
                         <tr>
-                            <th>Name</th>
-                            <th>Idle Instances</th>
-                            <th>Active Instances</th>
-                            <th>Messages Waiting</th>
+                            <th>{{ translate('common.name') }}</th>
+                            <th>{{ translate('screens.dashboard.idleinstances') }}</th>
+                            <th>{{ translate('screens.dashboard.activeinstances') }}</th>
+                            <th>{{ translate('screens.dashboard.messageswaiting') }}</th>
                         </tr>
                     </template>
                     <template #tbody>
@@ -41,13 +41,13 @@
                 <Table>
                     <template #thead>
                         <tr>
-                            <th colspan="100%" class="has-text-centered">Activity Serviceability</th>
+                            <th colspan="100%" class="has-text-centered">{{ translate('screens.dashboard.activityserviceability') }}</th>
                         </tr>
                         <tr>
-                            <th>Name</th>
-                            <th>Idle Instances</th>
-                            <th>Active Instances</th>
-                            <th>Messages Waiting</th>
+                            <th>{{ translate('common.name') }}</th>
+                            <th>{{ translate('screens.dashboard.idleinstances') }}</th>
+                            <th>{{ translate('screens.dashboard.activeinstances') }}</th>
+                            <th>{{ translate('screens.dashboard.messageswaiting') }}</th>
                         </tr>
                     </template>
                     <template #tbody>
@@ -67,22 +67,22 @@
                 <Table>
                     <template #thead>
                         <tr>
-                            <th colspan="100%" class="has-text-centered">Activity Performance</th>
+                            <th colspan="100%" class="has-text-centered">{{ translate('screens.dashboard.activityperformance') }}</th>
                         </tr>
                         <tr>
-                            <th>Time</th>
-                            <th>Name</th>
-                            <th>Started</th>
-                            <th>Completed</th>
-                            <th>Failed</th>
-                            <th>Timed Out</th>
-                            <th>Avg. Queue Latencies</th>
-                            <th>Avg. Durations</th>
+                            <th>{{ translate('screens.dashboard.time') }}</th>
+                            <th>{{ translate('common.name') }}</th>
+                            <th>{{ translate('screens.dashboard.started') }}</th>
+                            <th>{{ translate('screens.dashboard.completed') }}</th>
+                            <th>{{ translate('screens.dashboard.failed') }}</th>
+                            <th>{{ translate('screens.dashboard.timedout') }}</th>
+                            <th>{{ translate('screens.dashboard.avgqueuelatency') }}</th>
+                            <th>{{ translate('screens.dashboard.avgduration') }}</th>
                         </tr>
                     </template>
                     <template #tbody>
                         <tr v-for="perf in activityPerformance">
-                            <td>{{ Constants.timeFormatter.format(new Date(perf.window)) }}</td>
+                            <td>{{ formatTime(perf.window) }}</td>
                             <td>{{ perf.name }}</td>
                             <td>{{ perf.started }}</td>
                             <td>{{ perf.completed }}</td>
@@ -98,21 +98,21 @@
                 <Table>
                     <template #thead>
                         <tr>
-                            <th colspan="100%" class="has-text-centered">Workflow Performance</th>
+                            <th colspan="100%" class="has-text-centered">{{ translate('screens.dashboard.workflowperformance') }}</th>
                         </tr>
                         <tr>
-                            <th>Time</th>
-                            <th>Name</th>
-                            <th>Started</th>
-                            <th>Completed</th>
-                            <th>Failed</th>
-                            <th>Purged</th>
-                            <th>Avg. Queue Latencies</th>
+                            <th>{{ translate('screens.dashboard.time') }}</th>
+                            <th>{{ translate('common.name') }}</th>
+                            <th>{{ translate('screens.dashboard.started') }}</th>
+                            <th>{{ translate('screens.dashboard.completed') }}</th>
+                            <th>{{ translate('screens.dashboard.failed') }}</th>
+                            <th>{{ translate('screens.dashboard.purged') }}</th>
+                            <th>{{ translate('screens.dashboard.avgqueuelatency') }}</th>
                         </tr>
                     </template>
                     <template #tbody>
                         <tr v-for="perf in workflowPerformance">
-                            <td>{{ Constants.timeFormatter.format(new Date(perf.window)) }}</td>
+                            <td>{{ formatTime(perf.window) }}</td>
                             <td>{{ perf.name }}</td>
                             <td>{{ perf.started }}</td>
                             <td>{{ perf.completed }}</td>
@@ -132,6 +132,7 @@
     import {ref, onUnmounted, inject, watch} from "vue";
     import {ColumnContainerModifiers, ColumnContainer, ColumnSizes, Card, Table} from "components";
     import {Constants} from "mixins";
+    import {translate, formatTime} from '../i18n';
 
     const performanceCounters = ref({
         activeWorkflows:0,

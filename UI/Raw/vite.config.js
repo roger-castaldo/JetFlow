@@ -5,11 +5,12 @@ export default defineConfig({
     plugins: [vue()],
 
     build: {
+        sourcemap:true, 
         outDir: '../Core/wwwroot/jetflow/resources',
         emptyOutDir: false,
 
         lib: {
-            entry: 'app.vue',
+            entry: 'index.ts',
             formats: ['es'],
             fileName: () => 'app.js',
             cssFileName: 'app'
@@ -20,5 +21,8 @@ export default defineConfig({
         },
 
         minify: 'terser'
+    },
+    define: {
+        'process.env.NODE_ENV': JSON.stringify('production')
     }
 })

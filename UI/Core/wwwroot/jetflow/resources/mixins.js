@@ -155,8 +155,7 @@ export const SlotRef = defineComponent({
 });
 
 export const Constants = {
-    namespaceName: 'namespace',
-    timeFormatter: new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' })
+    namespaceName: 'namespace'
 };
 
 export const shrinkString = (str, maxLength) => {

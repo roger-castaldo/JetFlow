@@ -2,16 +2,16 @@
     <Table :fixed_header="true" :full_width="true">
         <template #thead>
             <tr>
-                <th>Name</th>
-                <th>Scheduled At</th>
-                <th>Argument</th>
-                <th>MetaData</th>
+                <th>{{ translate('common.name') }}</th>
+                <th>{{ translate('screens.scheduledFlows.scheduledAt') }}</th>
+                <th>{{ translate('common.argument') }}</th>
+                <th>{{ translate('common.metadata') }}</th>
                 <th></th>
             </tr>
         </template>
         <template #tbody>
             <tr v-if="scheduledFlows.length===0">
-                <td colspan="100%">No scheduled flows found</td>
+                <td colspan="100%">{{ translate('screens.scheduledFlows.noflows') }}</td>
             </tr>
             <tr v-for="flow in scheduledFlows" :key="flow.schedulerId">
                 <td>{{ flow.name }}</td>
@@ -29,13 +29,17 @@
     import {GetScheduledFlows} from 'services';
     import {Constants, shrinkString} from 'mixins';
     import {ref, inject, onMounted} from 'vue';
+    import { translate, translateCron, formatTime } from '../i18n';
 
     const currentNamespace = inject(Constants.namespaceName);
 
     const scheduledFlows = ref([]);
 
     const formatSchedule = (flow)=>{
-        return flow.cronString ?? Constants.timeFormatter.format(new Date(flow.runsAt));
+        if (flow.cronString!==null){
+            return translateCron(flow.cronString);
+        }
+        return formatTime(new Date(flow.runsAt));
     }
 
     onMounted(async()=>{

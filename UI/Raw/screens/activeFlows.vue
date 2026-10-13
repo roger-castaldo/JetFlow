@@ -3,25 +3,25 @@
         <InfiniteTable :fixed_header="true" :full_width="true" :loadMore="loadMore">
             <template #thead>
                 <tr>
-                    <th>Scheduler ID</th>
-                    <th>Started At</th>
-                    <th>On Complete</th>
-                    <th>On Activity Timeout</th>
-                    <th>On Activity Failure</th>
-                    <th>Argument</th>
-                    <th>MetaData</th>
-                    <th>StepCount</th>
-                    <th>Current Step</th>
+                    <th>{{ translate('common.schedulerid') }}</th>
+                    <th>{{ translate('common.startedat') }}</th>
+                    <th>{{ translate('common.oncomplete') }}</th>
+                    <th>{{ translate('common.onactivitytimeout') }}</th>
+                    <th>{{ translate('common.onactivityerror') }}</th>
+                    <th>{{ translate('common.argument') }}</th>
+                    <th>{{ translate('common.metadata') }}</th>
+                    <th>{{ translate('screens.activeFlows.stepcount') }}</th>
+                    <th>{{ translate('screens.activeFlows.currentstep') }}</th>
                     <th></th>
                 </tr>
             </template>
             <template #tbody>
                 <tr v-for="flow in flows" :key="flow.ID">
                     <td>{{ flow.schedulerId }}</td>
-                    <td>{{ Constants.timeFormatter.format(new Date(flow.startedAt)) }}</td>
-                    <td>{{ flow.options.completionAction }}{{ flow.options.purgeDelay!==null ? ` (Purge Delay: ${flow.options.purgeDelay})` : ''}}</td>
-                    <td>{{ flow.options.errorOnActivityTimeout ? 'Fail' : 'Continue' }}</td>
-                    <td>{{ flow.options.errorOnActivityFailure ? 'Fail' : 'Continue' }}</td>
+                    <td>{{ formatTime(flow.startedAt) }}</td>
+                    <td>{{ flow.options.completionAction }}{{ flow.options.purgeDelay!==null ? translate('screens.activeFlows.purgedelay',{delay:flow.options.purgeDelay}) : ''}}</td>
+                    <td>{{ flow.options.errorOnActivityTimeout ? translate('common.fail') : translate('common.continue') }}</td>
+                    <td>{{ flow.options.errorOnActivityFailure ? translate('common.fail') : translate('common.continue') }}</td>
                     <td>{{ shrinkString(JSON.stringify(flow.arguments, null, 2), 100) }}</td>
                     <td>{{ shrinkString(JSON.stringify(flow.metaData, null, 2), 100) }}</td>
                     <td>{{ flow.steps.length }}</td>
@@ -42,6 +42,7 @@
     import {Constants, shrinkString} from 'mixins';
     import {ref, inject} from 'vue';
     import {Button, Sizes} from 'components';
+    import {translate, formatTime} from '../i18n';
 
     const currentNamespace = inject(Constants.namespaceName);
 
@@ -65,9 +66,12 @@
             case 'Action':
                 return currentStep.name;
             case 'Delay':
-                return `Delayed @${Constants.timeFormatter.format(new Date(currentStep.startTime))} ${(currentStep.input ? ` for ${Constants.timeFormatter.format(new Date(currentStep.input))}` : '')}`;
+                return translate('screens.activeFlows.delayed',{
+                    starttime:formatTime(currentStep.startTime),
+                    endtime:(currentStep.input ? translate('screens.activeFlows.delayedfor',{time:currentStep.input}) : '')
+                });
             case 'Suspended':
-                return `Suspended @${Constants.timeFormatter.format(new Date(currentStep.startTime))}`;
+                return translate('screens.activeFlows.suspended',{starttime:formatTime(currentStep.startTime)});
         }
     };
     

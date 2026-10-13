@@ -11,7 +11,7 @@
             <!-- Sentinel -->
             <tr ref="loadMoreTrigger">
                 <td colspan="100%">
-                    {{ loading ? 'Loading...' : (hasMore ? '' : 'No more results') }}
+                    {{ loading ? translate('components.infinitetable.loading') : (hasMore ? '' : translate('components.infinitetable.nomore')) }}
                 </td>
             </tr>
         </template>
@@ -21,6 +21,7 @@
 <script setup>
     import {Table} from "components";
     import {useSlots, onMounted, onUnmounted, ref} from "vue";
+    import {translate} from '../i18n';
 
     const hasMore = ref(true);
     const loading = ref(false);
