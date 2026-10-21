@@ -52,5 +52,5 @@ export const formatTime = (date) => {
   if (!(date instanceof Date && !isNaN(date))){
     date=new Date(date);
   }
-  timeFormatter.value.format(date);
+  return timeFormatter.value.format(date);
 }

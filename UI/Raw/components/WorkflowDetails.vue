@@ -58,68 +58,60 @@
                         </li>
                     </List>
                 </p>
-                <p>
-                    <strong>{{ translate('components.workflowdetails.steps') }}:</strong>
-                </p>
-                <List :compact="true" :highlighted="true" :type="ColorTypes.info">
-                    <li v-for="(step,index) in props.workflow.steps" :key="index">
-                        <template v-if="step.type === 'Delay'">
-                            {{ translate('components.workflowdetails.delayed',{
-                                startime:formatTime(step.startTime),
-                                endtime:(step.endTime===null ? 
-                                    translate('components.workflowdetails.delayedfor',{time:step.input}) :
-                                    translate('components.workflowdetails.delayeduntil',{time:formatTime(step.endtime)})
-                                )
-                            }) }}
-                        </template>
-                        <template v-if="step.type === 'Suspended'">
-                            {{ translate('components.workflowdetails.suspended',{
-                                starttime:formatTime(step.startTime),
-                                endtime: (step.endTime === null ? 
-                                    '' :
-                                    translate('components.workflowdetails.suspendeduntil', {time:formatTime(step.endTime)})
-                                ),
-                                reason:(step.input===null ? '' : `(${step.input})`)
-                            }) }}
-                        </template>
-                        <template v-if="step.type === 'Action'">    
-                            <p>
-                                <strong>{{ step.name }}</strong> 
-                                @{{ formatTime(step.startTime) }}
-                            </p>
-                            <p v-if="step.input!==null">
-                                <strong>{{ translate('components.workflowdetails.input') }}:</strong> 
-                                <pre class="box">{{ JSON.stringify(step.input, null, 2) }}</pre>
-                            </p>
-                            <p v-if="step.retries!==null && step.retries.length>0">
-                                <strong>{{ translate('components.workflowdetails.retries') }}:</strong>
+                <Table :narrow="true" :fixed_header="true">
+                    <template #thead>
+                        <tr>
+                            <th colspan="100%"><strong>{{ translate('components.workflowdetails.steps') }}</strong></th>
+                        </tr>
+                        <tr>
+                            <th>{{ translate('components.workflowdetails.type') }}</th>
+                            <th>{{ translate('components.workflowdetails.starttime') }}</th>
+                            <th>{{ translate('components.workflowdetails.endtime') }}</th>
+                            <th>{{ translate('components.workflowdetails.name') }}</th>
+                            <th>{{ translate('components.workflowdetails.input') }}</th>
+                            <th>{{ translate('components.workflowdetails.retries') }}</th>
+                            <th>{{ translate('components.workflowdetails.resultstatus') }}</th>
+                            <th>{{ translate('components.workflowdetails.result') }}/{{ translate('components.workflowdetails.errormessage') }}</th>
+                        </tr>
+                    </template>
+                    <template #tbody>
+                        <tr v-for="(step,index) in props.workflow.steps" :key="index">
+                            <td>
+                                {{ (step.type==='Delay' ? translate('components.workflowdetails.delayed') : null) }}
+                                {{ (step.type==='Suspended' ? translate('components.workflowdetails.suspended') : null) }}
+                                {{ (step.type==='Action' ? translate('components.workflowdetails.action') : null) }}
+                            </td>
+                            <td>
+                                {{ formatTime(step.startTime) }}
+                            </td>
+                            <td>
+                                {{ (step.endTime===null && step.type==='Delayed' ? translate('components.workflowdetails.for',{time:step.input}) : null) }}
+                                {{ (step.endTime!==null ? formatTime(step.endTime) : null) }}
+                            </td>
+                            <td>
+                                {{ step.name }}
+                            </td>
+                            <td>
+                                {{ step.input!==null && step.type==='Suspended' ? step.input : null }}
+                                <pre class="box" v-if="step.input!==null && step.type==='Action'">{{ JSON.stringify(step.input, null, 2) }}</pre>
+                            </td>
+                            <td>
                                 <List :compact="true" :highlighted="true" :type="ColorTypes.info">
                                     <li v-for="(retry,index) in step.retries" :key="index">
                                         {{ retry.retryType }} @{{ formatTime(retry.timestamp) }}
                                     </li>
                                 </List>
-                            </p>
-                            <template v-if="step.endTime!==null">
-                                <p>
-                                    <strong>{{ translate('components.workflowdetails.finishedat') }}:</strong>
-                                    @{{ formatTime(step.endTime) }}
-                                </p>
-                                <p>
-                                    <strong>{{ translate('components.workflowdetails.resultstatus') }}:</strong> 
-                                    {{ step.status }}
-                                </p>
-                                <p v-if="step.errorMessage!==null">
-                                    <strong>{{ translate('components.workflowdetails.errormessage') }}:</strong> 
-                                    {{ step.errorMessage }}
-                                </p>
-                                <p v-if="step.result!==null">
-                                    <strong>{{ translate('components.workflowdetails.result') }}:</strong> 
-                                    <pre class="box">{{ JSON.stringify(step.result, null, 2) }}</pre>
-                                </p>
-                            </template>
-                        </template>
-                    </li>
-                </List>
+                            </td>
+                            <td>
+                                {{ step.status }}
+                            </td>
+                            <td>
+                                {{ step.errorMessage }}
+                                <pre class="box" v-if="step.result!==null">{{ JSON.stringify(step.result, null, 2) }}</pre>
+                            </td>
+                        </tr>
+                    </template>
+                </Table>
             </div>
             <div v-else>
                 <p>{{ translate('components.workflowdetails.nodetails') }}</p>
@@ -129,8 +121,7 @@
 </template>
 
 <script setup>
-    import {Slideout, List, ColorTypes} from 'components';
-    import {Constants} from 'mixins';
+    import {Slideout, List, ColorTypes, Table} from 'components';
     import {translate, formatTime} from '../i18n';
 
     const props = defineProps({
