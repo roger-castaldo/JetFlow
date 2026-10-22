@@ -1,6 +1,6 @@
 ﻿namespace JetFlow.UI.Extensions;
 
-internal record WorkflowQueryResponse(
-    IEnumerable<ActiveWorkflow> Data,
+internal record WorkflowQueryResponse<T>(
+    IEnumerable<T> Data,
     ulong LastOffset
 );

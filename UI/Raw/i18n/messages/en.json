@@ -21,7 +21,9 @@
         "onactivitytimeout":"On Activity Timeout",
         "onactivityerror":"On Activity Error",
         "fail":"Fail",
-        "continue":"Continue"
+        "continue":"Continue",
+        "stepcount":"Step Count",
+        "purgedelay":" (Purge Delay: {delay})"
     },
     "screens":{
         "scheduledFlows":{
@@ -29,12 +31,13 @@
             "noflows":"No scheduled flows found"
         },
         "activeFlows":{
-            "stepcount":"Step Count",
             "currentstep":"Current Step",
-            "purgedelay":" (Purge Delay: {delay})",
             "delayed":"Delayed @{startime} {endtime}",
             "delayedfor":"for {time}",
             "suspended":"Suspended @{starttime}"
+        },
+        "completedFlows":{
+            "success":"Successful"
         },
         "dashboard":{
             "activeflows":"Active Flows",

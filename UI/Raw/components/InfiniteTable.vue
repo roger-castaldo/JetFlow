@@ -11,7 +11,7 @@
             <!-- Sentinel -->
             <tr ref="loadMoreTrigger">
                 <td colspan="100%">
-                    {{ loading ? translate('components.infinitetable.loading') : (hasMore ? '' : translate('components.infinitetable.nomore')) }}
+                    {{ props.loading ? translate('components.infinitetable.loading') : (props.hasMore ? '' : translate('components.infinitetable.nomore')) }}
                 </td>
             </tr>
         </template>
@@ -23,8 +23,6 @@
     import {useSlots, onMounted, onUnmounted, ref} from "vue";
     import {translate} from '../i18n';
 
-    const hasMore = ref(true);
-    const loading = ref(false);
     const loadMoreTrigger = ref(null)
 
     const slots = useSlots();
@@ -41,18 +39,26 @@
         loadMore:{
             type:Function,
             required:true
+        },
+        hasMore:{
+            type:Boolean,
+            required:true
+        },
+        loading:{
+            type:Boolean,
+            required:true
         }
     });
 
     let observer = null;
+    const isAtEnd = ref(false);
 
     onMounted(async () => {
         observer = new IntersectionObserver(
             async (entries) => {
-                if (entries[0].isIntersecting) {
-                    loading.value = true;
-                    hasMore.value = await props.loadMore();
-                    loading.value = false;
+                if (entries[0].isIntersecting && props.hasMore) {
+                    await props.loadMore();
+                    isAtEnd.value = !props.hasMore;
                 }
             },
             {
@@ -70,5 +76,9 @@
     onUnmounted(() => {
         observer?.disconnect()
     });
+
+    defineExpose({
+        isAtEnd
+    })
 
 </script>

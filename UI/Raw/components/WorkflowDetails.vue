@@ -61,7 +61,9 @@
                 <Table :narrow="true" :fixed_header="true">
                     <template #thead>
                         <tr>
-                            <th colspan="100%"><strong>{{ translate('components.workflowdetails.steps') }}</strong></th>
+                            <th colspan="100%" class="has-text-centered">
+                                <strong class="title is-3">{{ translate('components.workflowdetails.steps') }}</strong>
+                            </th>
                         </tr>
                         <tr>
                             <th>{{ translate('components.workflowdetails.type') }}</th>

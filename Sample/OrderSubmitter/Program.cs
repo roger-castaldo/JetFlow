@@ -97,7 +97,7 @@ while (!sourceCancel.IsCancellationRequested)
     }
     try
     {
-        await Task.Delay(TimeSpan.FromMinutes(1), sourceCancel.Token);
+        await Task.Delay(TimeSpan.FromSeconds(30), sourceCancel.Token);
     }
     catch
     {

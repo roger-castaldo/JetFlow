@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS "activities" (
     "id" uuid NOT NULL,
     "namespace_id" uuid NOT NULL,
     "name" character varying(512) NOT NULL,
+    "argument_definition" jsonb,
     PRIMARY KEY ("id", "namespace_id"),
     FOREIGN KEY ("namespace_id") REFERENCES "namespaces" ("id") ON DELETE CASCADE
 );
@@ -54,6 +55,7 @@ CREATE TABLE IF NOT EXISTS "workflows" (
     "id" uuid NOT NULL,
     "namespace_id" uuid NOT NULL,
     "name" character varying(512) NOT NULL,
+    "argument_definition" jsonb,
     PRIMARY KEY ("id", "namespace_id"),
     FOREIGN KEY ("namespace_id") REFERENCES "namespaces" ("id") ON DELETE CASCADE
 );
@@ -474,4 +476,134 @@ BEGIN
         VALUES (p_id, v_workflow_id, v_namespace_id, p_step_id, p_retry_index, p_retry_type, p_time_stamp);
     END IF;
 END;
+$$;
+
+ALTER TABLE "activities" 
+ADD COLUMN IF NOT EXISTS "argument_definition" jsonb;
+
+ALTER TABLE "workflows" 
+ADD COLUMN IF NOT EXISTS "argument_definition" jsonb;
+
+CREATE OR REPLACE PROCEDURE "set_activity_argument_definition" (
+    IN p_namespace character varying ,
+    IN p_activity character varying ,
+    IN p_definition jsonb
+)
+LANGUAGE plpgsql 
+AS $$
+DECLARE
+    v_namespace_id uuid;
+    v_activity_id uuid;
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM namespaces WHERE name = p_namespace) THEN
+        v_namespace_id := gen_random_uuid();
+		INSERT INTO namespaces (id, name) VALUES (v_namespace_id, p_namespace);
+    ELSE
+        SELECT id INTO v_namespace_id FROM namespaces WHERE name = p_namespace;
+	END IF;
+    IF NOT EXISTS (SELECT 1 FROM activities WHERE name = p_activity AND namespace_id = v_namespace_id) THEN
+        v_activity_id := gen_random_uuid();
+        INSERT INTO activities (id, namespace_id, name) VALUES (v_activity_id, v_namespace_id, p_activity);
+    ELSE
+        SELECT id INTO v_activity_id FROM activities WHERE name = p_activity AND namespace_id = v_namespace_id;
+    END IF;
+    UPDATE activities
+    SET "argument_definition" = p_definition
+    WHERE namespace_id = v_namespace_id
+    AND id = v_activity_id;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE "set_workflow_argument_definition" (
+    IN p_namespace character varying ,
+    IN p_workflow character varying ,
+    IN p_definition jsonb
+)
+LANGUAGE plpgsql 
+AS $$
+DECLARE
+    v_namespace_id uuid;
+    v_workflow_id uuid;
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM namespaces WHERE name = p_namespace) THEN
+        v_namespace_id := gen_random_uuid();
+		INSERT INTO namespaces (id, name) VALUES (v_namespace_id, p_namespace);
+    ELSE
+        SELECT id INTO v_namespace_id FROM namespaces WHERE name = p_namespace;
+	END IF;
+    IF NOT EXISTS (SELECT 1 FROM workflows WHERE name = p_workflow AND namespace_id = v_namespace_id) THEN
+        v_workflow_id := gen_random_uuid();
+        INSERT INTO workflows (id, namespace_id, name) VALUES (v_workflow_id, v_namespace_id, p_workflow);
+    ELSE
+        SELECT id INTO v_workflow_id FROM workflows WHERE name = p_workflow AND namespace_id = v_namespace_id;
+    END IF;
+    UPDATE workflows
+    SET "argument_definition" = p_definition
+    WHERE namespace_id = v_namespace_id
+    AND id = v_workflow_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_archived_workflow_metada_json(pid uuid, pworkflow_id uuid, pnamespace_id uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+AS $$
+SELECT json_agg(metadata) 
+FROM (
+    SELECT json_build_object(
+        'Key', "key_name",
+        'Value', json_agg("value" ORDER BY value_index)
+    ) as "metadata"
+    FROM archived_workflow_metadata_entry
+    WHERE id = pid
+    AND workflow_id = pworkflow_id
+    AND namespace_id = pnamespace_id
+    GROUP BY key_name
+);
+$$;
+
+CREATE OR REPLACE FUNCTION get_archived_workflow_step_retries_json(pid uuid, pworkflow_id uuid, pnamespace_id uuid, pstep_id int)
+ RETURNS jsonb
+ LANGUAGE sql
+AS $$
+SELECT json_agg(
+  json_build_object(
+    'RetryType', "retry_type",
+    'Timestamp', "time_stamp"
+  )
+  ORDER BY retry_index
+)
+FROM archived_workflow_step_retries
+WHERE id = pid
+AND workflow_id = pworkflow_id
+AND namespace_id = pnamespace_id
+AND step_id = pstep_id;
+$$;
+
+CREATE OR REPLACE FUNCTION get_archived_workflow_step_json(pid uuid, pworkflow_id uuid, pnamespace_id uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+AS $$
+SELECT json_agg(
+  json_build_object(
+    'Type', aws.step_type,
+    'Index', aws.step_index,
+    'Name', a.name,
+    'StartTime', aws.start_time,
+    'EndTime', aws.end_time,
+    'Retries', get_archived_workflow_step_retries_json(pid, pworkflow_id, pnamespace_id, aws.step_id),
+    'Input', aws.input,
+    'Status', aws.result_status,
+    'ErrorMessage', aws.error_message,
+    'Result', aws.result 
+  )
+  ORDER BY step_id
+)
+FROM archived_workflow_steps aws
+LEFT JOIN activities a 
+  ON aws.activity_id = a.id 
+  AND aws.namespace_id = a.namespace_id
+WHERE aws.id = pid
+AND aws.workflow_id = pworkflow_id
+AND aws.namespace_id = pnamespace_id;
 $$;

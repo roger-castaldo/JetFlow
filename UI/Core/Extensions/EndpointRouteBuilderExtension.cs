@@ -1,4 +1,5 @@
 ﻿using JetFlow.UI.Handlers;
+using JetFlow.UI.Helpers;
 using JetFlow.UI.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -141,7 +142,8 @@ public static class EndpointRouteBuilderExtension
     private static IEndpointRouteBuilder RegisterQueryEndpoints(this IEndpointRouteBuilder routeBuilder)
     {
         routeBuilder
-            .MapQuery("/jetflow/query/activeflows", async ([FromBody] WorkflowQuery query, [FromServices] IActiveFlowService activeFlowService, CancellationToken cancellation) =>
+            .MapQuery("/jetflow/query/activeflows", async ([FromBody] WorkflowQuery query, [FromServices] IActiveFlowService activeFlowService,
+            [FromServices] IConfigService configService, CancellationToken cancellation) =>
             {
                 if (query is null)
                     return Results.BadRequest("Query parameter is required.");
@@ -151,9 +153,25 @@ public static class EndpointRouteBuilderExtension
                     query.PageSize,
                     query.Offset,
                     (metaData) => CheckMetaData(metaData, query.MetaData),
-                    (Func<JsonElement, bool>?)(!query.Argument.HasValue ? null : (arg) => CheckArgument(arg, query.Argument.Value))
+                    (Func<JsonElement, bool>?)(query.Argument==null ? null : (arg) => CheckArgument(arg, query.Argument))
                 );
-                return Results.Ok(new WorkflowQueryResponse(result, result.LastOffset));
+                return Results.Ok(new WorkflowQueryResponse<ActiveWorkflow>(await WorkflowsHelper.MaskArgumentsAsync(configService, query.WorkflowNamespace, result), result.LastOffset));
+            });
+        routeBuilder
+            .MapQuery("/jetflow/query/archivedflows", async ([FromBody] WorkflowQuery query, [FromServices] IDbConnection dbConnection,
+            [FromServices] IConfigService configService, CancellationToken cancellation) =>
+            {
+                if (query is null)
+                    return Results.BadRequest("Query parameter is required.");
+                var result = await dbConnection.FindArchivedWorkflowAsync(
+                    query.WorkflowNamespace,
+                    query.WorkflowName,
+                    query.Argument,
+                    query.MetaData,
+                    (int)query.Offset,
+                    (int)query.PageSize
+                );
+                return Results.Ok(new WorkflowQueryResponse<ArchivedWorkflow>(await WorkflowsHelper.MaskArgumentsAsync(configService, query.WorkflowNamespace, result), (ulong)((int)query.Offset+result.Count())));
             });
         return routeBuilder;
     }
@@ -185,23 +203,13 @@ public static class EndpointRouteBuilderExtension
         return true;
     }
 
-    private static bool CheckArgument(JsonElement argument, JsonElement queryArgument)
+    private static bool CheckArgument(JsonElement argument, IEnumerable<IArgumentFilter> argumentFilters)
     {
-        if (argument.ValueKind != queryArgument.ValueKind)
-            return false;
-        return argument.ValueKind switch
+        foreach(var filter in argumentFilters)
         {
-            JsonValueKind.String => argument.GetString() == queryArgument.GetString(),
-            JsonValueKind.Number => argument.ToString() == queryArgument.ToString(),
-            JsonValueKind.True => argument.GetBoolean() == queryArgument.GetBoolean(),
-            JsonValueKind.False => argument.GetBoolean() == queryArgument.GetBoolean(),
-            JsonValueKind.Array =>
-                argument.EnumerateArray().Zip(queryArgument.EnumerateArray()).All(pair => CheckArgument(pair.First, pair.Second)),
-            JsonValueKind.Object =>
-                argument.EnumerateObject().All(prop => queryArgument.TryGetProperty(prop.Name, out var queryProp) ? CheckArgument(prop.Value, queryProp) : true),
-            JsonValueKind.Null => true,
-            JsonValueKind.Undefined => true,
-            _ => false
-        };
+            if (!filter.IsMatch(argument))
+                return false;
+        }
+        return true;
     }
 }

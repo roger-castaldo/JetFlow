@@ -1,4 +1,5 @@
 ﻿using JetFlow.Data;
+using System.Text.Json;
 
 namespace JetFlow.UI.Interfaces;
 
@@ -31,12 +32,19 @@ public interface IDbConnection
     /// <returns>A collection of namespace names (null values represent the default namespace).</returns>
     ValueTask<IEnumerable<string?>> ListNamespacesAsync();
 
+    ValueTask StoreWorkflowArgumentDefinitionAsync(string? namespaceName, string workflowName, JsonDocument definition);
+    ValueTask<JsonDocument?> GetWorkflowArgumentDefinitionAsync(string? namespaceName, string workflowName);
+    ValueTask StoreActivityArgumentDefinitionAsync(string? namespaceName, string activityName, JsonDocument definition);
+    ValueTask<JsonDocument?> GetActivityArgumentDefinitionAsync(string? namespaceName, string activityName);
+
     /// <summary>
     /// Stores an archived workflow record for the specified namespace.
     /// </summary>
     /// <param name="archive">The archived workflow to store.</param>
     /// <param name="namespaceName">The namespace to associate the archive with.</param>
     ValueTask StoreArchiveAsync(ArchivedWorkflow archive, string? namespaceName);
+    ValueTask<IEnumerable<ArchivedWorkflow>> FindArchivedWorkflowAsync(string? namespaceName, string workflowName, IEnumerable<IArgumentFilter>? argumentFilters,
+        Dictionary<string, string?>? metaData, int offset, int pageSize);
 
     /// <summary>
     /// Stores an activity performance record for a namespace.

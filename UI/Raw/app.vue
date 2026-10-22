@@ -70,13 +70,13 @@
         },
         {
             icon:'boxes-stacked',
-            title:'scheduledflows',
+            title:'menu.scheduledflows',
             component:scheduledFlows,
             name:'scheduledflows'
         },
         {
             icon:'cog',
-            title:'settings',
+            title:'menu.settings',
             component:settings,
             name:'settings'
         }

@@ -7,4 +7,6 @@ internal interface IConfigService
     ValueTask RegisterNamespaceAsync(string? namespaceName);
     ValueTask UnregisterNamespaceAsync(string? namespaceName);
     ValueTask<IEnumerable<string?>> GetCurrentNamespacesAsync();
+    ValueTask<IArgumentDefinition?> GetWorkflowArgumentDefinitionAsync(string? namespaceName, string workflowName);
+    ValueTask<IArgumentDefinition?> GetActivityArgumentDefinitionAsync(string? namespaceName, string activityName);
 }

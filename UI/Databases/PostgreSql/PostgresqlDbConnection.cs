@@ -1,4 +1,5 @@
 ﻿using JetFlow.Data;
+using JetFlow.UI.ArgumentFilters;
 using JetFlow.UI.dto;
 using JetFlow.UI.Helpers;
 using JetFlow.UI.Interfaces;
@@ -42,12 +43,60 @@ public class PostgresqlDbConnection(string connectionString)
 
     async ValueTask<IEnumerable<string?>> IDbConnection.ListNamespacesAsync()
     {
-        var queryResults = await queryHelper.ExecuteReader(new(@"SELECT ""name"" FROM ""namespaces"" WHERE ""enabled"" = @enabled;", [new("@enabled", true)]));
+        var queryResults = await queryHelper.ExecuteReader(new(@"SELECT ""name"" FROM ""namespaces"" WHERE ""enabled"" = @enabled;", [QueryHelper.CreateParameter("@enabled", true)]));
         return queryResults?.Select(row => (string?)row["name"])?? [];
     }
 
+    ValueTask IDbConnection.StoreWorkflowArgumentDefinitionAsync(string? namespaceName, string workflowName, JsonDocument definition)
+        => queryHelper.ExecuteCommand("CALL set_workflow_argument_definition(@namespace, @workflow, @definition)", [
+                QueryHelper.CreateParameter("@namespace", namespaceName),
+                QueryHelper.CreateParameter("@workflow", workflowName),
+                QueryHelper.CreateJsonParameter("@definition", definition)
+            ]);
+
+    async ValueTask<JsonDocument?> IDbConnection.GetWorkflowArgumentDefinitionAsync(string? namespaceName, string workflowName)
+    {
+        var queryResult = await queryHelper.ExecuteReader(new(
+            @"SELECT w.""argument_definition"" 
+FROM ""workflows"" w 
+INNER JOIN ""namespaces"" n
+    ON w.namespace_id = n.id
+WHERE n.name = @namespace
+AND w.name = @workflow
+AND w.""argument_definition"" IS NOT NULL;", [
+                    QueryHelper.CreateParameter("@namespace", namespaceName),
+                    QueryHelper.CreateParameter("@workflow", workflowName)
+                ]
+        ));
+        return (queryResult?.Any()??false ? JsonSerializer.Deserialize<JsonDocument>((string)queryResult.First()["argument_definition"]) : null);
+    }
+
+    ValueTask IDbConnection.StoreActivityArgumentDefinitionAsync(string? namespaceName, string activityName, JsonDocument definition)
+        => queryHelper.ExecuteCommand("CALL set_activity_argument_definition(@namespace, @activity, @definition)", [
+                QueryHelper.CreateParameter("@namespace", namespaceName),
+                QueryHelper.CreateParameter("@activity", activityName),
+                QueryHelper.CreateJsonParameter("@definition", definition)
+            ]);
+
+    async ValueTask<JsonDocument?> IDbConnection.GetActivityArgumentDefinitionAsync(string? namespaceName, string activityName)
+    {
+        var queryResult = await queryHelper.ExecuteReader(new(
+            @"SELECT a.""argument_definition"" 
+FROM ""activities"" a
+INNER JOIN ""namespaces"" n
+    ON a.namespace_id = n.id
+WHERE n.name = @namespace
+AND a.name = @activity
+AND a.""argument_definition"" IS NOT NULL;", [
+                    QueryHelper.CreateParameter("@namespace", namespaceName),
+                    QueryHelper.CreateParameter("@activity", activityName)
+                ]
+        ));
+        return (queryResult?.Any()??false ? JsonSerializer.Deserialize<JsonDocument>((string)queryResult.First()["argument_definition"]) : null);
+    }
+
     ValueTask IDbConnection.RegisterNamespaceAsync(string? namespaceName)
-    => queryHelper.ExecuteCommand("CALL register_namespace(@namespace)", new NpgsqlParameter("@namespace", namespaceName));
+        => queryHelper.ExecuteCommand("CALL register_namespace(@namespace)", QueryHelper.CreateParameter("@namespace", namespaceName));
 
     ValueTask IDbConnection.StoreArchiveAsync(ArchivedWorkflow archive, string? namespaceName)
     => queryHelper.ExecuteCommands([
@@ -111,6 +160,68 @@ public class PostgresqlDbConnection(string connectionString)
             ]
         )
     ]);
+
+    async ValueTask<IEnumerable<ArchivedWorkflow>> IDbConnection.FindArchivedWorkflowAsync(string? namespaceName, string workflowName, IEnumerable<IArgumentFilter>? argumentFilters,
+        Dictionary<string, string?>? metaData, int offset, int pageSize)
+    {
+        var filters = (argumentFilters?? []).Select(a => ConvertArgumentToSql(a)).ToArray();
+        var queryResult = await queryHelper.ExecuteReader(new(
+            @$"SELECT 
+  aw.id,
+  json_build_object(
+    'ID', aw.id,
+    'SchedulerId', aw.scheduler_id,
+    'Name', w.name,
+    'Options', json_build_object(
+      'CompletionAction', awo.completion_action,
+      'PurgeDelay', awo.purge_delay,
+      'ErrorOnActivityTimeout', awo.error_on_activity_timeout,
+      'ErrorOnActivityFailure', awo.error_on_activity_failure
+    ),
+    'StartedAt', aw.started_at,
+    'FinishedAt', aw.finished_at,
+    'IsSuccessful', aw.is_successful,
+    'ErrorMessage', aw.error_message,
+    'Arguments', aw.arguments,
+    'MetaData', get_archived_workflow_metada_json(aw.id, aw.workflow_id, aw.namespace_id),
+    'Steps', get_archived_workflow_step_json(aw.id, aw.workflow_id, aw.namespace_id)
+  ) AS ""archive""
+FROM archived_workflows aw
+INNER JOIN namespaces n
+    ON aw.namespace_id = n.id
+INNER JOIN workflows w
+    ON aw.workflow_id = w.id 
+    AND aw.namespace_id = w.namespace_id
+INNER JOIN archived_workflow_options awo
+    ON aw.id = awo.id 
+    AND aw.workflow_id = awo.workflow_id
+    AND aw.namespace_id = awo.namespace_id
+WHERE n.name = @namespace
+AND w.name = @workflow
+{ string.Join('\n', filters.Select(f=> $"AND {f.queryPiece}")) }
+LIMIT @pageSize OFFSET @offset;",
+            [
+                .. filters.Select(f=>f.parameter)
+                .Where(p=>p is not null)
+                .OfType<NpgsqlParameter>()
+,
+                QueryHelper.CreateParameter("@namespace", namespaceName),
+                QueryHelper.CreateParameter("@workflow", workflowName),
+                QueryHelper.CreateParameter("@pageSize", pageSize),
+                QueryHelper.CreateParameter("@offset", offset)
+,
+            ]));
+        return queryResult?.Select(r => JsonSerializer.Deserialize<ArchivedWorkflow>((string)r["archive"]))
+            ?? [];
+    }
+
+    private static (string queryPiece, NpgsqlParameter? parameter) ConvertArgumentToSql(IArgumentFilter filter)
+        => filter switch
+        {
+            StartsWithFilter swf => ($" (aw.arguments #>> '{{{swf.PropertyName.Replace('.',',')}}}')::text LIKE @{swf.PropertyName.Replace('.','_')}", QueryHelper.CreateParameter($"@{swf.PropertyName.Replace('.','_')}",$"{swf.Value}%")),
+            EndsWithFilter ewf => ($" (aw.arguments #>> '{{{ewf.PropertyName.Replace('.', ',')}}}')::text LIKE @{ewf.PropertyName.Replace('.', '_')}", QueryHelper.CreateParameter($"@{ewf.PropertyName.Replace('.', '_')}", $"{ewf.Value}")),
+            _ => throw new InvalidCastException()
+        };
 
     ValueTask IDbConnection.UnregisterNamespaceAsync(string? namespaceName)
         => queryHelper.ExecuteCommand("CALL unregister_namespace(@namespace)", new NpgsqlParameter("@namespace", namespaceName));

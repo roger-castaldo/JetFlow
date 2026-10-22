@@ -34,9 +34,9 @@ builder.AddProject<WebUI>("webui")
     .WaitFor(nats)
     .WithExternalHttpEndpoints();
 
-builder.AddProject<OrderSubmitter>("ordersubmitter")
-    .WithReference(nats)
-    .WaitFor(nats)
-    .WaitFor(processor);
+//builder.AddProject<OrderSubmitter>("ordersubmitter")
+//    .WithReference(nats)
+//    .WaitFor(nats)
+//    .WaitFor(processor);
 
 builder.Build().Run();

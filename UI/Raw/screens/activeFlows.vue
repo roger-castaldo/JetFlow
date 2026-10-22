@@ -1,6 +1,6 @@
 <template>
     <div>
-        <InfiniteTable :fixed_header="true" :full_width="true" :loadMore="loadMore">
+        <InfiniteTable :fixed_header="true" :full_width="true" :loadMore="loadMore" :hasMore="hasMore" :loading="loading" ref="tableRef">
             <template #thead>
                 <tr>
                     <th>{{ translate('common.schedulerid') }}</th>
@@ -10,16 +10,16 @@
                     <th>{{ translate('common.onactivityerror') }}</th>
                     <th>{{ translate('common.argument') }}</th>
                     <th>{{ translate('common.metadata') }}</th>
-                    <th>{{ translate('screens.activeFlows.stepcount') }}</th>
+                    <th>{{ translate('common.stepcount') }}</th>
                     <th>{{ translate('screens.activeFlows.currentstep') }}</th>
                     <th></th>
                 </tr>
             </template>
             <template #tbody>
-                <tr v-for="flow in flows" :key="flow.ID">
+                <tr v-for="flow in flows" :key="flow.id">
                     <td>{{ flow.schedulerId }}</td>
                     <td>{{ formatTime(flow.startedAt) }}</td>
-                    <td>{{ flow.options.completionAction }}{{ flow.options.purgeDelay!==null ? translate('screens.activeFlows.purgedelay',{delay:flow.options.purgeDelay}) : ''}}</td>
+                    <td>{{ flow.options.completionAction }}{{ flow.options.purgeDelay!==null ? translate('common.purgedelay',{delay:flow.options.purgeDelay}) : ''}}</td>
                     <td>{{ flow.options.errorOnActivityTimeout ? translate('common.fail') : translate('common.continue') }}</td>
                     <td>{{ flow.options.errorOnActivityFailure ? translate('common.fail') : translate('common.continue') }}</td>
                     <td>{{ shrinkString(JSON.stringify(flow.arguments, null, 2), 100) }}</td>
@@ -40,7 +40,7 @@
     import WorkflowDetails from '../components/WorkflowDetails.vue';
     import {GetActiveFlows} from 'services';
     import {Constants, shrinkString} from 'mixins';
-    import {ref, inject} from 'vue';
+    import {ref, inject, watch} from 'vue';
     import {Button, Sizes} from 'components';
     import {translate, formatTime} from '../i18n';
 
@@ -52,12 +52,17 @@
     const metadata = null; // Replace with actual metadata if needed
     const argument = null; // Replace with actual argument if needed
     const currentWorkflow = ref(null);
+    const hasMore = ref(true);
+    const loading = ref(false);
+    const tableRef = ref(null);
 
     const loadMore = async () => {
+        loading.value = true;
         const newFlows = await GetActiveFlows(currentNamespace.value, "Place Order", metadata, argument, lastOffset.value, pageSize);
         flows.value.push(...newFlows.data);
         lastOffset.value = newFlows.lastOffset;
-        return newFlows.data.length === pageSize; // Return true if there might be more data to load
+        hasMore.value = (newFlows.data.length === pageSize); 
+        loading.value = false;
     };
 
     const getCurrentStep = (steps) => {
@@ -74,5 +79,14 @@
                 return translate('screens.activeFlows.suspended',{starttime:formatTime(currentStep.startTime)});
         }
     };
+
+    watch(currentNamespace,async ()=>{
+        flows.value=[];
+        hasMore.value=true;
+        lastOffset.value=0;
+        if (tableRef?.value.isAtEnd){
+            await loadMore();
+        }
+    });
     
 </script>

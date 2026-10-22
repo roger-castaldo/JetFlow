@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NATS.Client.Core;
-using NATS.Net;
 
 namespace JetFlow.UI.Extensions;
 
