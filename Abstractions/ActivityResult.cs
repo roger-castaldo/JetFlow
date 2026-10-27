@@ -1,28 +1,6 @@
 ﻿namespace JetFlow;
 
 /// <summary>
-/// Represents the status of an activity result, indicating whether it was successful, failed, or timed out.
-/// </summary>
-[Flags]
-public enum ActivityResultStatus
-{
-    /// <summary>
-    /// Indicates that the operation completed successfully.
-    /// </summary>
-    Success,
-    /// <summary>
-    /// Represents a failure result or state.
-    /// </summary>
-    Failure,
-    /// <summary>
-    /// Gets or sets the timeout interval for the operation.
-    /// </summary>
-    /// <remarks>Specify the duration to wait before the operation is canceled due to timeout. The value is
-    /// typically expressed in milliseconds unless otherwise noted by the implementation.</remarks>
-    Timeout
-}
-
-/// <summary>
 /// Represents the result of an activity execution, including its status, index, and an optional error message.
 /// </summary>
 /// <param name="Index">The zero-based index of the activity within the workflow or sequence.</param>

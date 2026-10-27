@@ -178,8 +178,13 @@ internal static class WorkflowHelper
 
     private static async Task<WorkflowStep> ProduceActionAsync(MessageSerializer messageSerializer, EventMessage? endMessage, EventMessage startMessage, IEnumerable<WorkflowStepRetry> retries)
     {
+        object? result = null;
+        if (!string.IsNullOrWhiteSpace(startMessage.ChildWorkflowId) && (endMessage?.Data?.Length??0)>0)
+            result = Enum.Parse<WorkflowResult>(UTF8Encoding.UTF8.GetString(endMessage!.Data));
+        else if (endMessage?.WorkflowStepResultStatus == ActivityResultStatus.Success && (endMessage?.Data?.Length??0)>0)
+            result = await messageSerializer.DecodeAsync(endMessage!.Data, endMessage!.Headers);
         return new(
-            WorkflowStepTypes.Action,
+            (!string.IsNullOrWhiteSpace(startMessage.ChildWorkflowId) ? WorkflowStepTypes.ChildWorkflow : WorkflowStepTypes.Action),
             startMessage.ActivityID,
             startMessage.ActivityName,
             startMessage!.Metadata!.Value.Timestamp,
@@ -188,7 +193,9 @@ internal static class WorkflowHelper
             ((startMessage.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(startMessage.Data, startMessage.Headers) : null),
             endMessage?.WorkflowStepResultStatus,
             endMessage?.WorkflowStepResultStatus == ActivityResultStatus.Failure ? System.Text.UTF8Encoding.UTF8.GetString(endMessage!.Data!) : null,
-            endMessage?.WorkflowStepResultStatus == ActivityResultStatus.Success && (endMessage?.Data?.Length??0)>0 ? await messageSerializer.DecodeAsync(endMessage!.Data, endMessage!.Headers) : null
+            result,
+            (!string.IsNullOrWhiteSpace(startMessage.ChildWorkflowId) ? Guid.Parse(startMessage.ChildWorkflowId) : null),
+            startMessage.ChildWorkflowName
         );
     }
 }

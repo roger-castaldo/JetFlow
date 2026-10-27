@@ -25,6 +25,12 @@ internal static class Constants
     public const string WorkflowTraceHeaderKey = $"{HeaderBase}workflow-traceParentId";
     public const string WorkflowTraceSpanHeaderKey = $"{HeaderBase}workflow-traceParentSpanId";
     public const string WorkflowNameHeader = $"{HeaderBase}workflow-name";
+    public const string ParentWorkflowIdHeader = $"{HeaderBase}parent-workflow-id";
+    public const string ParentWorkflowSubjectHeader = $"{HeaderBase}parent-workflow-subject";
+    public const string ParentWorkflowActivitySubjectHeader = $"{HeaderBase}parent-workflow-activity-subject";
+    public const string ParentWorkflowActivityNameHeader = $"{HeaderBase}parent-workflow-activity-name";
+    public const string ChildWorkflowIdHeader = $"{HeaderBase}child-workflow-id";
+    public const string ChildWorkflowNameHeader = $"{HeaderBase}child-workflow-name";
     public const string ActivityNameHeader = $"{HeaderBase}activity-name";
     public const string ScheduleDelayHeader = "Nats-Schedule";
 

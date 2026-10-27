@@ -5,6 +5,7 @@ namespace JetFlow.Configs;
 /// <summary>
 /// Specifies the actions to take when a workflow completes, such as archiving or purging the workflow data. This allows for automated cleanup and management of workflow records based on the desired retention policies.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<WorkflowCompletionActions>))]
 public enum WorkflowCompletionActions
 {
     /// <summary>
@@ -29,7 +30,6 @@ public sealed record WorkflowOptions
     /// <summary>
     /// Gets the action to perform when the workflow completes.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<WorkflowCompletionActions>))]
     public WorkflowCompletionActions CompletionAction { get; init; } = WorkflowCompletionActions.Archive;
     /// <summary>
     /// Gets the optional delay before purging items.

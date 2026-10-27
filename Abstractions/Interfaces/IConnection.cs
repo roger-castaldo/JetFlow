@@ -30,22 +30,22 @@ namespace JetFlow.Interfaces
         /// Starts a new instance of the specified workflow type asynchronously.
         /// </summary>
         /// <typeparam name="TWorkflow">The type of workflow to start. Must implement the IWorkflow interface.</typeparam>
-        /// <param name="exectionRequest">The request containing additional information to execute the workflow with, if desired.</param>
+        /// <param name="executionRequest">The request containing additional information to execute the workflow with, if desired.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the workflow start operation.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The result contains the unique identifier of the
         /// started workflow instance.</returns>
-        ValueTask<Guid> StartWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? exectionRequest = null, CancellationToken cancellationToken = default)
+        ValueTask<Guid> StartWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest = null, CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow;
         /// <summary>
         /// Starts a new instance of the specified workflow asynchronously.
         /// </summary>
         /// <typeparam name="TWorkflow">The type of workflow to start. Must implement IWorkflow&lt;TInput&gt;.</typeparam>
         /// <typeparam name="TInput">The type of input data provided to the workflow.</typeparam>
-        /// <param name="exectionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
+        /// <param name="executionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The task result contains the unique identifier of
         /// the started workflow instance.</returns>
-        ValueTask<Guid> StartWorkflowAsync<TWorkflow,TInput>(WorkflowExecutionRequest<TInput> exectionRequest, CancellationToken cancellationToken = default)
+        ValueTask<Guid> StartWorkflowAsync<TWorkflow,TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow<TInput>;
         /// <summary>
         /// Resumes the suspended instance of the specified workflow type asynchronously.
@@ -149,46 +149,46 @@ namespace JetFlow.Interfaces
         /// </summary>
         /// <typeparam name="TWorkflow">The type of workflow to schedule. Must implement the IWorkflow interface.</typeparam>
         /// <param name="schedule">The schedule that defines when and how the workflow should be executed.</param>
-        /// <param name="exectionRequest">The request containing additional information to execute the workflow with, if desired.</param>
+        /// <param name="executionRequest">The request containing additional information to execute the workflow with, if desired.</param>
         /// <param name="cancellationToken">A token to monitor for cancellation requests. The operation is canceled if the token is triggered.</param>
         /// <returns>A ValueTask that represents the asynchronous scheduling operation. The result contains the unique identifier
         /// of the scheduled workflow instance.</returns>
-        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowExecutionRequest? exectionRequest = null, CancellationToken cancellationToken = default)
+        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowExecutionRequest? executionRequest = null, CancellationToken cancellationToken = default)
            where TWorkflow : IWorkflow;
         /// <summary>
         /// Schedules a workflow of the specified type to run according to the provided schedule.
         /// </summary>
         /// <typeparam name="TWorkflow">The type of workflow to schedule. Must implement IWorkflow&lt;TInput&gt;.</typeparam>
         /// <typeparam name="TInput">The type of input data provided to the workflow.</typeparam>
-        /// <param name="exectionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
+        /// <param name="executionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
         /// <param name="schedule">The schedule that determines when the workflow will be executed.</param>
         /// <param name="cancellationToken">A token that can be used to cancel the scheduling operation.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The result contains the unique identifier of the
         /// scheduled workflow.</returns>
-        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> exectionRequest, IWorkflowSchedule schedule, CancellationToken cancellationToken = default)
+        ValueTask<Guid> ScheduleWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, IWorkflowSchedule schedule, CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow<TInput>;
         /// <summary>
         /// Schedules the specified workflow to start after the given delay.
         /// </summary>
         /// <typeparam name="TWorkflow">The type of workflow to start. Must implement the IWorkflow interface.</typeparam>
         /// <param name="delay">The amount of time to wait before starting the workflow. Must be a non-negative duration.</param>
-        /// <param name="exectionRequest">The request containing additional information to execute the workflow with, if desired.</param>
+        /// <param name="executionRequest">The request containing additional information to execute the workflow with, if desired.</param>
         /// <param name="cancellationToken">A token that can be used to cancel the scheduling operation.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The result contains the unique identifier of the
         /// scheduled workflow instance.</returns>
-        ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowExecutionRequest? exectionRequest = null, CancellationToken cancellationToken = default)
+        ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow>(TimeSpan delay, WorkflowExecutionRequest? executionRequest = null, CancellationToken cancellationToken = default)
            where TWorkflow : IWorkflow;
         /// <summary>
         /// Schedules the specified workflow to start after the given delay with the provided input.
         /// </summary>
         /// <typeparam name="TWorkflow">The type of workflow to start. Must implement IWorkflow&lt;TInput&gt;.</typeparam>
         /// <typeparam name="TInput">The type of input required by the workflow.</typeparam>
-        /// <param name="exectionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
+        /// <param name="executionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
         /// <param name="delay">The amount of time to wait before starting the workflow.</param>
         /// <param name="cancellationToken">A token that can be used to cancel the scheduling operation.</param>
         /// <returns>A ValueTask that represents the asynchronous operation. The result contains the unique identifier of the
         /// scheduled workflow instance.</returns>
-        ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> exectionRequest, TimeSpan delay, CancellationToken cancellationToken = default)
+        ValueTask<Guid> DelayStartWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, TimeSpan delay, CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow<TInput>;
         /// <summary>
         /// Removes a previously scheduled workflow by its identifier.

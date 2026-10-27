@@ -6,6 +6,7 @@ namespace JetFlow;
 /// <summary>
 /// Specifies the type of workflow step, which can be either an action (Activity) or a delay (a pause in the workflow).
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<WorkflowStepTypes>))]
 public enum WorkflowStepTypes
 {
     /// <summary>
@@ -19,12 +20,17 @@ public enum WorkflowStepTypes
     /// <summary>
     /// Represents a suspension of the workflow
     /// </summary>
-    Suspended
+    Suspended,
+    /// <summary>
+    /// Represents a child workflow execution
+    /// </summary>
+    ChildWorkflow
 }
 
 /// <summary>
 /// Specifies the type of retry that occurred during a workflow step, which can be either a timeout or an error.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<RetryTypes>))]
 public enum RetryTypes
 {
     /// <summary>
@@ -43,7 +49,6 @@ public enum RetryTypes
 /// <param name="RetryType">The type of retry performed for the workflow step.</param>
 /// <param name="Timestamp">The date and time, in UTC, when the retry action was executed.</param>
 public record struct WorkflowStepRetry(
-    [property: JsonConverter(typeof(JsonStringEnumConverter<RetryTypes>))]
     RetryTypes RetryType,
     DateTimeOffset Timestamp
 );
@@ -61,8 +66,9 @@ public record struct WorkflowStepRetry(
 /// <param name="Status">The result status of the step, or null if the status is not set.</param>
 /// <param name="ErrorMessage">The error message associated with the step if it failed, or null if no error occurred.</param>
 /// <param name="Result">The result produced by the step, or null if there is no result.</param>
+/// <param name="ChildWorkflowID">The id of the child workflow being executed</param>
+/// <param name="ChildWorkflowName">The name of the child workflow being executed</param>
 public record struct WorkflowStep(
-    [property: JsonConverter(typeof(JsonStringEnumConverter<WorkflowStepTypes>))]
     WorkflowStepTypes Type,
     uint? Index,
     string? Name,
@@ -70,10 +76,11 @@ public record struct WorkflowStep(
     DateTimeOffset? EndTime,
     WorkflowStepRetry[]? Retries,
     object? Input,
-    [property: JsonConverter(typeof(JsonStringEnumConverter<ActivityResultStatus>))]
     ActivityResultStatus? Status,
     string? ErrorMessage,
-    object? Result
+    object? Result,
+    Guid? ChildWorkflowID,
+    string? ChildWorkflowName
 )
 {
     internal static WorkflowStep CreateDelayStep(DateTimeOffset startTime, DateTimeOffset? endTime, TimeSpan? delayDuration)
@@ -87,6 +94,8 @@ public record struct WorkflowStep(
                 delayDuration,
                 null,
                 null,
+                null,
+                null,
                 null
             );
     internal static WorkflowStep CreateSuspendStep(DateTimeOffset startTime, DateTimeOffset? endTime, object? resumeMessage)
@@ -98,6 +107,8 @@ public record struct WorkflowStep(
                 endTime,
                 null,
                 resumeMessage,
+                null,
+                null,
                 null,
                 null,
                 null

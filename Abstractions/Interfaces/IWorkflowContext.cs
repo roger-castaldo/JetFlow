@@ -86,4 +86,33 @@ public interface IWorkflowContext : IContext
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcomes of the executed activities.</returns>
     ValueTask<IEnumerable<ActivityResult<TOutput>>> ExecuteActivitiesAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken = default)
         where TActivity : IActivityWithReturn<TOutput, TInput>;
+    /// <summary>
+    /// Starts a child instance of the specified workflow type asynchronously.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The type of workflow to start. Must implement the IWorkflow interface.</typeparam>
+    /// <param name="executionRequest">The request containing additional information to execute the workflow with, if desired.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the workflow start operation.</param>
+    /// <returns>A ValueTask that represents the asynchronous operation. The task result contains result status of the workflow.</returns>
+    ValueTask<WorkflowResult> ExecuteChildWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest = null, CancellationToken cancellationToken = default)
+        where TWorkflow : IWorkflow;
+    /// <summary>
+    /// Starts a child instance of the specified workflow asynchronously.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The type of workflow to start. Must implement IWorkflow&lt;TInput&gt;.</typeparam>
+    /// <typeparam name="TInput">The type of input data provided to the workflow.</typeparam>
+    /// <param name="executionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>A ValueTask that represents the asynchronous operation. The task result contains result status of the workflow.</returns>
+    ValueTask<WorkflowResult> ExecuteChildWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken = default)
+        where TWorkflow : IWorkflow<TInput>;
+    /// <summary>
+    /// Starts multiple child workflow instance of the specified workflow asynchronously and returns the results of the workflows.
+    /// </summary>
+    /// <typeparam name="TWorkflow">The type of workflow to start. Must implement IWorkflow&lt;TInput&gt;.</typeparam>
+    /// <typeparam name="TInput">The type of input data provided to the workflow.</typeparam>
+    /// <param name="executionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>A ValueTask that represents the asynchronous operation. The task result contains the results of the workflows.</returns>
+    ValueTask<IEnumerable<WorkflowResult>> ExecuteChildWorkflowsAsync<TWorkflow, TInput>(WorkflowExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken = default)
+        where TWorkflow : IWorkflow<TInput>;
 }

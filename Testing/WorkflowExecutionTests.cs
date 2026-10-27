@@ -567,13 +567,14 @@ public class WorkflowExecutionTests
             subjectMapper,
             async () =>
             {
-                runId = await connection.StartWorkflowAsync<AllActivityResultsWorkflow>(exectionRequest: new() { MetaData=metaData});
+                runId = await connection.StartWorkflowAsync<AllActivityResultsWorkflow>(executionRequest: new() { MetaData=metaData});
                 return runId;
             }
         );
 
         // Assert
         Assert.IsNotNull(result);
+        await Task.Delay(TimeSpan.FromSeconds(10)); //ensuring archive exists
 
         //Verify
         var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore, TestContext.CancellationToken);

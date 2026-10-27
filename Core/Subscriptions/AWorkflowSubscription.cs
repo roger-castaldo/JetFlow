@@ -44,16 +44,18 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
         else
         {
             bool isCompleted = false;
+            EventMessage? startMessage = null;
             try
             {
                 if (!ValidOperations.Any(m => Equals(m, message.WorkflowEventType)))
                     throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
                 await MetricsHelper.ProcessWorkflowMessageAsync(message, CancellationToken);
                 var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, MetricsHelper, message);
+                startMessage=context.StartMessage;
                 var activityResultStatus = message.WorkflowStepResultStatus;
                 var errorMessage = (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Data) : null);
                 string? timeoutMessage = null;
-                if (message.ParallelActivityCount.HasValue)
+                if (message.WorkflowEventType!=WorkflowEventTypes.Start && message.ParallelActivityCount.HasValue)
                 {
                     (var isComplete, activityResultStatus, errorMessage, timeoutMessage) = context.ExtractParallelActivityStatus();
                     if (!isComplete)
@@ -83,13 +85,13 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             {
                 Activity.Current?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 await MetricsHelper.EndWorkflowAsync(message.WorkflowName, false, CancellationToken);
-                await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, ex.Message), CancellationToken);
+                await ServiceConnection.EndWorkflowAsync(startMessage, message, new(DateTime.UtcNow, ex.Message), CancellationToken);
             }
             await message.AckAsync(CancellationToken);
             if (isCompleted)
             {
                 await MetricsHelper.EndWorkflowAsync(message.WorkflowName, true, CancellationToken);
-                await ServiceConnection.EndWorkflowAsync(message, new(DateTime.UtcNow, null), CancellationToken);
+                await ServiceConnection.EndWorkflowAsync(startMessage, message, new(DateTime.UtcNow, null), CancellationToken);
             }
         }
     }

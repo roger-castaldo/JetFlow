@@ -26,6 +26,12 @@ internal static class NameHelper
         return pair;
     }
 
+    public static (string cleanedName, string rawName) GetChildWorkflowName<TWorkflow>()
+    {
+        var (cleanedName, rawName)= GetWorkflowName<TWorkflow>();
+        return ($"cwf_{cleanedName}", $"Child Workflow {rawName}");
+    }
+
     private static string? TraceBaseWorkflowTypeName(Type type)
     {
         var baseType = type.BaseType;

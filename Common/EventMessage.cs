@@ -42,7 +42,7 @@ internal record EventMessage
 
     private static string? ExtractHeader(NatsHeaders? headers, string headerKey)
     {
-        if (headers?.TryGetValue(headerKey, out var value)??false)
+        if (headers?.TryGetValue(headerKey, out var value)??false && !string.IsNullOrWhiteSpace(value))
             return value.ToString();
         return null;
     }
@@ -50,8 +50,9 @@ internal record EventMessage
     private static T? ExtractHeader<T>(NatsHeaders? headers, string headerKey, Func<string, T?> converter)
         where T : struct
     {
-        if (headers?.TryGetValue(headerKey, out var value)??false)
-            return converter(value.ToString());
+        var svalue = ExtractHeader(headers, headerKey);
+        if (!string.IsNullOrWhiteSpace(svalue))
+            return converter(svalue);
         return null;
     }
 
@@ -106,6 +107,12 @@ internal record EventMessage
         WorkflowSubjectName = match.Groups["workflowName"].Value;
         WorkflowName = ExtractHeader(headers, Constants.WorkflowNameHeader)??WorkflowSubjectName;
         WorkflowId = match.Groups["instance"].Value;
+        ParentWorkflowId = ExtractHeader(headers, Constants.ParentWorkflowIdHeader);
+        ParentWorkflowSubject = ExtractHeader(headers, Constants.ParentWorkflowSubjectHeader);
+        ParentWorkflowActivitySubject = ExtractHeader(headers, Constants.ParentWorkflowActivitySubjectHeader);
+        ParentWorkflowActivityName = ExtractHeader(headers, Constants.ParentWorkflowActivityNameHeader);
+        ChildWorkflowId = ExtractHeader(headers, Constants.ChildWorkflowIdHeader);
+        ChildWorkflowName = ExtractHeader(headers, Constants.ChildWorkflowNameHeader);
         Subject = subject;
         Data = data?? [];
         Headers = headers;
@@ -119,6 +126,12 @@ internal record EventMessage
     public string WorkflowSubjectName { get; private init; }
     public string WorkflowName { get; private init; }
     public string WorkflowId { get; private init; }
+    public string? ChildWorkflowId { get; private init; }
+    public string? ChildWorkflowName { get; private init; }
+    public string? ParentWorkflowId { get; private init; }
+    public string? ParentWorkflowSubject { get; private init; }
+    public string? ParentWorkflowActivitySubject { get; private init; }
+    public string? ParentWorkflowActivityName { get; private init; }
     public WorkflowEventTypes? WorkflowEventType { get; private init; } = null;
     public ActivityResultStatus? WorkflowStepResultStatus { get; private init; } = null;
     public uint? ParallelActivityIndex { get; private init; } = null;
