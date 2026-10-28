@@ -43,7 +43,7 @@ public class ActivityRetryTests
     [WorkflowName("Workflow With Activity Timeout")]
     private sealed class WorkflowWithActivityTimeout : IWorkflow
     {
-        public static ActivityResult? RunResult { get; private set; } = null;
+        public static StepResult? RunResult { get; private set; } = null;
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
             RunResult = await context.ExecuteActivityAsync<TimeoutActivity>(new()
@@ -109,8 +109,8 @@ public class ActivityRetryTests
     [WorkflowName("Workflow With Unimplmented Activity")]
     public class WorkflowWithUnimplmentedActivity : IWorkflow
     {
-        public static ActivityResult? FirstCallResult { get; private set; } = null;
-        public static ActivityResult? SecondCallResult { get; private set; } = null;
+        public static StepResult? FirstCallResult { get; private set; } = null;
+        public static StepResult? SecondCallResult { get; private set; } = null;
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)
         {
             FirstCallResult = await context.ExecuteActivityAsync<UnimplementedActivity>(new()

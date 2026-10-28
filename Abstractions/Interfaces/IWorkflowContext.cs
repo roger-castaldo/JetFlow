@@ -27,7 +27,7 @@ public interface IWorkflowContext : IContext
     /// <param name="cancellationToken">A token that can be used to cancel the activity execution. Optional.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcome of the executed
     /// activity.</returns>
-    ValueTask<ActivityResult> ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken = default)
+    ValueTask<StepResult> ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken = default)
         where TActivity : IActivity;
     /// <summary>
     /// Executes the specified activity asynchronously using the provided execution request.
@@ -38,7 +38,7 @@ public interface IWorkflowContext : IContext
     /// <param name="cancellationToken">A token that can be used to cancel the activity execution. Optional.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcome of the activity
     /// execution.</returns>
-    ValueTask<ActivityResult> ExecuteActivityAsync<TActivity, TInput>(ActivityExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken = default)
+    ValueTask<StepResult> ExecuteActivityAsync<TActivity, TInput>(ActivityExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken = default)
         where TActivity : IActivity<TInput>;
     /// <summary>
     /// Executes the specified activity asynchronously using the provided execution request and returns the result of
@@ -50,7 +50,7 @@ public interface IWorkflowContext : IContext
     /// <param name="cancellationToken">A token that can be used to cancel the activity execution. Optional.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcome of the executed
     /// activity.</returns>
-    ValueTask<ActivityResult<TOutput>> ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken = default)
+    ValueTask<StepResult<TOutput>> ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken = default)
         where TActivity : IActivityWithReturn<TOutput>;
     /// <summary>
     /// Executes the specified activity asynchronously using the provided execution request and returns the result of
@@ -63,7 +63,7 @@ public interface IWorkflowContext : IContext
     /// <param name="cancellationToken">A token that can be used to cancel the activity execution. Optional.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcome of the activity
     /// execution.</returns>
-    ValueTask<ActivityResult<TOutput>> ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken = default)
+    ValueTask<StepResult<TOutput>> ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken = default)
         where TActivity : IActivityWithReturn<TOutput, TInput>;
     /// <summary>
     /// Executes the specified activity asynchronously multiple times using the provided inputs and execution request, and returns the results of the activities.
@@ -73,7 +73,7 @@ public interface IWorkflowContext : IContext
     /// <param name="executionRequest">The request containing the inputs and context information for the activity execution. Cannot be null.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the activity execution. Optional.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcomes of the executed activities.</returns>
-    ValueTask<IEnumerable<ActivityResult>> ExecuteActivitiesAsync<TActivity, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken = default)
+    ValueTask<IEnumerable<StepResult>> ExecuteActivitiesAsync<TActivity, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken = default)
         where TActivity : IActivity<TInput>;
     /// <summary>
     /// Executes the specified activity asynchronously multiple times using the provided inputs and execution request, and returns the results of the activities.
@@ -84,7 +84,7 @@ public interface IWorkflowContext : IContext
     /// <param name="executionRequest">The request containing the inputs and context information for the activity execution. Cannot be null.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the activity execution. Optional.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The result contains the outcomes of the executed activities.</returns>
-    ValueTask<IEnumerable<ActivityResult<TOutput>>> ExecuteActivitiesAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken = default)
+    ValueTask<IEnumerable<StepResult<TOutput>>> ExecuteActivitiesAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken = default)
         where TActivity : IActivityWithReturn<TOutput, TInput>;
     /// <summary>
     /// Starts a child instance of the specified workflow type asynchronously.
@@ -93,7 +93,7 @@ public interface IWorkflowContext : IContext
     /// <param name="executionRequest">The request containing additional information to execute the workflow with, if desired.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the workflow start operation.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The task result contains result status of the workflow.</returns>
-    ValueTask<WorkflowResult> ExecuteChildWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest = null, CancellationToken cancellationToken = default)
+    ValueTask<StepResult> ExecuteChildWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest = null, CancellationToken cancellationToken = default)
         where TWorkflow : IWorkflow;
     /// <summary>
     /// Starts a child instance of the specified workflow asynchronously.
@@ -103,7 +103,7 @@ public interface IWorkflowContext : IContext
     /// <param name="executionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The task result contains result status of the workflow.</returns>
-    ValueTask<WorkflowResult> ExecuteChildWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken = default)
+    ValueTask<StepResult> ExecuteChildWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken = default)
         where TWorkflow : IWorkflow<TInput>;
     /// <summary>
     /// Starts multiple child workflow instance of the specified workflow asynchronously and returns the results of the workflows.
@@ -113,6 +113,6 @@ public interface IWorkflowContext : IContext
     /// <param name="executionRequest">The request containing additional information to execute the workflow with, as well as the input.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
     /// <returns>A ValueTask that represents the asynchronous operation. The task result contains the results of the workflows.</returns>
-    ValueTask<IEnumerable<WorkflowResult>> ExecuteChildWorkflowsAsync<TWorkflow, TInput>(WorkflowExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken = default)
+    ValueTask<IEnumerable<StepResult>> ExecuteChildWorkflowsAsync<TWorkflow, TInput>(WorkflowExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken = default)
         where TWorkflow : IWorkflow<TInput>;
 }

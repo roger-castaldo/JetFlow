@@ -93,7 +93,7 @@ internal class WorkflowContext
         return result;
     }
 
-    private async ValueTask<(ActivityResult? result, uint? progressIndex, uint? progressCount)> GetNextActivityAsync<TActivity>(CancellationToken cancellationToken)
+    private async ValueTask<(StepResult? result, uint? progressIndex, uint? progressCount)> GetNextActivityAsync<TActivity>(CancellationToken cancellationToken)
     {
         var nextActivityMsg = await GetNextActivityMessageAsync<TActivity>(cancellationToken);
         return (
@@ -110,7 +110,7 @@ internal class WorkflowContext
         );
     }
 
-    private async ValueTask<(ActivityResult<TOutput>?, uint? progressIndex, uint? progressCount)> GetNextActivityAsync<TActivity, TOutput>(CancellationToken cancellationToken)
+    private async ValueTask<(StepResult<TOutput>?, uint? progressIndex, uint? progressCount)> GetNextActivityAsync<TActivity, TOutput>(CancellationToken cancellationToken)
     {
         var nextActivityMsg = await GetNextActivityMessageAsync<TActivity>(cancellationToken);
         return (
@@ -127,7 +127,7 @@ internal class WorkflowContext
         );
     }
 
-    private async ValueTask<ActivityResult> HandleNextActivityAsync<TActivity>(Func<ValueTask> invokeCall, CancellationToken cancellationToken)
+    private async ValueTask<StepResult> HandleNextActivityAsync<TActivity>(Func<ValueTask> invokeCall, CancellationToken cancellationToken)
     {
         var (result,_,_) = await GetNextActivityAsync<TActivity>(cancellationToken);
         if (result!=null)
@@ -136,13 +136,13 @@ internal class WorkflowContext
         throw new WorkflowSuspendedException();
     }
 
-    ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken)
+    ValueTask<StepResult> IWorkflowContext.ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken)
         => HandleNextActivityAsync<TActivity>(() => serviceConnection.StartActivityAsync<TActivity>(activityIndex, executionRequest, message, cancellationToken), cancellationToken);
 
-    ValueTask<ActivityResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput>(ActivityExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
+    ValueTask<StepResult> IWorkflowContext.ExecuteActivityAsync<TActivity, TInput>(ActivityExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
         => HandleNextActivityAsync<TActivity>(() => serviceConnection.StartActivityAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken), cancellationToken);
 
-    private async ValueTask<ActivityResult<TOutput>> HandleNextActivity<TActivity, TOutput>(Func<ValueTask> invokeCall, CancellationToken cancellationToken)
+    private async ValueTask<StepResult<TOutput>> HandleNextActivity<TActivity, TOutput>(Func<ValueTask> invokeCall, CancellationToken cancellationToken)
     {
         var (result,_,_) = await GetNextActivityAsync<TActivity, TOutput>(cancellationToken);
         if (result!=null)
@@ -151,18 +151,18 @@ internal class WorkflowContext
         throw new WorkflowSuspendedException();
     }
 
-    ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken)
+    ValueTask<StepResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken)
         => HandleNextActivity<TActivity, TOutput>(() => serviceConnection.StartActivityAsync<TActivity>(activityIndex, executionRequest, message, cancellationToken), cancellationToken);
 
-    ValueTask<ActivityResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
+    ValueTask<StepResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
         => HandleNextActivity<TActivity, TOutput>(() => serviceConnection.StartActivityAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken), cancellationToken);
 
-    async ValueTask<IEnumerable<ActivityResult>> IWorkflowContext.ExecuteActivitiesAsync<TActivity, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken)
+    async ValueTask<IEnumerable<StepResult>> IWorkflowContext.ExecuteActivitiesAsync<TActivity, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken)
     {
         var (result, progressIndex, progressCount) = await GetNextActivityAsync<TActivity>(cancellationToken);
         if (result!=null)
         {
-            var results = new List<(uint index, ActivityResult result)>();
+            var results = new List<(uint index, StepResult result)>();
             results.Add((progressIndex!.Value, result!));
             while(results.Count<progressCount)
             {
@@ -175,12 +175,12 @@ internal class WorkflowContext
         throw new WorkflowSuspendedException();
     }
 
-    async ValueTask<IEnumerable<ActivityResult<TOutput>>> IWorkflowContext.ExecuteActivitiesAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken)
+    async ValueTask<IEnumerable<StepResult<TOutput>>> IWorkflowContext.ExecuteActivitiesAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken)
     {
         var (result, progressIndex, progressCount) = await GetNextActivityAsync<TActivity, TOutput>(cancellationToken);
         if (result!=null)
         {
-            var results = new List<(uint index, ActivityResult<TOutput> result)>();
+            var results = new List<(uint index, StepResult<TOutput> result)>();
             results.Add((progressIndex!.Value, result!));
             while (results.Count < progressCount)
             {
@@ -260,7 +260,7 @@ internal class WorkflowContext
         );
     }
 
-    private async ValueTask<EventMessage?> GetNextChildWorkflowMessage<TWorkflow>(CancellationToken cancellationToken)
+    private async ValueTask<(StepResult? result, uint? progressIndex, uint? progressCount)> GetNextChildWorkflowMessage<TWorkflow>(CancellationToken cancellationToken)
     {
         var (_, rawName) = NameHelper.GetChildWorkflowName<TWorkflow>();
         var msg = await GetNextMessageAsync(cancellationToken);
@@ -270,35 +270,45 @@ internal class WorkflowContext
                 throw new Exception();
             if (!Equals(msg.ActivityName, rawName))
                 throw new InvalidStepException(rawName, msg.ActivityName??string.Empty);
-            return msg;
+            return (
+                msg.WorkflowStepResultStatus switch
+                {
+                    null => null,
+                    ActivityResultStatus.Success => new(msg.ActivityID??0, ActivityResultStatus.Success, null),
+                    ActivityResultStatus.Failure => new(msg.ActivityID??0, ActivityResultStatus.Failure, msg.Data != null ? System.Text.Encoding.UTF8.GetString(msg.Data) : null),
+                    _ => throw new InvalidWorkflowEventMessage(msg.Subject, InternalNatsConnection.GetMessageID(msg.Headers))
+                },
+                msg.ParallelActivityIndex,
+                msg.ParallelActivityCount
+            );
         }
-        return null;
+        return (null, null, null);
     }
 
-    private async ValueTask<WorkflowResult> HandleNextChildWorkflow<TWorkflow>(Func<ValueTask> invokeCall, CancellationToken cancellationToken)
+    private async ValueTask<StepResult> HandleNextChildWorkflow<TWorkflow>(Func<ValueTask> invokeCall, CancellationToken cancellationToken)
     {
-        var msg = await GetNextChildWorkflowMessage<TWorkflow>(cancellationToken);
-        if (msg!=null)
-            return Enum.Parse<WorkflowResult>(UTF8Encoding.UTF8.GetString(msg.Data));
+        var (result, _, _) = await GetNextChildWorkflowMessage<TWorkflow>(cancellationToken);
+        if (result!=null)
+            return result;
         await invokeCall();
         throw new WorkflowSuspendedException();
     }
 
-    ValueTask<WorkflowResult> IWorkflowContext.ExecuteChildWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
+    ValueTask<StepResult> IWorkflowContext.ExecuteChildWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
         => HandleNextChildWorkflow<TWorkflow>(()=>serviceConnection.StartChildWorkflowAsync<TWorkflow>(activityIndex, message, executionRequest, cancellationToken), cancellationToken);
-    ValueTask<WorkflowResult> IWorkflowContext.ExecuteChildWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
+    ValueTask<StepResult> IWorkflowContext.ExecuteChildWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, CancellationToken cancellationToken)
         => HandleNextChildWorkflow<TWorkflow>(() => serviceConnection.StartChildWorkflowAsync<TWorkflow,TInput>(activityIndex, message, executionRequest, cancellationToken), cancellationToken);
-    async ValueTask<IEnumerable<WorkflowResult>> IWorkflowContext.ExecuteChildWorkflowsAsync<TWorkflow, TInput>(WorkflowExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken)
+    async ValueTask<IEnumerable<StepResult>> IWorkflowContext.ExecuteChildWorkflowsAsync<TWorkflow, TInput>(WorkflowExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken)
     {
-        var msg = await GetNextChildWorkflowMessage<TWorkflow>(cancellationToken);
-        if (msg!=null)
+        var(result, index, count) = await GetNextChildWorkflowMessage<TWorkflow>(cancellationToken);
+        if (result!=null)
         {
-            var results = new List<(uint index, WorkflowResult result)>();
-            results.Add((msg.ParallelActivityIndex!.Value, Enum.Parse<WorkflowResult>(UTF8Encoding.UTF8.GetString(msg.Data))));
-            while (results.Count<msg.ParallelActivityCount!)
+            var results = new List<(uint index, StepResult result)>();
+            results.Add((index!.Value, result));
+            while (results.Count<count!.Value)
             {
-                msg = await GetNextChildWorkflowMessage<TWorkflow>(cancellationToken);
-                results.Add((msg.ParallelActivityIndex!.Value, Enum.Parse<WorkflowResult>(UTF8Encoding.UTF8.GetString(msg.Data))));
+                (result, index, _) = await GetNextChildWorkflowMessage<TWorkflow>(cancellationToken);
+                results.Add((index!.Value,result!));
             }
             return results.OrderBy(x => x.index).Select(x => x.result);
         }

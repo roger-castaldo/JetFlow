@@ -338,15 +338,15 @@ public class WorkflowExecutionTests
     [WorkflowName("All Activity Results Workflow")]
     private sealed class AllActivityResultsWorkflow : IWorkflow
     {
-        public static ActivityResult? NoActResult { get; private set; }
-        public static ActivityResult<string>? NoActReturnResult { get; private set; }
+        public static StepResult? NoActResult { get; private set; }
+        public static StepResult<string>? NoActReturnResult { get; private set; }
         public static string? StringInput { get; private set; }
-        public static ActivityResult? NoActWithInputResult { get; private set; }
-        public static ActivityResult<string>? NoActWithInputReturnResult { get; private set; }
-        public static ActivityResult? ErrorActResult { get; private set; }
-        public static ActivityResult<string>? ErrorActWithResult { get; private set; }
-        public static ActivityResult? TimeoutActResult { get; private set; }
-        public static ActivityResult<string>? TimeoutActWithResult { get; private set; }
+        public static StepResult? NoActWithInputResult { get; private set; }
+        public static StepResult<string>? NoActWithInputReturnResult { get; private set; }
+        public static StepResult? ErrorActResult { get; private set; }
+        public static StepResult<string>? ErrorActWithResult { get; private set; }
+        public static StepResult? TimeoutActResult { get; private set; }
+        public static StepResult<string>? TimeoutActWithResult { get; private set; }
         public static bool RanWait { get; private set; } = false;
 
         async ValueTask IWorkflow.ExecuteAsync(IWorkflowContext context)

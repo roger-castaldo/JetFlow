@@ -33,18 +33,10 @@
   - [Started](#P-JetFlow-Data-ActivityPerformanceRecord-Started 'JetFlow.Data.ActivityPerformanceRecord.Started')
   - [TimedOut](#P-JetFlow-Data-ActivityPerformanceRecord-TimedOut 'JetFlow.Data.ActivityPerformanceRecord.TimedOut')
   - [Window](#P-JetFlow-Data-ActivityPerformanceRecord-Window 'JetFlow.Data.ActivityPerformanceRecord.Window')
-- [ActivityResult](#T-JetFlow-ActivityResult 'JetFlow.ActivityResult')
-  - [#ctor(Index,Status,ErrorMessage)](#M-JetFlow-ActivityResult-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String- 'JetFlow.ActivityResult.#ctor(System.UInt64,JetFlow.ActivityResultStatus,System.String)')
-  - [ErrorMessage](#P-JetFlow-ActivityResult-ErrorMessage 'JetFlow.ActivityResult.ErrorMessage')
-  - [Index](#P-JetFlow-ActivityResult-Index 'JetFlow.ActivityResult.Index')
-  - [Status](#P-JetFlow-ActivityResult-Status 'JetFlow.ActivityResult.Status')
 - [ActivityResultStatus](#T-JetFlow-ActivityResultStatus 'JetFlow.ActivityResultStatus')
   - [Failure](#F-JetFlow-ActivityResultStatus-Failure 'JetFlow.ActivityResultStatus.Failure')
   - [Success](#F-JetFlow-ActivityResultStatus-Success 'JetFlow.ActivityResultStatus.Success')
   - [Timeout](#F-JetFlow-ActivityResultStatus-Timeout 'JetFlow.ActivityResultStatus.Timeout')
-- [ActivityResult\`1](#T-JetFlow-ActivityResult`1 'JetFlow.ActivityResult`1')
-  - [#ctor(Index,Status,ErrorMessage,Output)](#M-JetFlow-ActivityResult`1-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String,`0- 'JetFlow.ActivityResult`1.#ctor(System.UInt64,JetFlow.ActivityResultStatus,System.String,`0)')
-  - [Output](#P-JetFlow-ActivityResult`1-Output 'JetFlow.ActivityResult`1.Output')
 - [ActivityRetryConfiguration](#T-JetFlow-ActivityRetryConfiguration 'JetFlow.ActivityRetryConfiguration')
   - [#ctor(MaximumAttempts,DelayBetween,RetryOnTimeout,RetryOnError,BlockedErrors)](#M-JetFlow-ActivityRetryConfiguration-#ctor-System-UInt16,System-Nullable{System-TimeSpan},System-Boolean,System-Boolean,System-String[]- 'JetFlow.ActivityRetryConfiguration.#ctor(System.UInt16,System.Nullable{System.TimeSpan},System.Boolean,System.Boolean,System.String[])')
   - [BlockedErrors](#P-JetFlow-ActivityRetryConfiguration-BlockedErrors 'JetFlow.ActivityRetryConfiguration.BlockedErrors')
@@ -133,6 +125,14 @@
 - [RetryTypes](#T-JetFlow-RetryTypes 'JetFlow.RetryTypes')
   - [Error](#F-JetFlow-RetryTypes-Error 'JetFlow.RetryTypes.Error')
   - [Timeout](#F-JetFlow-RetryTypes-Timeout 'JetFlow.RetryTypes.Timeout')
+- [StepResult](#T-JetFlow-StepResult 'JetFlow.StepResult')
+  - [#ctor(Index,Status,ErrorMessage)](#M-JetFlow-StepResult-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String- 'JetFlow.StepResult.#ctor(System.UInt64,JetFlow.ActivityResultStatus,System.String)')
+  - [ErrorMessage](#P-JetFlow-StepResult-ErrorMessage 'JetFlow.StepResult.ErrorMessage')
+  - [Index](#P-JetFlow-StepResult-Index 'JetFlow.StepResult.Index')
+  - [Status](#P-JetFlow-StepResult-Status 'JetFlow.StepResult.Status')
+- [StepResult\`1](#T-JetFlow-StepResult`1 'JetFlow.StepResult`1')
+  - [#ctor(Index,Status,ErrorMessage,Output)](#M-JetFlow-StepResult`1-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String,`0- 'JetFlow.StepResult`1.#ctor(System.UInt64,JetFlow.ActivityResultStatus,System.String,`0)')
+  - [Output](#P-JetFlow-StepResult`1-Output 'JetFlow.StepResult`1.Output')
 - [WorkflowCompletionActions](#T-JetFlow-Configs-WorkflowCompletionActions 'JetFlow.Configs.WorkflowCompletionActions')
   - [Archive](#F-JetFlow-Configs-WorkflowCompletionActions-Archive 'JetFlow.Configs.WorkflowCompletionActions.Archive')
   - [Purge](#F-JetFlow-Configs-WorkflowCompletionActions-Purge 'JetFlow.Configs.WorkflowCompletionActions.Purge')
@@ -159,9 +159,6 @@
   - [QueueLatencies](#P-JetFlow-Data-WorkflowPerformanceRecord-QueueLatencies 'JetFlow.Data.WorkflowPerformanceRecord.QueueLatencies')
   - [Started](#P-JetFlow-Data-WorkflowPerformanceRecord-Started 'JetFlow.Data.WorkflowPerformanceRecord.Started')
   - [Window](#P-JetFlow-Data-WorkflowPerformanceRecord-Window 'JetFlow.Data.WorkflowPerformanceRecord.Window')
-- [WorkflowResult](#T-JetFlow-WorkflowResult 'JetFlow.WorkflowResult')
-  - [Failure](#F-JetFlow-WorkflowResult-Failure 'JetFlow.WorkflowResult.Failure')
-  - [Success](#F-JetFlow-WorkflowResult-Success 'JetFlow.WorkflowResult.Success')
 - [WorkflowScheduleBuilder](#T-JetFlow-WorkflowScheduleBuilder 'JetFlow.WorkflowScheduleBuilder')
   - [AtDay(day)](#M-JetFlow-WorkflowScheduleBuilder-AtDay-System-Int32- 'JetFlow.WorkflowScheduleBuilder.AtDay(System.Int32)')
   - [AtDayOfWeek(dayOfWeek)](#M-JetFlow-WorkflowScheduleBuilder-AtDayOfWeek-System-Int32- 'JetFlow.WorkflowScheduleBuilder.AtDayOfWeek(System.Int32)')
@@ -537,59 +534,6 @@ Number of timeouts during the window.
 
 The window timestamp for the sampled metrics.
 
-<a name='T-JetFlow-ActivityResult'></a>
-## ActivityResult `type`
-
-##### Namespace
-
-JetFlow
-
-##### Summary
-
-Represents the result of an activity execution, including its status, index, and an optional error message.
-
-##### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| Index | [T:JetFlow.ActivityResult](#T-T-JetFlow-ActivityResult 'T:JetFlow.ActivityResult') | The zero-based index of the activity within the workflow or sequence. |
-
-<a name='M-JetFlow-ActivityResult-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String-'></a>
-### #ctor(Index,Status,ErrorMessage) `constructor`
-
-##### Summary
-
-Represents the result of an activity execution, including its status, index, and an optional error message.
-
-##### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| Index | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | The zero-based index of the activity within the workflow or sequence. |
-| Status | [JetFlow.ActivityResultStatus](#T-JetFlow-ActivityResultStatus 'JetFlow.ActivityResultStatus') | The status indicating the outcome of the activity execution. |
-| ErrorMessage | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | An optional error message describing the reason for failure if the activity did not succeed; otherwise, null. |
-
-<a name='P-JetFlow-ActivityResult-ErrorMessage'></a>
-### ErrorMessage `property`
-
-##### Summary
-
-An optional error message describing the reason for failure if the activity did not succeed; otherwise, null.
-
-<a name='P-JetFlow-ActivityResult-Index'></a>
-### Index `property`
-
-##### Summary
-
-The zero-based index of the activity within the workflow or sequence.
-
-<a name='P-JetFlow-ActivityResult-Status'></a>
-### Status `property`
-
-##### Summary
-
-The status indicating the outcome of the activity execution.
-
 <a name='T-JetFlow-ActivityResultStatus'></a>
 ## ActivityResultStatus `type`
 
@@ -626,62 +570,6 @@ Gets or sets the timeout interval for the operation.
 
 Specify the duration to wait before the operation is canceled due to timeout. The value is
 typically expressed in milliseconds unless otherwise noted by the implementation.
-
-<a name='T-JetFlow-ActivityResult`1'></a>
-## ActivityResult\`1 `type`
-
-##### Namespace
-
-JetFlow
-
-##### Summary
-
-Represents the result of an activity execution, including its status, optional error message, and an output value of
-the specified type.
-
-##### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| Index | [T:JetFlow.ActivityResult\`1](#T-T-JetFlow-ActivityResult`1 'T:JetFlow.ActivityResult`1') | The zero-based index of the activity execution within a sequence or workflow. |
-
-##### Generic Types
-
-| Name | Description |
-| ---- | ----------- |
-| TOutput | The type of the output value returned by the activity. May be null or default if the activity did not produce a
-result. |
-
-<a name='M-JetFlow-ActivityResult`1-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String,`0-'></a>
-### #ctor(Index,Status,ErrorMessage,Output) `constructor`
-
-##### Summary
-
-Represents the result of an activity execution, including its status, optional error message, and an output value of
-the specified type.
-
-##### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| Index | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | The zero-based index of the activity execution within a sequence or workflow. |
-| Status | [JetFlow.ActivityResultStatus](#T-JetFlow-ActivityResultStatus 'JetFlow.ActivityResultStatus') | The status indicating whether the activity succeeded, failed, or was skipped. |
-| ErrorMessage | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | An optional error message describing the reason for failure if the activity did not succeed; otherwise, null. |
-| Output | [\`0](#T-`0 '`0') | The output value produced by the activity, or the default value for the type if no output was generated. |
-
-##### Generic Types
-
-| Name | Description |
-| ---- | ----------- |
-| TOutput | The type of the output value returned by the activity. May be null or default if the activity did not produce a
-result. |
-
-<a name='P-JetFlow-ActivityResult`1-Output'></a>
-### Output `property`
-
-##### Summary
-
-The output value produced by the activity, or the default value for the type if no output was generated.
 
 <a name='T-JetFlow-ActivityRetryConfiguration'></a>
 ## ActivityRetryConfiguration `type`
@@ -2149,6 +2037,115 @@ Specifies that the retry was triggered due to an error, indicating that an excep
 
 Specifies that the retry was triggered due to a timeout, indicating that the operation took longer than expected to complete.
 
+<a name='T-JetFlow-StepResult'></a>
+## StepResult `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Represents the result of an activity execution, including its status, index, and an optional error message.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Index | [T:JetFlow.StepResult](#T-T-JetFlow-StepResult 'T:JetFlow.StepResult') | The zero-based index of the activity within the workflow or sequence. |
+
+<a name='M-JetFlow-StepResult-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String-'></a>
+### #ctor(Index,Status,ErrorMessage) `constructor`
+
+##### Summary
+
+Represents the result of an activity execution, including its status, index, and an optional error message.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Index | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | The zero-based index of the activity within the workflow or sequence. |
+| Status | [JetFlow.ActivityResultStatus](#T-JetFlow-ActivityResultStatus 'JetFlow.ActivityResultStatus') | The status indicating the outcome of the activity execution. |
+| ErrorMessage | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | An optional error message describing the reason for failure if the activity did not succeed; otherwise, null. |
+
+<a name='P-JetFlow-StepResult-ErrorMessage'></a>
+### ErrorMessage `property`
+
+##### Summary
+
+An optional error message describing the reason for failure if the activity did not succeed; otherwise, null.
+
+<a name='P-JetFlow-StepResult-Index'></a>
+### Index `property`
+
+##### Summary
+
+The zero-based index of the activity within the workflow or sequence.
+
+<a name='P-JetFlow-StepResult-Status'></a>
+### Status `property`
+
+##### Summary
+
+The status indicating the outcome of the activity execution.
+
+<a name='T-JetFlow-StepResult`1'></a>
+## StepResult\`1 `type`
+
+##### Namespace
+
+JetFlow
+
+##### Summary
+
+Represents the result of an activity execution, including its status, optional error message, and an output value of
+the specified type.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Index | [T:JetFlow.StepResult\`1](#T-T-JetFlow-StepResult`1 'T:JetFlow.StepResult`1') | The zero-based index of the activity execution within a sequence or workflow. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TOutput | The type of the output value returned by the activity. May be null or default if the activity did not produce a
+result. |
+
+<a name='M-JetFlow-StepResult`1-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String,`0-'></a>
+### #ctor(Index,Status,ErrorMessage,Output) `constructor`
+
+##### Summary
+
+Represents the result of an activity execution, including its status, optional error message, and an output value of
+the specified type.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| Index | [System.UInt64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.UInt64 'System.UInt64') | The zero-based index of the activity execution within a sequence or workflow. |
+| Status | [JetFlow.ActivityResultStatus](#T-JetFlow-ActivityResultStatus 'JetFlow.ActivityResultStatus') | The status indicating whether the activity succeeded, failed, or was skipped. |
+| ErrorMessage | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | An optional error message describing the reason for failure if the activity did not succeed; otherwise, null. |
+| Output | [\`0](#T-`0 '`0') | The output value produced by the activity, or the default value for the type if no output was generated. |
+
+##### Generic Types
+
+| Name | Description |
+| ---- | ----------- |
+| TOutput | The type of the output value returned by the activity. May be null or default if the activity did not produce a
+result. |
+
+<a name='P-JetFlow-StepResult`1-Output'></a>
+### Output `property`
+
+##### Summary
+
+The output value produced by the activity, or the default value for the type if no output was generated.
+
 <a name='T-JetFlow-Configs-WorkflowCompletionActions'></a>
 ## WorkflowCompletionActions `type`
 
@@ -2429,31 +2426,6 @@ Number of workflow starts during the window.
 ##### Summary
 
 The window timestamp for the sampled metrics.
-
-<a name='T-JetFlow-WorkflowResult'></a>
-## WorkflowResult `type`
-
-##### Namespace
-
-JetFlow
-
-##### Summary
-
-Represents the status of a child workflow result, indicating if it was successful or failed.
-
-<a name='F-JetFlow-WorkflowResult-Failure'></a>
-### Failure `constants`
-
-##### Summary
-
-Represents a failure result or state.
-
-<a name='F-JetFlow-WorkflowResult-Success'></a>
-### Success `constants`
-
-##### Summary
-
-Indicates that the operation completed successfully.
 
 <a name='T-JetFlow-WorkflowScheduleBuilder'></a>
 ## WorkflowScheduleBuilder `type`

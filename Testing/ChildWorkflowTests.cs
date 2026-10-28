@@ -136,31 +136,35 @@ public class ChildWorkflowTests
         Assert.AreEqual(NameHelper.GetChildWorkflowName<SuccessfulChildWorkflowWithoutInput>().rawName, archive.Steps[0].Name);
         Assert.AreEqual(NameHelper.GetWorkflowName<SuccessfulChildWorkflowWithoutInput>().rawName, archive.Steps[0].ChildWorkflowName);
         Assert.IsNull(archive.Steps[0].Input);
-        Assert.IsNotNull(archive.Steps[0].Result);
-        Assert.AreEqual(WorkflowResult.Success, JsonSerializer.Deserialize<WorkflowResult>((JsonElement)archive.Steps[0].Result!));
+        Assert.IsNull(archive.Steps[0].Result);
+        Assert.IsNull(archive.Steps[0].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Success, archive.Steps[0].Status);
         Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<SuccessfulChildWorkflowWithoutInput>().cleanedName}/{archive.Steps[0].ChildWorkflowID}")).Deleted);
         Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[1].Type);
         Assert.AreEqual(NameHelper.GetChildWorkflowName<FailingChildWorkflowWithoutInput>().rawName, archive.Steps[1].Name);
         Assert.AreEqual(NameHelper.GetWorkflowName<FailingChildWorkflowWithoutInput>().rawName, archive.Steps[1].ChildWorkflowName);
         Assert.IsNull(archive.Steps[1].Input);
-        Assert.IsNotNull(archive.Steps[1].Result);
-        Assert.AreEqual(WorkflowResult.Failure, JsonSerializer.Deserialize<WorkflowResult>((JsonElement)archive.Steps[1].Result!));
+        Assert.IsNull(archive.Steps[1].Result);
+        Assert.IsNotNull(archive.Steps[1].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Failure, archive.Steps[1].Status);
         Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<FailingChildWorkflowWithoutInput>().cleanedName}/{archive.Steps[1].ChildWorkflowID}")).Deleted);
         Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[2].Type);
         Assert.AreEqual(NameHelper.GetChildWorkflowName<SuccessfulChildWorkflowWitInput>().rawName, archive.Steps[2].Name);
         Assert.AreEqual(NameHelper.GetWorkflowName<SuccessfulChildWorkflowWitInput>().rawName, archive.Steps[2].ChildWorkflowName);
         Assert.IsNotNull(archive.Steps[2].Input);
         Assert.AreEqual(argument, JsonSerializer.Deserialize<string>((JsonElement)archive.Steps[2].Input!));
-        Assert.IsNotNull(archive.Steps[2].Result);
-        Assert.AreEqual(WorkflowResult.Success, JsonSerializer.Deserialize<WorkflowResult>((JsonElement)archive.Steps[2].Result!));
+        Assert.IsNull(archive.Steps[2].Result);
+        Assert.IsNull(archive.Steps[2].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Success, archive.Steps[2].Status);
         Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<SuccessfulChildWorkflowWitInput>().cleanedName}/{archive.Steps[2].ChildWorkflowID}")).Deleted);
         Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[3].Type);
         Assert.AreEqual(NameHelper.GetChildWorkflowName<FailingChildWorkflowWithInput>().rawName, archive.Steps[3].Name);
         Assert.AreEqual(NameHelper.GetWorkflowName<FailingChildWorkflowWithInput>().rawName, archive.Steps[3].ChildWorkflowName);
         Assert.IsNotNull(archive.Steps[3].Input);
         Assert.AreEqual(argument, JsonSerializer.Deserialize<string>((JsonElement)archive.Steps[3].Input!));
-        Assert.IsNotNull(archive.Steps[3].Result);
-        Assert.AreEqual(WorkflowResult.Failure, JsonSerializer.Deserialize<WorkflowResult>((JsonElement)archive.Steps[3].Result!));
+        Assert.IsNull(archive.Steps[3].Result);
+        Assert.IsNotNull(archive.Steps[3].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Failure, archive.Steps[3].Status);
         Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<FailingChildWorkflowWithInput>().cleanedName}/{archive.Steps[3].ChildWorkflowID}")).Deleted);
     }
 
@@ -235,29 +239,187 @@ public class ChildWorkflowTests
         Assert.AreEqual(NameHelper.GetChildWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[0].Name);
         Assert.AreEqual(NameHelper.GetWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[0].ChildWorkflowName);
         Assert.IsNotNull(archive.Steps[0].Input);
-        Assert.IsNotNull(archive.Steps[0].Result);
-        Assert.AreEqual(WorkflowResult.Success, JsonSerializer.Deserialize<WorkflowResult>((JsonElement)archive.Steps[0].Result!));
+        Assert.IsNull(archive.Steps[0].Result);
+        Assert.IsNull(archive.Steps[0].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Success, archive.Steps[0].Status);
         Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<ParallelChildWorkflow>().cleanedName}/{archive.Steps[0].ChildWorkflowID}")).Deleted);
         Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[1].Type);
         Assert.AreEqual(NameHelper.GetChildWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[1].Name);
         Assert.AreEqual(NameHelper.GetWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[0].ChildWorkflowName);
         Assert.IsNotNull(archive.Steps[1].Input);
-        Assert.IsNotNull(archive.Steps[1].Result);
-        Assert.AreEqual(WorkflowResult.Success, JsonSerializer.Deserialize<WorkflowResult>((JsonElement)archive.Steps[1].Result!));
+        Assert.IsNull(archive.Steps[1].Result);
+        Assert.IsNull(archive.Steps[1].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Success, archive.Steps[1].Status);
         Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<ParallelChildWorkflow>().cleanedName}/{archive.Steps[1].ChildWorkflowID}")).Deleted);
         Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[2].Type);
         Assert.AreEqual(NameHelper.GetChildWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[2].Name);
         Assert.AreEqual(NameHelper.GetWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[2].ChildWorkflowName);
         Assert.IsNotNull(archive.Steps[2].Input);
-        Assert.IsNotNull(archive.Steps[2].Result);
-        Assert.AreEqual(WorkflowResult.Failure, JsonSerializer.Deserialize<WorkflowResult>((JsonElement)archive.Steps[2].Result!));
+        Assert.IsNull(archive.Steps[2].Result);
+        Assert.IsNotNull(archive.Steps[2].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Failure, archive.Steps[2].Status);
         Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<ParallelChildWorkflow>().cleanedName}/{archive.Steps[2].ChildWorkflowID}")).Deleted);
         Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[3].Type);
         Assert.AreEqual(NameHelper.GetChildWorkflowName<SuccessfulChildWorkflowWithoutInput>().rawName, archive.Steps[3].Name);
         Assert.AreEqual(NameHelper.GetWorkflowName<SuccessfulChildWorkflowWithoutInput>().rawName, archive.Steps[3].ChildWorkflowName);
         Assert.IsNull(archive.Steps[3].Input);
-        Assert.IsNotNull(archive.Steps[3].Result);
-        Assert.AreEqual(WorkflowResult.Success, JsonSerializer.Deserialize<WorkflowResult>((JsonElement)archive.Steps[3].Result!));
+        Assert.IsNull(archive.Steps[3].Result);
+        Assert.IsNull(archive.Steps[3].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Success, archive.Steps[3].Status);
         Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<SuccessfulChildWorkflowWithoutInput>().cleanedName}/{archive.Steps[3].ChildWorkflowID}")).Deleted);
+    }
+
+    [TestMethod]
+    [DataRow(null, DisplayName = "Default Namespace")]
+    [DataRow(TestNamespace, DisplayName = "Supplied Namespace")]
+    public async Task ExecuteChildWorkflowWithExceptionCausesFailure(string? namespaceValue)
+    {
+        Assert.IsNotNull(natsTestHarness);
+        SuccessfulChildWorkflowWitInput.SuppliedInput=null;
+        FailingChildWorkflowWithInput.SuppliedInput=null;
+        var argument = "I am the very model of a modern major general";
+        var runId = Guid.Empty;
+        var subjectMapper = new SubjectMapper(namespaceValue);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var jsContext = new NatsJSContext(natsConnection);
+        var objContext = jsContext.CreateObjectStoreContext();
+        var connectionOptions = new ConnectionOptions(natsConnection)
+        {
+            Namespace=namespaceValue
+        };
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<ParentWorkflow, string>();
+        await connection.RegisterWorkflowAsync<SuccessfulChildWorkflowWithoutInput>();
+        await connection.RegisterWorkflowAsync<FailingChildWorkflowWithoutInput>();
+        await connection.RegisterWorkflowAsync<SuccessfulChildWorkflowWitInput, string>();
+        await connection.RegisterWorkflowAsync<FailingChildWorkflowWithInput, string>();
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForArchive<ParentWorkflow>(
+            natsConnection,
+            subjectMapper,
+            async () =>
+            {
+                runId = await connection.StartWorkflowAsync<ParentWorkflow, string>(executionRequest: new(argument)
+                {
+                    Options = new()
+                    {
+                        ErrorOnActivityFailure=true
+                    }
+                });
+                return runId;
+            }
+        );
+
+        // Assert
+        Assert.IsNotNull(result);
+
+        //Verify
+        Assert.IsNull(SuccessfulChildWorkflowWitInput.SuppliedInput);
+        Assert.IsNull(FailingChildWorkflowWithInput.SuppliedInput);
+        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<ParentWorkflow>().cleanedName}/{runId}");
+        var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
+        Assert.AreEqual(runId, archive.ID);
+        Assert.IsNull(archive.SchedulerId);
+        Assert.IsFalse(archive.IsSuccessful);
+        Assert.HasCount(2, archive.Steps);
+        Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[0].Type);
+        Assert.AreEqual(NameHelper.GetChildWorkflowName<SuccessfulChildWorkflowWithoutInput>().rawName, archive.Steps[0].Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<SuccessfulChildWorkflowWithoutInput>().rawName, archive.Steps[0].ChildWorkflowName);
+        Assert.IsNull(archive.Steps[0].Input);
+        Assert.IsNull(archive.Steps[0].Result);
+        Assert.IsNull(archive.Steps[0].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Success, archive.Steps[0].Status);
+        Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<SuccessfulChildWorkflowWithoutInput>().cleanedName}/{archive.Steps[0].ChildWorkflowID}")).Deleted);
+        Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[1].Type);
+        Assert.AreEqual(NameHelper.GetChildWorkflowName<FailingChildWorkflowWithoutInput>().rawName, archive.Steps[1].Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<FailingChildWorkflowWithoutInput>().rawName, archive.Steps[1].ChildWorkflowName);
+        Assert.IsNull(archive.Steps[1].Input);
+        Assert.IsNull(archive.Steps[1].Result);
+        Assert.IsNotNull(archive.Steps[1].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Failure, archive.Steps[1].Status);
+        Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<FailingChildWorkflowWithoutInput>().cleanedName}/{archive.Steps[1].ChildWorkflowID}")).Deleted);
+        Assert.AreEqual($"Activity Child Workflow Failing Child Workflow Without Input has failed with error: {(new NotImplementedException()).Message}", archive.ErrorMessage);
+    }
+
+    [TestMethod]
+    [DataRow(null, DisplayName = "Default Namespace")]
+    [DataRow(TestNamespace, DisplayName = "Supplied Namespace")]
+    public async Task ExecuteChildWorkflowsWithExceptionCausesFailure(string? namespaceValue)
+    {
+        Assert.IsNotNull(natsTestHarness);
+        var runId = Guid.Empty;
+        var subjectMapper = new SubjectMapper(namespaceValue);
+        var options = natsTestHarness.Options;
+        var natsConnection = new NatsConnection(options);
+        var jsContext = new NatsJSContext(natsConnection);
+        var objContext = jsContext.CreateObjectStoreContext();
+        var connectionOptions = new ConnectionOptions(natsConnection)
+        {
+            Namespace=namespaceValue
+        };
+        var messageSerializer = new MessageSerializer(connectionOptions.CompressionType, connectionOptions.JsonTypeInfoResolver);
+        var connection = await Connection.CreateInstanceAsync(connectionOptions);
+        await connection.RegisterWorkflowAsync<ParallelParentWorkflow>();
+        await connection.RegisterWorkflowAsync<SuccessfulChildWorkflowWithoutInput>();
+        await connection.RegisterWorkflowAsync<ParallelChildWorkflow, int>();
+
+        //Act
+        var result = await WorkflowsHelper.StartWorkflowAndWaitForArchive<ParallelParentWorkflow>(
+            natsConnection,
+            subjectMapper,
+            async () =>
+            {
+                runId = await connection.StartWorkflowAsync<ParallelParentWorkflow>(new()
+                {
+                    Options = new()
+                    {
+                        ErrorOnActivityFailure=true
+                    }
+                });
+                return runId;
+            }
+        );
+
+        // Assert
+        Assert.IsNotNull(result);
+        await Task.Delay(TimeSpan.FromSeconds(5)); //ensure all archiving is complete
+
+        //Verify
+        var archiveStore = await objContext.GetObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore);
+        var archiveData = await archiveStore.GetBytesAsync($"{NameHelper.GetWorkflowName<ParallelParentWorkflow>().cleanedName}/{runId}");
+        var archive = JsonSerializer.Deserialize<ArchivedWorkflow>(archiveData, Constants.JsonOptions);
+        Assert.AreEqual(runId, archive.ID);
+        Assert.IsNull(archive.SchedulerId);
+        Assert.IsFalse(archive.IsSuccessful);
+        Assert.HasCount(3, archive.Steps);
+        Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[0].Type);
+        Assert.AreEqual(NameHelper.GetChildWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[0].Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[0].ChildWorkflowName);
+        Assert.IsNotNull(archive.Steps[0].Input);
+        Assert.IsNull(archive.Steps[0].Result);
+        Assert.IsNull(archive.Steps[0].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Success, archive.Steps[0].Status);
+        Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<ParallelChildWorkflow>().cleanedName}/{archive.Steps[0].ChildWorkflowID}")).Deleted);
+        Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[1].Type);
+        Assert.AreEqual(NameHelper.GetChildWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[1].Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[0].ChildWorkflowName);
+        Assert.IsNotNull(archive.Steps[1].Input);
+        Assert.IsNull(archive.Steps[1].Result);
+        Assert.IsNull(archive.Steps[1].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Success, archive.Steps[1].Status);
+        Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<ParallelChildWorkflow>().cleanedName}/{archive.Steps[1].ChildWorkflowID}")).Deleted);
+        Assert.AreEqual(WorkflowStepTypes.ChildWorkflow, archive.Steps[2].Type);
+        Assert.AreEqual(NameHelper.GetChildWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[2].Name);
+        Assert.AreEqual(NameHelper.GetWorkflowName<ParallelChildWorkflow>().rawName, archive.Steps[2].ChildWorkflowName);
+        Assert.IsNotNull(archive.Steps[2].Input);
+        Assert.IsNull(archive.Steps[2].Result);
+        Assert.IsNotNull(archive.Steps[2].ErrorMessage);
+        Assert.AreEqual(ActivityResultStatus.Failure, archive.Steps[2].Status);
+        Assert.IsFalse((await archiveStore.GetInfoAsync($"{NameHelper.GetWorkflowName<ParallelChildWorkflow>().cleanedName}/{archive.Steps[2].ChildWorkflowID}")).Deleted);
+        Assert.AreEqual($"Activity Child Workflow Parallel Child Workflow has failed with error: 2: {(new NotImplementedException()).Message}", archive.ErrorMessage);
     }
 }

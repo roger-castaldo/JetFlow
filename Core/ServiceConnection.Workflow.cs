@@ -149,7 +149,8 @@ internal partial class ServiceConnection
         {
             NatsHeaders endHeaders = [
                 new(Constants.ActivityNameHeader, startMessage.ParentWorkflowActivityName),
-                new(Constants.ActivityIDHeader, startMessage.ActivityID?.ToString())
+                new(Constants.ActivityIDHeader, startMessage.ActivityID?.ToString()),
+                new(Constants.ActivityResultHeader, (workflowEnd.IsSuccess ? ActivityResultStatus.Success : ActivityResultStatus.Failure).ToString())
             ];
             if (startMessage.ParallelActivityIndex.HasValue)
             {
@@ -157,7 +158,7 @@ internal partial class ServiceConnection
                 endHeaders.Add(Constants.ParallelActivityCountHeader, startMessage.ParallelActivityCount?.ToString());
             }
             messages = messages.Append(new(
-                UTF8Encoding.UTF8.GetBytes((workflowEnd.IsSuccess ? WorkflowResult.Success : WorkflowResult.Failure).ToString()),
+                (workflowEnd.IsSuccess? [] : UTF8Encoding.UTF8.GetBytes(workflowEnd.ErrorMessage!)),
                 subjectMapper.WorkflowStepEnd(startMessage.ParentWorkflowSubject, startMessage.ParentWorkflowId, startMessage.ParentWorkflowActivitySubject!),
                 endHeaders,
                 $"child-{message.WorkflowSubjectName}-{message.WorkflowId}-end"

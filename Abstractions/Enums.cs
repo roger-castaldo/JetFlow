@@ -27,19 +27,3 @@ public enum ActivityResultStatus
     /// typically expressed in milliseconds unless otherwise noted by the implementation.</remarks>
     Timeout
 }
-
-/// <summary>
-/// Represents the status of a child workflow result, indicating if it was successful or failed.
-/// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<WorkflowResult>))]
-public enum WorkflowResult
-{
-    /// <summary>
-    /// Indicates that the operation completed successfully.
-    /// </summary>
-    Success,
-    /// <summary>
-    /// Represents a failure result or state.
-    /// </summary>
-    Failure
-}
