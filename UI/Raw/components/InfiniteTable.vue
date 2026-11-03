@@ -56,7 +56,7 @@
     onMounted(async () => {
         observer = new IntersectionObserver(
             async (entries) => {
-                if (entries[0].isIntersecting && props.hasMore) {
+                if (entries[0].isIntersecting && props.hasMore && !props.loading) {
                     await props.loadMore();
                     isAtEnd.value = !props.hasMore;
                 }

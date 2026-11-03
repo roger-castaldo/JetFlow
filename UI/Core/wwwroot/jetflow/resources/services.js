@@ -49,12 +49,14 @@ export const GetActiveFlows = async (namespace, workflowName, metadata, argument
     throw 'Unable to list active flows';
 };
 
-export const GetArchivedFlows = async (namespace, workflowName, metadata, argument, offset, pageSize) => {
+export const GetArchivedFlows = async (namespace, workflowName, startedAt, completedAt, metadata, argument, offset, pageSize) => {
     let result = await fetch('/jetflow/query/archivedflows',{
         method:'QUERY',
         body:JSON.stringify({
             workflowNamespace:namespace,
             workflowName:workflowName,
+            startedAt:startedAt,
+            completedAt:completedAt,
             metadata:metadata,
             argument:argument,
             offset:offset,

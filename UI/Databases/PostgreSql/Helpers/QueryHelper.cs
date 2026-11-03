@@ -1,4 +1,7 @@
-﻿using Npgsql;
+﻿using JetFlow.UI.ArgumentFilters;
+using JetFlow.UI.Interfaces;
+using Npgsql;
+using NpgsqlTypes;
 using System.Text.Json;
 
 namespace JetFlow.UI.Helpers;
@@ -21,6 +24,11 @@ internal class QueryHelper (string connectionString)
         => new(parameterName, NpgsqlTypes.NpgsqlDbType.Bigint) { Value = (long?)value };
     public static NpgsqlParameter CreateParameter(string parameterName, long? value)
         => new(parameterName, NpgsqlTypes.NpgsqlDbType.Bigint) { Value = value };
+    public static NpgsqlParameter CreateParameter(string parameterName, IEnumerable<string> value)
+        => new(parameterName, NpgsqlDbType.Array | NpgsqlDbType.Text)
+        {
+            Value = value.ToArray()
+        };
     public static NpgsqlParameter CreateJsonParameter(string parameterName, object? value)
         => new(parameterName, NpgsqlTypes.NpgsqlDbType.Jsonb) { Value = (value is null ? null : JsonSerializer.Serialize(value))};
 
@@ -128,4 +136,81 @@ internal class QueryHelper (string connectionString)
 
     public async ValueTask<IEnumerable<Dictionary<string, object>>?> ExecuteReader(NpgsqlConnection connection, NpgsqlTransaction transaction, SqlCommand command)
         => (await ExecuteReaders(connection, transaction, [command])).FirstOrDefault();
+
+    public static (string queryPiece, NpgsqlParameter[] parameters) ConvertArgumentFilter(string workflowTableName, IArgumentFilter filter)
+        => filter switch
+        {
+            StartsWithFilter swf => (
+            $@"
+            EXISTS (
+                SELECT 1
+                FROM jsonb_extract_path_recursive(
+                    {workflowTableName}.arguments,
+                    @prop_{swf.PropertyName.Replace('.', '_')}
+                ) AS extracted(value)
+                WHERE extracted.value #>> '{{}}' LIKE @filter_{swf.PropertyName.Replace('.', '_')}
+            )
+            ",
+            [
+                new($"@prop_{swf.PropertyName.Replace('.','_')}", NpgsqlDbType.Array | NpgsqlDbType.Text)
+                {
+                    Value = swf.PropertyName.Split('.')
+                },
+                new($"@filter_{swf.PropertyName.Replace('.','_')}", NpgsqlDbType.Text)
+                {
+                    Value = $"{swf.Value}%"
+                }
+            ]),
+
+            EndsWithFilter ewf => (
+            $@"
+            EXISTS (
+                SELECT 1
+                FROM jsonb_extract_path_recursive(
+                    {workflowTableName}.arguments,
+                    @prop_{ewf.PropertyName.Replace('.', '_')}
+                ) AS extracted(value)
+                WHERE extracted.value #>> '{{}}' LIKE @filter_{ewf.PropertyName.Replace('.', '_')}
+            )
+            ",
+            [
+                new($"@prop_{ewf.PropertyName.Replace('.', '_')}", NpgsqlDbType.Array | NpgsqlDbType.Text)
+                {
+                    Value = ewf.PropertyName.Split('.')
+                },
+                new($"@filter_{ewf.PropertyName.Replace('.', '_')}", NpgsqlDbType.Text)
+                {
+                    Value = $"%{ewf.Value}"
+                }
+            ]),
+            _ => throw new InvalidCastException()
+        };
+
+    internal static IEnumerable<(string queryPiece, NpgsqlParameter[] parameters)> ConvertDateFilter(string dateColumn, DateRange? dateRange)
+    {
+        if (dateRange is null)
+            return [];
+        return (dateRange.Value.Start, dateRange.Value.End) switch
+        {
+            (null, null) => [],
+            (DateTimeOffset start, null) => [
+                ($"{dateColumn} >= @{dateColumn.Replace(".", "_")}_start", [CreateParameter($"@{dateColumn.Replace(".", "_")}_start", start)])
+            ],
+            (null, DateTimeOffset end) => [
+                ($"{dateColumn} <= @{dateColumn.Replace(".", "_")}_end", [CreateParameter($"@{dateColumn.Replace(".", "_")}_end", end)])
+            ],
+            (DateTimeOffset start, DateTimeOffset end) => [
+                ($"{dateColumn} BETWEEN @{dateColumn.Replace(".", "_")}_start AND @{dateColumn.Replace(".", "_")}_end", 
+                [CreateParameter($"@{dateColumn.Replace(".", "_")}_start", start), CreateParameter($"@{dateColumn.Replace(".", "_")}_end", end)])
+            ]
+        };
+    }
+
+    /*
+     * SELECT
+    try_bigint(data ->> 'id')             AS id,
+    try_numeric(data ->> 'amount')        AS amount,
+    try_timestamptz(data ->> 'createdAt') AS created_at
+FROM my_table;
+     */
 }

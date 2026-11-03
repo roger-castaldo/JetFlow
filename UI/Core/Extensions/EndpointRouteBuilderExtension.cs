@@ -1,6 +1,7 @@
 ﻿using JetFlow.UI.Handlers;
 using JetFlow.UI.Helpers;
 using JetFlow.UI.Interfaces;
+using JetFlow.UI.Messages;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -158,7 +159,7 @@ public static class EndpointRouteBuilderExtension
                 return Results.Ok(new WorkflowQueryResponse<ActiveWorkflow>(await WorkflowsHelper.MaskArgumentsAsync(configService, query.WorkflowNamespace, result), result.LastOffset));
             });
         routeBuilder
-            .MapQuery("/jetflow/query/archivedflows", async ([FromBody] WorkflowQuery query, [FromServices] IDbConnection dbConnection,
+            .MapQuery("/jetflow/query/archivedflows", async ([FromBody] ArchivedWorkflowQuery query, [FromServices] IDbConnection dbConnection,
             [FromServices] IConfigService configService, CancellationToken cancellation) =>
             {
                 if (query is null)
@@ -166,6 +167,8 @@ public static class EndpointRouteBuilderExtension
                 var result = await dbConnection.FindArchivedWorkflowAsync(
                     query.WorkflowNamespace,
                     query.WorkflowName,
+                    query.StartedAt,
+                    query.CompletedAt,
                     query.Argument,
                     query.MetaData,
                     (int)query.Offset,

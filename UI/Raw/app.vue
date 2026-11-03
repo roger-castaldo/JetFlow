@@ -23,10 +23,13 @@
             <template #menu>
                 <Box>
                     <Title :text="translate('title')" :level="4"/>
-                    <Select :values="namespaces" @valueChanged="namespaceChanged"  style="margin-bottom:15px;"/>
                     <Menu>
                         <MenuList :items="mainMenu"/>
                     </Menu>
+                    <Title :text="translate('namespace')" :level="6"/>
+                    <Select :values="namespaces" @valueChanged="namespaceChanged"  style="margin-bottom:15px;"/>
+                    <Title :text="translate('theme')" :level="6"/>
+                    <Select :values="skins" @valueChanged="skinChanged"  style="margin-bottom:15px;"/>
                 </Box>
             </template>
         </ColumnContainer>
@@ -35,8 +38,8 @@
 
 <script setup>
     import { Animation, PageNotification, Modal, Progress, AnimationTypes, AnimationSpeeds,
-        ColumnContainerModifiers, ColumnContainer, ColumnSizes, BorderTypes, Menu, MenuList,
-        Title, Select, Box
+        ColumnContainerModifiers, ColumnContainer, ColumnSizes, Menu, MenuList,
+        Title, Select, Box, AVAIABLE_SKINS, setSkin, provideLanguage
      } from 'components';
     import { Config } from 'mixins';
     import { Locked, ProgressMessage, Message, ErrorMessage, ClearProgress, Unlock, Constants} from 'mixins';
@@ -88,10 +91,13 @@
     provide('IconSet', 'solid');
     provide('Language', 'en');
     provide(Constants.namespaceName, currentNamespace);
+    provideLanguage('en', provide);
 
     const currentComponent = shallowRef(null);
     const currentMenu = ref('dashboard');
     const namespaces = ref([]);
+
+    const skins = AVAIABLE_SKINS.map((s)=>({value:s,label:s,selected:s===Config.skin.toLowerCase()}));
 
     const mainMenu = computed(()=>{
         return menu.map(m=>{
@@ -119,9 +125,13 @@
         currentNamespace.value = val.value;
     };
 
+    const skinChanged = (val)=>{
+        setSkin(val.value);
+    };
+
     onMounted(async () => {
         document.getElementById('preload-modal').remove();
-        namespaces.value = (await GetNamespaces()).map((ns)=>({value:ns,label:ns}));
+        namespaces.value = (await GetNamespaces()).map((ns)=>({value:ns,label:ns,selected:ns===Config.defaultNamespace}));
 
         currentComponent.value = dashboard;
         ClearProgress();

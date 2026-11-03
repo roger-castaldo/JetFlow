@@ -1,5 +1,4 @@
 ﻿using JetFlow.Data;
-using JetFlow.UI.ArgumentFilters;
 using JetFlow.UI.dto;
 using JetFlow.UI.Helpers;
 using JetFlow.UI.Interfaces;
@@ -132,7 +131,7 @@ AND a.""argument_definition"" IS NOT NULL;", [
             ))??[]),
         .. archive.Steps.SelectMany<WorkflowStep, SqlCommand>((step, index)=>
             [
-                new SqlCommand("CALL add_archived_workflow_step(@id, @namespace, @workflow, @step_id, @step_type::workflow_step_types, @step_index, @step_name, @start_time, @end_time, @input, @result_status::workflow_step_result_status, @error_message, @result)", [
+                new SqlCommand("CALL add_archived_workflow_step(@id, @namespace, @workflow, @step_id, @step_type::workflow_step_types, @step_index, @step_name, @start_time, @end_time, @input, @result_status::workflow_step_result_status, @error_message, @result, @child_workflow_instance_id, @child_workflow_name)", [
                     QueryHelper.CreateParameter("@id", archive.ID),
                     QueryHelper.CreateParameter("@namespace", namespaceName),
                     QueryHelper.CreateParameter("@workflow", archive.Name),
@@ -145,7 +144,9 @@ AND a.""argument_definition"" IS NOT NULL;", [
                     QueryHelper.CreateJsonParameter("@input", step.Input),
                     QueryHelper.CreateParameter("@result_status", step.Status),
                     QueryHelper.CreateParameter("@error_message", step.ErrorMessage),
-                    QueryHelper.CreateJsonParameter("@result", step.Result)
+                    QueryHelper.CreateJsonParameter("@result", step.Result),
+                    QueryHelper.CreateParameter("@child_workflow_instance_id", step.ChildWorkflowID),
+                    QueryHelper.CreateParameter("@child_workflow_name", step.ChildWorkflowName)
                 ]),
                 .. (step.Retries?.Select((retry, rindex)=>new SqlCommand("CALL add_archived_workflow_step_retry(@id, @namespace, @workflow, @step_id, @retry_index, @retry_type::workflow_retry_types, @time_stamp)",[
                         QueryHelper.CreateParameter("@id", archive.ID),
@@ -161,10 +162,14 @@ AND a.""argument_definition"" IS NOT NULL;", [
         )
     ]);
 
-    async ValueTask<IEnumerable<ArchivedWorkflow>> IDbConnection.FindArchivedWorkflowAsync(string? namespaceName, string workflowName, IEnumerable<IArgumentFilter>? argumentFilters,
-        Dictionary<string, string?>? metaData, int offset, int pageSize)
+    async ValueTask<IEnumerable<ArchivedWorkflow>> IDbConnection.FindArchivedWorkflowAsync(string? namespaceName, string workflowName,
+        DateRange? startedAt, DateRange? completedAt, IEnumerable<IArgumentFilter>? argumentFilters, Dictionary<string, string?>? metaData, int offset, int pageSize)
     {
-        var filters = (argumentFilters?? []).Select(a => ConvertArgumentToSql(a)).ToArray();
+        IEnumerable<(string queryPiece, NpgsqlParameter[] parameters)> filters = [];
+        filters = filters.Concat(QueryHelper.ConvertDateFilter("aw.started_at", startedAt));
+        filters = filters.Concat(QueryHelper.ConvertDateFilter("aw.finished_at", completedAt));
+        filters = filters.Concat((argumentFilters?? []).Select(a => QueryHelper.ConvertArgumentFilter("aw",a)).ToArray());
+        var metaFilter = CreateMetaFilter(metaData);
         var queryResult = await queryHelper.ExecuteReader(new(
             @$"SELECT 
   aw.id,
@@ -199,12 +204,11 @@ INNER JOIN archived_workflow_options awo
 WHERE n.name = @namespace
 AND w.name = @workflow
 { string.Join('\n', filters.Select(f=> $"AND {f.queryPiece}")) }
+{ metaFilter.queryPiece }
 LIMIT @pageSize OFFSET @offset;",
             [
-                .. filters.Select(f=>f.parameter)
-                .Where(p=>p is not null)
-                .OfType<NpgsqlParameter>()
-,
+                .. filters.SelectMany(f=>f.parameters),
+                .. metaFilter.parameters,
                 QueryHelper.CreateParameter("@namespace", namespaceName),
                 QueryHelper.CreateParameter("@workflow", workflowName),
                 QueryHelper.CreateParameter("@pageSize", pageSize),
@@ -215,13 +219,30 @@ LIMIT @pageSize OFFSET @offset;",
             ?? [];
     }
 
-    private static (string queryPiece, NpgsqlParameter? parameter) ConvertArgumentToSql(IArgumentFilter filter)
-        => filter switch
-        {
-            StartsWithFilter swf => ($" (aw.arguments #>> '{{{swf.PropertyName.Replace('.',',')}}}')::text LIKE @{swf.PropertyName.Replace('.','_')}", QueryHelper.CreateParameter($"@{swf.PropertyName.Replace('.','_')}",$"{swf.Value}%")),
-            EndsWithFilter ewf => ($" (aw.arguments #>> '{{{ewf.PropertyName.Replace('.', ',')}}}')::text LIKE @{ewf.PropertyName.Replace('.', '_')}", QueryHelper.CreateParameter($"@{ewf.PropertyName.Replace('.', '_')}", $"{ewf.Value}")),
-            _ => throw new InvalidCastException()
-        };
+    private (string queryPiece, NpgsqlParameter[] parameters) CreateMetaFilter(Dictionary<string, string?>? metaData)
+    {
+        if (metaData==null)
+            return ("", []);
+        var parts = metaData.Select((pair, index) =>
+        new {
+            query = $"AND awme.key_name = @mdfilter_key{index} AND awme.value = @mdfilter_par{index}",
+            parameters = new NpgsqlParameter[]{
+                QueryHelper.CreateParameter($"@mdfilter_par{index}", pair.Value),
+                QueryHelper.CreateParameter($"@mdfilter_key{index}", pair.Key)
+            }
+        });
+        return (
+            $@"AND EXISTS (
+                SELECT 1 
+                FROM archived_workflow_metadata_entry awme
+                WHERE awme.id = aw.id 
+                AND awme.workflow_id = aw.workflow_id 
+                AND awme.namespace_id = aw.namespace_id 
+                { string.Join('\n', parts.Select(p=>p.query)) }
+            )",
+            parts.SelectMany(p => p.parameters).ToArray()
+        );
+    }
 
     ValueTask IDbConnection.UnregisterNamespaceAsync(string? namespaceName)
         => queryHelper.ExecuteCommand("CALL unregister_namespace(@namespace)", new NpgsqlParameter("@namespace", namespaceName));

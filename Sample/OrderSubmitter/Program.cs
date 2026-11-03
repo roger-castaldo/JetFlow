@@ -53,6 +53,11 @@ var config = (IConfiguration)(new ConfigurationBuilder()
     .AddUserSecrets(typeof(Program).Assembly)
     .Build());
 
+var employees = new Faker<string>()
+    .CustomInstantiator(f => $"{f.Name.LastName()}, {f.Name.FirstName()}")
+    .Generate(5)
+    .ToArray();
+
 var primaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Client.Core.NatsOpts()
 {
     Url = config.GetConnectionString("nats")!
@@ -72,27 +77,46 @@ var cron = new WorkflowScheduleBuilder()
     .MonthlyOnAt(15, 16, 30)
     .Build();
 
+var idx = 0;
+
 foreach(var order in orderGenerator.GenerateBetween(2, 10))
 {
-    await primaryConnection.ScheduleWorkflowAsync<IPlaceOrder, Order>(new(order), cron);
+    await primaryConnection.ScheduleWorkflowAsync<IPlaceOrder, Order>(new(order)
+    {
+        MetaData = new Dictionary<string, string[]>() { { "CommissionEmployee", [employees[idx%employees.Length]] } }
+    }, cron);
+    idx++;
 }
 
 foreach(var order in orderGenerator.GenerateBetween(2, 10))
 {
-    await primaryConnection.DelayStartWorkflowAsync<IPlaceOrder, Order>(new(order), TimeSpan.FromMinutes(RandomNumberGenerator.GetInt32(30, 60*24)));
+    await primaryConnection.DelayStartWorkflowAsync<IPlaceOrder, Order>(new(order)
+    {
+        MetaData = new Dictionary<string, string[]>() { { "CommissionEmployee", [employees[idx%employees.Length]] } }
+    }, TimeSpan.FromMinutes(RandomNumberGenerator.GetInt32(30, 60*24)));
+    idx++;
 }
 
 while (!sourceCancel.IsCancellationRequested)
 {
     Guid id = Guid.Empty;
+    idx=0;
     foreach (var order in orderGenerator.GenerateBetween(2, 10))
     {
-        id = await primaryConnection.StartWorkflowAsync<IPlaceOrder, Order>(new(order));
+        id = await primaryConnection.StartWorkflowAsync<IPlaceOrder, Order>(new(order)
+        {
+            MetaData = new Dictionary<string, string[]>() { { "CommissionEmployee", [employees[idx%employees.Length]] } }
+        });
+        idx++;
         Console.WriteLine($"Submitting order: {id} on {Shared.Constants.PrimaryNamespace}");
     }
     foreach (var order in orderGenerator.GenerateBetween(2, 10))
     {
-        id = await secondaryConnection.StartWorkflowAsync<IPlaceOrder, Order>(new(order));
+        id = await secondaryConnection.StartWorkflowAsync<IPlaceOrder, Order>(new(order)
+        {
+            MetaData = new Dictionary<string, string[]>() { { "CommissionEmployee", [employees[idx%employees.Length]] } }
+        });
+        idx++;
         Console.WriteLine($"Submitting order: {id} on {Shared.Constants.SecondayNamespace}");
     }
     try

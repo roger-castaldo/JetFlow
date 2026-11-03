@@ -30,14 +30,14 @@ END $$;
 
 DO $$ 
 BEGIN
-    CREATE TYPE "workflow_step_types" AS ENUM ('Action', 'Delay', 'Suspended');
+    CREATE TYPE "workflow_step_types" AS ENUM ('Action', 'Delay', 'Suspended', 'ChildWorkflow');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
 CREATE TABLE IF NOT EXISTS "namespaces" (
     "id" uuid NOT NULL,
-    "name" character varying(512) UNIQUE,
+    "name" character varying(2048) UNIQUE,
     "enabled" boolean DEFAULT true NOT NULL,
     PRIMARY KEY ("id")
 );
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS "namespaces" (
 CREATE TABLE IF NOT EXISTS "activities" (
     "id" uuid NOT NULL,
     "namespace_id" uuid NOT NULL,
-    "name" character varying(512) NOT NULL,
+    "name" character varying(2048) NOT NULL,
     "argument_definition" jsonb,
     PRIMARY KEY ("id", "namespace_id"),
     FOREIGN KEY ("namespace_id") REFERENCES "namespaces" ("id") ON DELETE CASCADE
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS "activities" (
 CREATE TABLE IF NOT EXISTS "workflows" (
     "id" uuid NOT NULL,
     "namespace_id" uuid NOT NULL,
-    "name" character varying(512) NOT NULL,
+    "name" character varying(2048) NOT NULL,
     "argument_definition" jsonb,
     PRIMARY KEY ("id", "namespace_id"),
     FOREIGN KEY ("namespace_id") REFERENCES "namespaces" ("id") ON DELETE CASCADE
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS "archived_workflow_metadata_entry" (
     "id" uuid NOT NULL,
     "workflow_id" uuid NOT NULL,
     "namespace_id" uuid NOT NULL,
-    "key_name" character varying(512) NOT NULL,
+    "key_name" character varying(2048) NOT NULL,
     "value_index" integer NOT NULL,
     "value" text NOT NULL,
     PRIMARY KEY ("id", "workflow_id", "namespace_id", "key_name", "value_index"),
@@ -111,10 +111,15 @@ CREATE TABLE IF NOT EXISTS "archived_workflow_steps" (
     "result_status" workflow_step_result_status,
     "error_message" text,
     "result" jsonb,
+	"child_workflow_instance_id" uuid,
+	"child_workflow_id" uuid,
     PRIMARY KEY ("id", "workflow_id", "namespace_id", "step_id"),
     FOREIGN KEY ("id", "workflow_id", "namespace_id") REFERENCES "archived_workflows" ("id", "workflow_id", "namespace_id") ON DELETE CASCADE,
-    FOREIGN KEY ("activity_id", "namespace_id") REFERENCES "activities" ("id", "namespace_id") ON DELETE CASCADE
+    FOREIGN KEY ("activity_id", "namespace_id") REFERENCES "activities" ("id", "namespace_id") ON DELETE CASCADE,
+	FOREIGN KEY ("child_workflow_instance_id", "child_workflow_id", "namespace_id") REFERENCES "archived_workflows" ("id", "workflow_id", "namespace_id") ON DELETE CASCADE,
+	FOREIGN KEY ("child_workflow_id", "namespace_id") REFERENCES "workflows" ("id", "namespace_id") ON DELETE CASCADE
 );
+
 
 CREATE TABLE IF NOT EXISTS "archived_workflow_step_retries" (
     "id" uuid NOT NULL,
@@ -364,7 +369,7 @@ CREATE OR REPLACE PROCEDURE "add_archived_workflow_metadata_entry" (
     IN p_id uuid ,
     IN p_namespace character varying ,
     IN p_workflow character varying ,
-    IN p_key_name character varying(512) ,
+    IN p_key_name character varying(2048) ,
     IN p_value_index integer ,
     IN p_value text 
 )
@@ -386,7 +391,7 @@ BEGIN
     ELSE
         SELECT id INTO v_workflow_id FROM workflows WHERE name = p_workflow AND namespace_id = v_namespace_id;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM archived_workflow_metadata_entry WHERE id = id AND workflow_id = v_workflow_id AND namespace_id = v_namespace_id AND key_name = p_key_name AND value_index = p_value_index) THEN
+    IF NOT EXISTS (SELECT 1 FROM archived_workflow_metadata_entry WHERE id = p_id AND workflow_id = v_workflow_id AND namespace_id = v_namespace_id AND key_name = p_key_name AND value_index = p_value_index) THEN
         INSERT INTO archived_workflow_metadata_entry (id, workflow_id, namespace_id, key_name, value_index, value) 
         VALUES (p_id, v_workflow_id, v_namespace_id, p_key_name, p_value_index, p_value);
     END IF;
@@ -400,13 +405,15 @@ CREATE OR REPLACE PROCEDURE "add_archived_workflow_step" (
     IN p_step_id int ,
     IN p_step_type workflow_step_types ,
     IN p_step_index bigint,
-    IN p_step_name character varying(512),
+    IN p_step_name character varying(2048),
     IN p_start_time timestamp ,
     IN p_end_time timestamp ,
     IN p_input jsonb,
     IN p_result_status workflow_step_result_status,
     IN p_error_message text,
-    IN p_result jsonb
+    IN p_result jsonb,
+    IN p_child_workflow_instance_id uuid,
+    in p_child_workflow_name character varying
 )
 LANGUAGE plpgsql 
 AS $$
@@ -414,6 +421,8 @@ DECLARE
     v_namespace_id uuid;
     v_workflow_id uuid;
     v_activity_id uuid;
+    v_child_workflow_instance_id uuid;
+    v_child_workflow_id uuid;
 BEGIN
 	IF NOT EXISTS (SELECT 1 FROM namespaces WHERE name = p_namespace) THEN
         v_namespace_id := gen_random_uuid();
@@ -437,9 +446,22 @@ BEGIN
     ELSE
         v_activity_id := NULL;
     END IF;
+    v_child_workflow_instance_id := null;
+    v_child_workflow_id := null;
+    IF p_child_workflow_instance_id IS NOT NULL THEN 
+        IF NOT EXISTS (SELECT 1 FROM workflows WHERE name = p_child_workflow_name AND namespace_id = v_namespace_id) THEN
+            v_child_workflow_id := gen_random_uuid();
+            INSERT INTO workflows (id, namespace_id, name) VALUES (v_child_workflow_id, v_namespace_id, p_child_workflow_name);
+        ELSE
+            SELECT id INTO v_child_workflow_id FROM workflows WHERE name = p_child_workflow_name AND namespace_id = v_namespace_id;
+        END IF;
+        IF EXISTS (SELECT 1 FROM archived_workflow_steps WHERE id = v_child_workflow_instance_id AND workflow_id = v_child_workflow_id AND namespace_id = v_namespace_id) THEN
+            v_child_workflow_instance_id := p_child_workflow_instance_id;
+        END IF;
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM archived_workflow_steps WHERE id = p_id AND workflow_id = v_workflow_id AND namespace_id = v_namespace_id AND step_id = p_step_id) THEN
-        INSERT INTO archived_workflow_steps (id, workflow_id, namespace_id, step_id, step_type, step_index, activity_id, start_time, end_time, input, result_status, error_message, result) 
-        VALUES (p_id, v_workflow_id, v_namespace_id, p_step_id, p_step_type, p_step_index, v_activity_id, p_start_time, p_end_time, p_input, p_result_status, p_error_message, p_result);
+        INSERT INTO archived_workflow_steps (id, workflow_id, namespace_id, step_id, step_type, step_index, activity_id, start_time, end_time, input, result_status, error_message, result, child_workflow_instance_id, child_workflow_id) 
+        VALUES (p_id, v_workflow_id, v_namespace_id, p_step_id, p_step_type, p_step_index, v_activity_id, p_start_time, p_end_time, p_input, p_result_status, p_error_message, p_result, v_child_workflow_instance_id,  v_child_workflow_id);
     END IF;
 END;
 $$;
@@ -548,18 +570,23 @@ CREATE OR REPLACE FUNCTION public.get_archived_workflow_metada_json(pid uuid, pw
  RETURNS jsonb
  LANGUAGE sql
 AS $$
-SELECT json_agg(metadata) 
-FROM (
-    SELECT json_build_object(
-        'Key', "key_name",
-        'Value', json_agg("value" ORDER BY value_index)
-    ) as "metadata"
-    FROM archived_workflow_metadata_entry
-    WHERE id = pid
-    AND workflow_id = pworkflow_id
-    AND namespace_id = pnamespace_id
-    GROUP BY key_name
-);
+    SELECT COALESCE(
+        jsonb_object_agg(
+            key_name,
+            values
+        ),
+        '{}'::jsonb
+    )
+    FROM (
+        SELECT
+            key_name,
+            jsonb_agg("value" ORDER BY value_index) AS values
+        FROM archived_workflow_metadata_entry
+        WHERE id = pid
+          AND workflow_id = pworkflow_id
+          AND namespace_id = pnamespace_id
+        GROUP BY key_name
+    ) metadata;
 $$;
 
 CREATE OR REPLACE FUNCTION get_archived_workflow_step_retries_json(pid uuid, pworkflow_id uuid, pnamespace_id uuid, pstep_id int)
@@ -595,7 +622,9 @@ SELECT json_agg(
     'Input', aws.input,
     'Status', aws.result_status,
     'ErrorMessage', aws.error_message,
-    'Result', aws.result 
+    'Result', aws.result,
+    'ChildWorfklowID', aws.child_workflow_instance_id,
+    'ChildWorkflowName', cwf.name
   )
   ORDER BY step_id
 )
@@ -603,7 +632,116 @@ FROM archived_workflow_steps aws
 LEFT JOIN activities a 
   ON aws.activity_id = a.id 
   AND aws.namespace_id = a.namespace_id
+LEFT JOIN workflows cwf
+  ON aws.child_workflow_id = cwf.id
+  AND aws.namespace_id = cwf.namespace_id
 WHERE aws.id = pid
 AND aws.workflow_id = pworkflow_id
 AND aws.namespace_id = pnamespace_id;
+$$;
+
+CREATE OR REPLACE FUNCTION jsonb_extract_path_recursive(
+    p_json jsonb,
+    p_path text[]
+)
+RETURNS SETOF jsonb
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+BEGIN
+    IF cardinality(p_path) = 0 THEN
+        RETURN NEXT p_json;
+        RETURN;
+    END IF;
+
+    IF jsonb_typeof(p_json) = 'array' THEN
+        RETURN QUERY
+        SELECT extracted.value
+        FROM jsonb_array_elements(p_json) AS item(value)
+        CROSS JOIN LATERAL
+            jsonb_extract_path_recursive(item.value, p_path)
+            AS extracted(value);
+
+    ELSIF jsonb_typeof(p_json) = 'object'
+          AND p_json ? p_path[1] THEN
+
+        RETURN QUERY
+        SELECT extracted.value
+        FROM jsonb_extract_path_recursive(
+            p_json -> p_path[1],
+            p_path[2:]
+        ) AS extracted(value);
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION try_bigint(p_value text)
+RETURNS bigint
+LANGUAGE plpgsql
+STABLE
+PARALLEL SAFE
+RETURNS NULL ON NULL INPUT
+AS $$
+BEGIN
+    -- Fast non-throwing validation.
+    IF NOT pg_input_is_valid(p_value, 'bigint'::regtype) THEN
+        RETURN NULL;
+    END IF;
+
+    -- Actual conversion.
+    RETURN p_value::bigint;
+
+    -- Defensive fallback if conversion ever still fails.
+EXCEPTION
+    WHEN data_exception THEN
+        RETURN NULL;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION try_numeric(p_value text)
+RETURNS numeric
+LANGUAGE plpgsql
+STABLE
+PARALLEL SAFE
+RETURNS NULL ON NULL INPUT
+AS $$
+BEGIN
+    -- Fast non-throwing validation.
+    IF NOT pg_input_is_valid(p_value, 'numeric'::regtype) THEN
+        RETURN NULL;
+    END IF;
+
+    -- Actual conversion.
+    RETURN p_value::numeric;
+
+    -- Defensive fallback if conversion ever still fails.
+EXCEPTION
+    WHEN data_exception THEN
+        RETURN NULL;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION try_timestamptz(p_value text)
+RETURNS timestamptz
+LANGUAGE plpgsql
+STABLE
+PARALLEL SAFE
+RETURNS NULL ON NULL INPUT
+AS $$
+BEGIN
+    -- Fast non-throwing validation.
+    IF NOT pg_input_is_valid(p_value, 'timestamptz'::regtype) THEN
+        RETURN NULL;
+    END IF;
+
+    -- Actual conversion.
+    RETURN p_value::timestamptz;
+
+    -- Defensive fallback if conversion ever still fails.
+EXCEPTION
+    WHEN data_exception THEN
+        RETURN NULL;
+END;
 $$;

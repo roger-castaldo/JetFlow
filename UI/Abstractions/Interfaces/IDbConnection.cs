@@ -43,7 +43,8 @@ public interface IDbConnection
     /// <param name="archive">The archived workflow to store.</param>
     /// <param name="namespaceName">The namespace to associate the archive with.</param>
     ValueTask StoreArchiveAsync(ArchivedWorkflow archive, string? namespaceName);
-    ValueTask<IEnumerable<ArchivedWorkflow>> FindArchivedWorkflowAsync(string? namespaceName, string workflowName, IEnumerable<IArgumentFilter>? argumentFilters,
+    ValueTask<IEnumerable<ArchivedWorkflow>> FindArchivedWorkflowAsync(string? namespaceName, string workflowName, 
+        DateRange? startedAt, DateRange? completedAt, IEnumerable<IArgumentFilter>? argumentFilters,
         Dictionary<string, string?>? metaData, int offset, int pageSize);
 
     /// <summary>

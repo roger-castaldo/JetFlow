@@ -1,5 +1,7 @@
 {
     "title":"JETFLOW",
+    "namespace":"Namespace:",
+    "theme":"Theme:",
     "menu":{
         "dashboard":"Dashboard",
         "activeflows":"Active Flows",
@@ -23,7 +25,27 @@
         "fail":"Fail",
         "continue":"Continue",
         "stepcount":"Step Count",
-        "purgedelay":" (Purge Delay: {delay})"
+        "purgedelay":" (Purge Delay: {delay})",
+        "filters":"Filters:",
+        "workflowname":"Workflow: {workflowname}",
+        "argumentFilters":{
+            "startsWith":"{property} starts with {value}",
+            "endsWith":"{property} ends with {value}",
+            "equals":"{property} equals {value}"
+        },
+        "dateFilters":{
+            "startedAt":{
+                "before":"Started before {end}",
+                "after":"Started after {start}",
+                "between":"Started between {start} and {end}"
+            },
+            "completedAt":{
+                "before":"Completed before {end}",
+                "after":"Completed after {start}",
+                "between":"Completed between {start} and {end}"
+            }
+        },
+        "metadataFilter":"MetaData: {key} equals {value}"
     },
     "screens":{
         "scheduledFlows":{

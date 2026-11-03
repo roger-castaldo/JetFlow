@@ -43,12 +43,14 @@ public static class ServiceCollectionExtension
         if (connection.ConnectionState != NatsConnectionState.Open)
             throw new UnableToConnectException();
         await dbConnection.InitAsync();
-        var configService = new ConfigService(dbConnection);
+        var eventService = new EventService(natsOpts);
+        var configService = new ConfigService(dbConnection, eventService);
         var activeFlowService = new ActiveFlowService(dbConnection, configService, await ObservationConnection.CreateInstanceAsync(new(connection)));
         await activeFlowService.InitAsync();
         services.AddSingleton<IConfigService>(configService)
             .AddSingleton<IActiveFlowService>(activeFlowService)
             .AddHostedService<ArchivingObserver>((services)=>new ArchivingObserver(services.GetRequiredService<IDbConnection>(), services.GetRequiredService<IConfigService>(), natsOpts))
+            .AddSingleton<IEventService>(eventService)
             .TryAddSingleton<IDbConnection>(dbConnection);
         services.Configure<JsonOptions>(options =>
             {

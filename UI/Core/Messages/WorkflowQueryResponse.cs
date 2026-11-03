@@ -1,4 +1,4 @@
-﻿namespace JetFlow.UI.Extensions;
+﻿namespace JetFlow.UI.Messages;
 
 internal record WorkflowQueryResponse<T>(
     IEnumerable<T> Data,
