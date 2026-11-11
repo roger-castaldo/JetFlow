@@ -55,7 +55,7 @@ internal class LatencyAggregator(string connectionString)
         await using var transaction = await connection.BeginTransactionAsync();
         try
         {
-            var results = await queryHelper.ExecuteReader(connection, transaction, new("SELECT * FROM \"workflow_performance_raw\";", []));
+            var results = await queryHelper.ExecuteReader(connection, transaction, new("SELECT * FROM \"workflow_performance_raw\" WHERE \"processed\" = FALSE;", []));
             var rawPerformances = results?.Select(r => new WorkflowPerformanceRaw(
                 (Guid)r["id"],
                 (DateTime)r["window"],
@@ -89,9 +89,10 @@ internal class LatencyAggregator(string connectionString)
                 .ToArray();
             var commands = rawPerformances
                 .Select(perf=>new SqlCommand(
-                    "DELETE FROM \"workflow_performance_raw\" WHERE \"id\" = @id",
+                    "UPDATE \"workflow_performance_raw\" SET \"processed\" = TRUE WHERE \"id\" = @id",
                     [new("@id", perf.ID)]
                 ))
+                .Prepend(new("DELETE FROM \"workflow_performance_raw\" WHERE \"processed\" = TRUE", []))
                 .ToList();
             foreach (var performance in performances)
             {
@@ -208,7 +209,7 @@ VALUES(@bucketStart, @workflowID, @namespaceID, @aggregationType::performance_ag
         await using var transaction = await connection.BeginTransactionAsync();
         try
         {
-            var results = await queryHelper.ExecuteReader(connection, transaction, new("SELECT * FROM \"activity_performance_raw\";", []));
+            var results = await queryHelper.ExecuteReader(connection, transaction, new("SELECT * FROM \"activity_performance_raw\" WHERE \"processed\" = FALSE;", []));
             var rawPerformances = results?.Select(r => new ActivityPerformanceRaw(
                 (Guid)r["id"],
                 (DateTime)r["window"],
@@ -246,9 +247,10 @@ VALUES(@bucketStart, @workflowID, @namespaceID, @aggregationType::performance_ag
                 .ToArray();
             var commands = rawPerformances
                 .Select(perf => new SqlCommand(
-                    "DELETE FROM \"activity_performance_raw\" WHERE \"id\" = @id",
+                    "UPDATE \"activity_performance_raw\" SET \"processed\" = TRUE WHERE \"id\" = @id",
                     [new("@id", perf.ID)]
                 ))
+                .Prepend(new("DELETE FROM \"activity_performance_raw\" WHERE \"processed\" = TRUE", []))
                 .ToList();
             foreach (var performance in performances)
             {

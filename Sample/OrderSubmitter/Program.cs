@@ -73,11 +73,11 @@ var secondaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Clie
     Namespace = Shared.Constants.SecondayNamespace
 });
 
-var cron = new WorkflowScheduleBuilder()
+var idx = 0;
+
+/*var cron = new WorkflowScheduleBuilder()
     .MonthlyOnAt(15, 16, 30)
     .Build();
-
-var idx = 0;
 
 foreach(var order in orderGenerator.GenerateBetween(2, 10))
 {
@@ -96,6 +96,7 @@ foreach(var order in orderGenerator.GenerateBetween(2, 10))
     }, TimeSpan.FromMinutes(RandomNumberGenerator.GetInt32(30, 60*24)));
     idx++;
 }
+*/
 
 while (!sourceCancel.IsCancellationRequested)
 {

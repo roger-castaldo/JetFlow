@@ -50,6 +50,7 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IConfigService>(configService)
             .AddSingleton<IActiveFlowService>(activeFlowService)
             .AddHostedService<ArchivingObserver>((services)=>new ArchivingObserver(services.GetRequiredService<IDbConnection>(), services.GetRequiredService<IConfigService>(), natsOpts))
+            .AddHostedService<PerformanceObserver>((services) => new PerformanceObserver(services.GetRequiredService<IDbConnection>(), services.GetRequiredService<IConfigService>(), natsOpts))
             .AddSingleton<IEventService>(eventService)
             .TryAddSingleton<IDbConnection>(dbConnection);
         services.Configure<JsonOptions>(options =>

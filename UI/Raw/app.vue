@@ -88,6 +88,7 @@
     const currentNamespace = ref(Config.defaultNamespace);
 
     provide('FontAwesomeCDN','https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/');
+    provide('ChartJSCDN','https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/');
     provide('IconSet', 'solid');
     provide('Language', 'en');
     provide(Constants.namespaceName, currentNamespace);

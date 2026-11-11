@@ -34,8 +34,10 @@ public interface IDbConnection
 
     ValueTask StoreWorkflowArgumentDefinitionAsync(string? namespaceName, string workflowName, JsonDocument definition);
     ValueTask<JsonDocument?> GetWorkflowArgumentDefinitionAsync(string? namespaceName, string workflowName);
+    ValueTask<IEnumerable<string>> ListWorkflowsAsync(string? namespaceName);
     ValueTask StoreActivityArgumentDefinitionAsync(string? namespaceName, string activityName, JsonDocument definition);
     ValueTask<JsonDocument?> GetActivityArgumentDefinitionAsync(string? namespaceName, string activityName);
+    ValueTask<IEnumerable<string>> ListActivitiesAsync(string? namespaceName);
 
     /// <summary>
     /// Stores an archived workflow record for the specified namespace.
@@ -82,7 +84,6 @@ public interface IDbConnection
     /// <param name="workflowName">The workflow name to filter by.</param>
     /// <param name="startTime">Start time (UTC) for the query.</param>
     /// <param name="endTime">End time (UTC) for the query.</param>
-    /// <param name="aggregationType">The aggregation window to use when sampling.</param>
     /// <returns>A collection of workflow performance samples.</returns>
     ValueTask<IEnumerable<WorkflowPerformanceSample>> ExtractWorkflowPerformanceDataAsync(string? namespaceName, string workflowName, DateTime startTime, DateTime endTime);
 
@@ -92,9 +93,9 @@ public interface IDbConnection
     /// <param name="namespaceName">The namespace to query.</param>
     /// <param name="startTime">Start time (UTC) for the query.</param>
     /// <param name="endTime">End time (UTC) for the query.</param>
-    /// <param name="aggregationType">The aggregation window to use when sampling.</param>
     /// <returns>A collection of named workflow performance samples.</returns>
     ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> ExtractWorkflowPerformanceDataAsync(string? namespaceName, DateTime startTime, DateTime endTime);
+    ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> GetLatestWorkflowPerformanceDataAsync(string? namespaceName);
 
     /// <summary>
     /// Extracts activity performance samples for a specific activity over the provided time range.
@@ -103,7 +104,6 @@ public interface IDbConnection
     /// <param name="activityName">The activity name to filter by.</param>
     /// <param name="startTime">Start time (UTC) for the query.</param>
     /// <param name="endTime">End time (UTC) for the query.</param>
-    /// <param name="aggregationType">The aggregation window to use when sampling.</param>
     /// <returns>A collection of activity performance samples.</returns>
     ValueTask<IEnumerable<ActivityPerformanceSample>> ExtractActivityPerformanceDataAsync(string? namespaceName, string activityName, DateTime startTime, DateTime endTime);
 
@@ -113,7 +113,8 @@ public interface IDbConnection
     /// <param name="namespaceName">The namespace to query.</param>
     /// <param name="startTime">Start time (UTC) for the query.</param>
     /// <param name="endTime">End time (UTC) for the query.</param>
-    /// <param name="aggregationType">The aggregation window to use when sampling.</param>
     /// <returns>A collection of named activity performance samples.</returns>
     ValueTask<IEnumerable<NamedActivityPerformanceSample>> ExtractActivityPerformanceDataAsync(string? namespaceName, DateTime startTime, DateTime endTime);
+
+    ValueTask<IEnumerable<NamedActivityPerformanceSample>> GetLatestActivityPerformanceDataAsync(string? namespaceName);
 }

@@ -4,18 +4,19 @@
 ## Contents
 
 - [ActivityPerformanceSample](#T-JetFlow-UI-ActivityPerformanceSample 'JetFlow.UI.ActivityPerformanceSample')
-  - [#ctor(Started,Completed,Failed,TimedOut,QueueLatency,Duration)](#M-JetFlow-UI-ActivityPerformanceSample-#ctor-System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics,JetFlow-UI-PMetrics- 'JetFlow.UI.ActivityPerformanceSample.#ctor(System.Int64,System.Int64,System.Int64,System.Int64,JetFlow.UI.PMetrics,JetFlow.UI.PMetrics)')
+  - [#ctor(SampleWindow,Started,Completed,Failed,TimedOut,QueueLatency,Duration)](#M-JetFlow-UI-ActivityPerformanceSample-#ctor-System-DateTimeOffset,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics,JetFlow-UI-PMetrics- 'JetFlow.UI.ActivityPerformanceSample.#ctor(System.DateTimeOffset,System.Int64,System.Int64,System.Int64,System.Int64,JetFlow.UI.PMetrics,JetFlow.UI.PMetrics)')
   - [Completed](#P-JetFlow-UI-ActivityPerformanceSample-Completed 'JetFlow.UI.ActivityPerformanceSample.Completed')
   - [Duration](#P-JetFlow-UI-ActivityPerformanceSample-Duration 'JetFlow.UI.ActivityPerformanceSample.Duration')
   - [Failed](#P-JetFlow-UI-ActivityPerformanceSample-Failed 'JetFlow.UI.ActivityPerformanceSample.Failed')
   - [QueueLatency](#P-JetFlow-UI-ActivityPerformanceSample-QueueLatency 'JetFlow.UI.ActivityPerformanceSample.QueueLatency')
+  - [SampleWindow](#P-JetFlow-UI-ActivityPerformanceSample-SampleWindow 'JetFlow.UI.ActivityPerformanceSample.SampleWindow')
   - [Started](#P-JetFlow-UI-ActivityPerformanceSample-Started 'JetFlow.UI.ActivityPerformanceSample.Started')
   - [TimedOut](#P-JetFlow-UI-ActivityPerformanceSample-TimedOut 'JetFlow.UI.ActivityPerformanceSample.TimedOut')
 - [IDbConnection](#T-JetFlow-UI-Interfaces-IDbConnection 'JetFlow.UI.Interfaces.IDbConnection')
-  - [ExtractActivityPerformanceDataAsync(namespaceName,activityName,startTime,endTime,aggregationType)](#M-JetFlow-UI-Interfaces-IDbConnection-ExtractActivityPerformanceDataAsync-System-String,System-String,System-DateTime,System-DateTime- 'JetFlow.UI.Interfaces.IDbConnection.ExtractActivityPerformanceDataAsync(System.String,System.String,System.DateTime,System.DateTime)')
-  - [ExtractActivityPerformanceDataAsync(namespaceName,startTime,endTime,aggregationType)](#M-JetFlow-UI-Interfaces-IDbConnection-ExtractActivityPerformanceDataAsync-System-String,System-DateTime,System-DateTime- 'JetFlow.UI.Interfaces.IDbConnection.ExtractActivityPerformanceDataAsync(System.String,System.DateTime,System.DateTime)')
-  - [ExtractWorkflowPerformanceDataAsync(namespaceName,workflowName,startTime,endTime,aggregationType)](#M-JetFlow-UI-Interfaces-IDbConnection-ExtractWorkflowPerformanceDataAsync-System-String,System-String,System-DateTime,System-DateTime- 'JetFlow.UI.Interfaces.IDbConnection.ExtractWorkflowPerformanceDataAsync(System.String,System.String,System.DateTime,System.DateTime)')
-  - [ExtractWorkflowPerformanceDataAsync(namespaceName,startTime,endTime,aggregationType)](#M-JetFlow-UI-Interfaces-IDbConnection-ExtractWorkflowPerformanceDataAsync-System-String,System-DateTime,System-DateTime- 'JetFlow.UI.Interfaces.IDbConnection.ExtractWorkflowPerformanceDataAsync(System.String,System.DateTime,System.DateTime)')
+  - [ExtractActivityPerformanceDataAsync(namespaceName,activityName,startTime,endTime)](#M-JetFlow-UI-Interfaces-IDbConnection-ExtractActivityPerformanceDataAsync-System-String,System-String,System-DateTime,System-DateTime- 'JetFlow.UI.Interfaces.IDbConnection.ExtractActivityPerformanceDataAsync(System.String,System.String,System.DateTime,System.DateTime)')
+  - [ExtractActivityPerformanceDataAsync(namespaceName,startTime,endTime)](#M-JetFlow-UI-Interfaces-IDbConnection-ExtractActivityPerformanceDataAsync-System-String,System-DateTime,System-DateTime- 'JetFlow.UI.Interfaces.IDbConnection.ExtractActivityPerformanceDataAsync(System.String,System.DateTime,System.DateTime)')
+  - [ExtractWorkflowPerformanceDataAsync(namespaceName,workflowName,startTime,endTime)](#M-JetFlow-UI-Interfaces-IDbConnection-ExtractWorkflowPerformanceDataAsync-System-String,System-String,System-DateTime,System-DateTime- 'JetFlow.UI.Interfaces.IDbConnection.ExtractWorkflowPerformanceDataAsync(System.String,System.String,System.DateTime,System.DateTime)')
+  - [ExtractWorkflowPerformanceDataAsync(namespaceName,startTime,endTime)](#M-JetFlow-UI-Interfaces-IDbConnection-ExtractWorkflowPerformanceDataAsync-System-String,System-DateTime,System-DateTime- 'JetFlow.UI.Interfaces.IDbConnection.ExtractWorkflowPerformanceDataAsync(System.String,System.DateTime,System.DateTime)')
   - [InitAsync()](#M-JetFlow-UI-Interfaces-IDbConnection-InitAsync 'JetFlow.UI.Interfaces.IDbConnection.InitAsync')
   - [ListNamespacesAsync()](#M-JetFlow-UI-Interfaces-IDbConnection-ListNamespacesAsync 'JetFlow.UI.Interfaces.IDbConnection.ListNamespacesAsync')
   - [PeakActivityPerformanceDataAsync(namespaceName)](#M-JetFlow-UI-Interfaces-IDbConnection-PeakActivityPerformanceDataAsync-System-String- 'JetFlow.UI.Interfaces.IDbConnection.PeakActivityPerformanceDataAsync(System.String)')
@@ -26,10 +27,10 @@
   - [StoreWorkflowPerformanceRecordAsync(namespaceName,record)](#M-JetFlow-UI-Interfaces-IDbConnection-StoreWorkflowPerformanceRecordAsync-System-String,JetFlow-Data-WorkflowPerformanceRecord- 'JetFlow.UI.Interfaces.IDbConnection.StoreWorkflowPerformanceRecordAsync(System.String,JetFlow.Data.WorkflowPerformanceRecord)')
   - [UnregisterNamespaceAsync(namespaceName)](#M-JetFlow-UI-Interfaces-IDbConnection-UnregisterNamespaceAsync-System-String- 'JetFlow.UI.Interfaces.IDbConnection.UnregisterNamespaceAsync(System.String)')
 - [NamedActivityPerformanceSample](#T-JetFlow-UI-NamedActivityPerformanceSample 'JetFlow.UI.NamedActivityPerformanceSample')
-  - [#ctor(Name,Started,Completed,Failed,TimedOut,QueueLatency,Duration)](#M-JetFlow-UI-NamedActivityPerformanceSample-#ctor-System-String,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics,JetFlow-UI-PMetrics- 'JetFlow.UI.NamedActivityPerformanceSample.#ctor(System.String,System.Int64,System.Int64,System.Int64,System.Int64,JetFlow.UI.PMetrics,JetFlow.UI.PMetrics)')
+  - [#ctor(Name,SampleWindow,Started,Completed,Failed,TimedOut,QueueLatency,Duration)](#M-JetFlow-UI-NamedActivityPerformanceSample-#ctor-System-String,System-DateTimeOffset,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics,JetFlow-UI-PMetrics- 'JetFlow.UI.NamedActivityPerformanceSample.#ctor(System.String,System.DateTimeOffset,System.Int64,System.Int64,System.Int64,System.Int64,JetFlow.UI.PMetrics,JetFlow.UI.PMetrics)')
   - [Name](#P-JetFlow-UI-NamedActivityPerformanceSample-Name 'JetFlow.UI.NamedActivityPerformanceSample.Name')
 - [NamedWorkflowPerformanceSample](#T-JetFlow-UI-NamedWorkflowPerformanceSample 'JetFlow.UI.NamedWorkflowPerformanceSample')
-  - [#ctor(Name,Started,Completed,Failed,Purged,QueueLatency)](#M-JetFlow-UI-NamedWorkflowPerformanceSample-#ctor-System-String,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics- 'JetFlow.UI.NamedWorkflowPerformanceSample.#ctor(System.String,System.Int64,System.Int64,System.Int64,System.Int64,JetFlow.UI.PMetrics)')
+  - [#ctor(Name,SampleWindow,Started,Completed,Failed,Purged,QueueLatency)](#M-JetFlow-UI-NamedWorkflowPerformanceSample-#ctor-System-String,System-DateTimeOffset,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics- 'JetFlow.UI.NamedWorkflowPerformanceSample.#ctor(System.String,System.DateTimeOffset,System.Int64,System.Int64,System.Int64,System.Int64,JetFlow.UI.PMetrics)')
   - [Name](#P-JetFlow-UI-NamedWorkflowPerformanceSample-Name 'JetFlow.UI.NamedWorkflowPerformanceSample.Name')
 - [PMetrics](#T-JetFlow-UI-PMetrics 'JetFlow.UI.PMetrics')
   - [#ctor(P50,P95,P99)](#M-JetFlow-UI-PMetrics-#ctor-System-TimeSpan,System-TimeSpan,System-TimeSpan- 'JetFlow.UI.PMetrics.#ctor(System.TimeSpan,System.TimeSpan,System.TimeSpan)')
@@ -37,11 +38,12 @@
   - [P95](#P-JetFlow-UI-PMetrics-P95 'JetFlow.UI.PMetrics.P95')
   - [P99](#P-JetFlow-UI-PMetrics-P99 'JetFlow.UI.PMetrics.P99')
 - [WorkflowPerformanceSample](#T-JetFlow-UI-WorkflowPerformanceSample 'JetFlow.UI.WorkflowPerformanceSample')
-  - [#ctor(Started,Completed,Failed,Purged,QueueLatency)](#M-JetFlow-UI-WorkflowPerformanceSample-#ctor-System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics- 'JetFlow.UI.WorkflowPerformanceSample.#ctor(System.Int64,System.Int64,System.Int64,System.Int64,JetFlow.UI.PMetrics)')
+  - [#ctor(SampleWindow,Started,Completed,Failed,Purged,QueueLatency)](#M-JetFlow-UI-WorkflowPerformanceSample-#ctor-System-DateTimeOffset,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics- 'JetFlow.UI.WorkflowPerformanceSample.#ctor(System.DateTimeOffset,System.Int64,System.Int64,System.Int64,System.Int64,JetFlow.UI.PMetrics)')
   - [Completed](#P-JetFlow-UI-WorkflowPerformanceSample-Completed 'JetFlow.UI.WorkflowPerformanceSample.Completed')
   - [Failed](#P-JetFlow-UI-WorkflowPerformanceSample-Failed 'JetFlow.UI.WorkflowPerformanceSample.Failed')
   - [Purged](#P-JetFlow-UI-WorkflowPerformanceSample-Purged 'JetFlow.UI.WorkflowPerformanceSample.Purged')
   - [QueueLatency](#P-JetFlow-UI-WorkflowPerformanceSample-QueueLatency 'JetFlow.UI.WorkflowPerformanceSample.QueueLatency')
+  - [SampleWindow](#P-JetFlow-UI-WorkflowPerformanceSample-SampleWindow 'JetFlow.UI.WorkflowPerformanceSample.SampleWindow')
   - [Started](#P-JetFlow-UI-WorkflowPerformanceSample-Started 'JetFlow.UI.WorkflowPerformanceSample.Started')
 
 <a name='T-JetFlow-UI-ActivityPerformanceSample'></a>
@@ -59,10 +61,10 @@ Aggregated activity performance metrics for a single sampling window.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Started | [T:JetFlow.UI.ActivityPerformanceSample](#T-T-JetFlow-UI-ActivityPerformanceSample 'T:JetFlow.UI.ActivityPerformanceSample') | Number of activity starts during the window. |
+| SampleWindow | [T:JetFlow.UI.ActivityPerformanceSample](#T-T-JetFlow-UI-ActivityPerformanceSample 'T:JetFlow.UI.ActivityPerformanceSample') | The time window these metrics were aggregated over. |
 
-<a name='M-JetFlow-UI-ActivityPerformanceSample-#ctor-System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics,JetFlow-UI-PMetrics-'></a>
-### #ctor(Started,Completed,Failed,TimedOut,QueueLatency,Duration) `constructor`
+<a name='M-JetFlow-UI-ActivityPerformanceSample-#ctor-System-DateTimeOffset,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics,JetFlow-UI-PMetrics-'></a>
+### #ctor(SampleWindow,Started,Completed,Failed,TimedOut,QueueLatency,Duration) `constructor`
 
 ##### Summary
 
@@ -72,6 +74,7 @@ Aggregated activity performance metrics for a single sampling window.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| SampleWindow | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The time window these metrics were aggregated over. |
 | Started | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of activity starts during the window. |
 | Completed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of activity completions during the window. |
 | Failed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of activity failures during the window. |
@@ -107,6 +110,13 @@ Number of activity failures during the window.
 
 Distribution metrics for queue latency observed.
 
+<a name='P-JetFlow-UI-ActivityPerformanceSample-SampleWindow'></a>
+### SampleWindow `property`
+
+##### Summary
+
+The time window these metrics were aggregated over.
+
 <a name='P-JetFlow-UI-ActivityPerformanceSample-Started'></a>
 ### Started `property`
 
@@ -134,7 +144,7 @@ Abstraction over a persistence connection used by the UI to store archives, perf
 records and to query available namespaces and performance samples.
 
 <a name='M-JetFlow-UI-Interfaces-IDbConnection-ExtractActivityPerformanceDataAsync-System-String,System-String,System-DateTime,System-DateTime-'></a>
-### ExtractActivityPerformanceDataAsync(namespaceName,activityName,startTime,endTime,aggregationType) `method`
+### ExtractActivityPerformanceDataAsync(namespaceName,activityName,startTime,endTime) `method`
 
 ##### Summary
 
@@ -154,7 +164,7 @@ A collection of activity performance samples.
 | endTime | [System.DateTime](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTime 'System.DateTime') | End time (UTC) for the query. |
 
 <a name='M-JetFlow-UI-Interfaces-IDbConnection-ExtractActivityPerformanceDataAsync-System-String,System-DateTime,System-DateTime-'></a>
-### ExtractActivityPerformanceDataAsync(namespaceName,startTime,endTime,aggregationType) `method`
+### ExtractActivityPerformanceDataAsync(namespaceName,startTime,endTime) `method`
 
 ##### Summary
 
@@ -173,7 +183,7 @@ A collection of named activity performance samples.
 | endTime | [System.DateTime](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTime 'System.DateTime') | End time (UTC) for the query. |
 
 <a name='M-JetFlow-UI-Interfaces-IDbConnection-ExtractWorkflowPerformanceDataAsync-System-String,System-String,System-DateTime,System-DateTime-'></a>
-### ExtractWorkflowPerformanceDataAsync(namespaceName,workflowName,startTime,endTime,aggregationType) `method`
+### ExtractWorkflowPerformanceDataAsync(namespaceName,workflowName,startTime,endTime) `method`
 
 ##### Summary
 
@@ -193,7 +203,7 @@ A collection of workflow performance samples.
 | endTime | [System.DateTime](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTime 'System.DateTime') | End time (UTC) for the query. |
 
 <a name='M-JetFlow-UI-Interfaces-IDbConnection-ExtractWorkflowPerformanceDataAsync-System-String,System-DateTime,System-DateTime-'></a>
-### ExtractWorkflowPerformanceDataAsync(namespaceName,startTime,endTime,aggregationType) `method`
+### ExtractWorkflowPerformanceDataAsync(namespaceName,startTime,endTime) `method`
 
 ##### Summary
 
@@ -356,8 +366,8 @@ Named activity performance sample including the activity name and aggregated met
 | ---- | ---- | ----------- |
 | Name | [T:JetFlow.UI.NamedActivityPerformanceSample](#T-T-JetFlow-UI-NamedActivityPerformanceSample 'T:JetFlow.UI.NamedActivityPerformanceSample') | The activity name these metrics belong to. |
 
-<a name='M-JetFlow-UI-NamedActivityPerformanceSample-#ctor-System-String,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics,JetFlow-UI-PMetrics-'></a>
-### #ctor(Name,Started,Completed,Failed,TimedOut,QueueLatency,Duration) `constructor`
+<a name='M-JetFlow-UI-NamedActivityPerformanceSample-#ctor-System-String,System-DateTimeOffset,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics,JetFlow-UI-PMetrics-'></a>
+### #ctor(Name,SampleWindow,Started,Completed,Failed,TimedOut,QueueLatency,Duration) `constructor`
 
 ##### Summary
 
@@ -368,6 +378,7 @@ Named activity performance sample including the activity name and aggregated met
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The activity name these metrics belong to. |
+| SampleWindow | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The time window these metrics were aggregated over. |
 | Started | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of activity starts during the window. |
 | Completed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of activity completions during the window. |
 | Failed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of activity failures during the window. |
@@ -399,8 +410,8 @@ Named workflow performance sample including the workflow name and aggregated met
 | ---- | ---- | ----------- |
 | Name | [T:JetFlow.UI.NamedWorkflowPerformanceSample](#T-T-JetFlow-UI-NamedWorkflowPerformanceSample 'T:JetFlow.UI.NamedWorkflowPerformanceSample') | The workflow name these metrics belong to. |
 
-<a name='M-JetFlow-UI-NamedWorkflowPerformanceSample-#ctor-System-String,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics-'></a>
-### #ctor(Name,Started,Completed,Failed,Purged,QueueLatency) `constructor`
+<a name='M-JetFlow-UI-NamedWorkflowPerformanceSample-#ctor-System-String,System-DateTimeOffset,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics-'></a>
+### #ctor(Name,SampleWindow,Started,Completed,Failed,Purged,QueueLatency) `constructor`
 
 ##### Summary
 
@@ -411,6 +422,7 @@ Named workflow performance sample including the workflow name and aggregated met
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | Name | [System.String](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.String 'System.String') | The workflow name these metrics belong to. |
+| SampleWindow | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The time window these metrics were aggregated over. |
 | Started | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of workflow starts during the window. |
 | Completed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of workflow completions during the window. |
 | Failed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of workflow failures during the window. |
@@ -492,10 +504,10 @@ Aggregated workflow performance metrics for a single sampling window.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Started | [T:JetFlow.UI.WorkflowPerformanceSample](#T-T-JetFlow-UI-WorkflowPerformanceSample 'T:JetFlow.UI.WorkflowPerformanceSample') | Number of workflow starts during the window. |
+| SampleWindow | [T:JetFlow.UI.WorkflowPerformanceSample](#T-T-JetFlow-UI-WorkflowPerformanceSample 'T:JetFlow.UI.WorkflowPerformanceSample') | The time window these metrics were aggregated over. |
 
-<a name='M-JetFlow-UI-WorkflowPerformanceSample-#ctor-System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics-'></a>
-### #ctor(Started,Completed,Failed,Purged,QueueLatency) `constructor`
+<a name='M-JetFlow-UI-WorkflowPerformanceSample-#ctor-System-DateTimeOffset,System-Int64,System-Int64,System-Int64,System-Int64,JetFlow-UI-PMetrics-'></a>
+### #ctor(SampleWindow,Started,Completed,Failed,Purged,QueueLatency) `constructor`
 
 ##### Summary
 
@@ -505,6 +517,7 @@ Aggregated workflow performance metrics for a single sampling window.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| SampleWindow | [System.DateTimeOffset](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.DateTimeOffset 'System.DateTimeOffset') | The time window these metrics were aggregated over. |
 | Started | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of workflow starts during the window. |
 | Completed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of workflow completions during the window. |
 | Failed | [System.Int64](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Int64 'System.Int64') | Number of workflow failures during the window. |
@@ -538,6 +551,13 @@ Number of workflows purged during the window.
 ##### Summary
 
 Distribution metrics for queue latency observed.
+
+<a name='P-JetFlow-UI-WorkflowPerformanceSample-SampleWindow'></a>
+### SampleWindow `property`
+
+##### Summary
+
+The time window these metrics were aggregated over.
 
 <a name='P-JetFlow-UI-WorkflowPerformanceSample-Started'></a>
 ### Started `property`

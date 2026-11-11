@@ -26,26 +26,7 @@
         "continue":"Continue",
         "stepcount":"Step Count",
         "purgedelay":" (Purge Delay: {delay})",
-        "filters":"Filters:",
-        "workflowname":"Workflow: {workflowname}",
-        "argumentFilters":{
-            "startsWith":"{property} starts with {value}",
-            "endsWith":"{property} ends with {value}",
-            "equals":"{property} equals {value}"
-        },
-        "dateFilters":{
-            "startedAt":{
-                "before":"Started before {end}",
-                "after":"Started after {start}",
-                "between":"Started between {start} and {end}"
-            },
-            "completedAt":{
-                "before":"Completed before {end}",
-                "after":"Completed after {start}",
-                "between":"Completed between {start} and {end}"
-            }
-        },
-        "metadataFilter":"MetaData: {key} equals {value}"
+        "workflowname":"Workflow: {workflowname}"
     },
     "screens":{
         "scheduledFlows":{
@@ -110,6 +91,46 @@
             "errormessage":"Error Message",
             "result":"Result",
             "nodetails":"No Workflow details available."
+        },
+        "workflowfilter":{
+            "title":"Workflow Filter",
+            "filters":"Filters:",
+            "argument":"Argument",
+            "startedAtMin":"Started After",
+            "startedAtMax":"Started Before",
+            "completedAtMin":"Completed After",
+            "completedAtMax":"Completed Before",
+            "argumentFilters":{
+                "startsWith":"{property} starts with {value}",
+                "endsWith":"{property} ends with {value}",
+                "equals":"{property} equals {value}",
+                "value":"Value"
+            },
+            "dateFilters":{
+                "startedAt":{
+                    "before":"Started before {end}",
+                    "after":"Started after {start}",
+                    "between":"Started between {start} and {end}"
+                },
+                "completedAt":{
+                    "before":"Completed before {end}",
+                    "after":"Completed after {start}",
+                    "between":"Completed between {start} and {end}"
+                }
+            },
+            "metadataFilter":"MetaData: {key} equals {value}"
+        },
+        "performancedetails":{
+            "title":"Performance Details",
+            "workflowperformance":"Workflow Performance",
+            "activityperformance":"Activity Performance",
+            "started":"Started",
+            "completed":"Completed",
+            "failed":"Failed",
+            "timedout":"Timed Out",
+            "purged":"Purged",
+            "queuelatencies":"Queue Latencies",
+            "durations":"Durations"
         }
     }
 }

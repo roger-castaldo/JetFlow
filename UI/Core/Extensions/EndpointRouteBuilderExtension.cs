@@ -37,7 +37,9 @@ public static class EndpointRouteBuilderExtension
             .RegisterPerformanceEndpoints()
             .RegisterNamespaceEndpoints()
             .RegisterQueryEndpoints()
-            .RegisterScheduledEndpoints();
+            .RegisterScheduledEndpoints()
+            .RegisterWorkflowDefinitionEndpoints()
+            .RegisterActivityDefinitionEndpoints();
 
     private static IFileInfo LocateFile(IFileProvider fileProvider, string path)
     {
@@ -105,15 +107,25 @@ public static class EndpointRouteBuilderExtension
             .MapGet("/jetflow/performance/workflow", async ([FromQuery] string? ns, [FromQuery] string? workflowName, [FromQuery] DateTime startTime, [FromQuery] DateTime endTime, [FromServices] IDbConnection dbConnection) => 
             {
                 if (workflowName is null)
-                    return Results.Ok(await dbConnection.ExtractWorkflowPerformanceDataAsync(ns, startTime, endTime));
-                return Results.Ok(await dbConnection.ExtractWorkflowPerformanceDataAsync(ns, workflowName, startTime, endTime));
+                    return Results.Ok(await dbConnection.ExtractWorkflowPerformanceDataAsync(ns, startTime.ToUniversalTime(), endTime.ToUniversalTime()));
+                return Results.Ok(await dbConnection.ExtractWorkflowPerformanceDataAsync(ns, workflowName, startTime.ToUniversalTime(), endTime.ToUniversalTime()));
+            });
+        routeBuilder
+            .MapGet("/jetflow/performance/workflow/latest", async ([FromQuery] string? ns, [FromServices] IDbConnection dbConnection) =>
+            {
+                return Results.Ok(await dbConnection.GetLatestWorkflowPerformanceDataAsync(ns));
             });
         routeBuilder
             .MapGet("/jetflow/performance/activity", async ([FromQuery] string? ns, [FromQuery] string? activityName, [FromQuery] DateTime startTime, [FromQuery] DateTime endTime, [FromServices] IDbConnection dbConnection) =>
             {
                 if (activityName is null)
-                    return Results.Ok(await dbConnection.ExtractActivityPerformanceDataAsync(ns, startTime, endTime));
-                return Results.Ok(await dbConnection.ExtractActivityPerformanceDataAsync(ns, activityName, startTime, endTime));
+                    return Results.Ok(await dbConnection.ExtractActivityPerformanceDataAsync(ns, startTime.ToUniversalTime(), endTime.ToUniversalTime()));
+                return Results.Ok(await dbConnection.ExtractActivityPerformanceDataAsync(ns, activityName, startTime.ToUniversalTime(), endTime.ToUniversalTime()));
+            });
+        routeBuilder
+            .MapGet("/jetflow/performance/activity/latest", async ([FromQuery] string? ns, [FromServices] IDbConnection dbConnection) =>
+            {
+                return Results.Ok(await dbConnection.GetLatestActivityPerformanceDataAsync(ns));
             });
         return routeBuilder;
     }
@@ -185,6 +197,43 @@ public static class EndpointRouteBuilderExtension
             .MapGet("/jetflow/scheduledflows", async ([FromQuery]string ? ns, [FromServices] IActiveFlowService activeFlowService, CancellationToken cancellation) =>
             {
                 var result = await activeFlowService.ListScheduledWorkflowsAsync(ns);
+                return Results.Ok(result);
+            });
+        return routeBuilder;
+    }
+
+    private static IEndpointRouteBuilder RegisterWorkflowDefinitionEndpoints(this IEndpointRouteBuilder routeBuilder) {
+        routeBuilder
+            .MapGet("/jetflow/workflows", async ([FromQuery] string? ns, [FromServices] IDbConnection dbConnection, CancellationToken cancellation) =>
+            {
+                var result = await dbConnection.ListWorkflowsAsync(ns);
+                return Results.Ok(result);
+            });
+        routeBuilder
+            .MapGet("/jetflow/workflows/{workflowName}", async (string workflowName, [FromQuery] string? ns, [FromServices] IDbConnection dbConnection, CancellationToken cancellation) =>
+            {
+                var result = await dbConnection.GetWorkflowArgumentDefinitionAsync(ns, workflowName);
+                if (result is null)
+                    return Results.NotFound();
+                return Results.Ok(result);
+            });
+        return routeBuilder;
+    }
+
+    private static IEndpointRouteBuilder RegisterActivityDefinitionEndpoints(this IEndpointRouteBuilder routeBuilder)
+    {
+        routeBuilder
+            .MapGet("/jetflow/activities", async ([FromQuery] string? ns, [FromServices] IDbConnection dbConnection, CancellationToken cancellation) =>
+            {
+                var result = await dbConnection.ListActivitiesAsync(ns);
+                return Results.Ok(result);
+            });
+        routeBuilder
+            .MapGet("/jetflow/activities/{activityName}", async (string activityName, [FromQuery] string? ns, [FromServices] IDbConnection dbConnection, CancellationToken cancellation) =>
+            {
+                var result = await dbConnection.GetActivityArgumentDefinitionAsync(ns, activityName);
+                if (result is null)
+                    return Results.NotFound();
                 return Results.Ok(result);
             });
         return routeBuilder;

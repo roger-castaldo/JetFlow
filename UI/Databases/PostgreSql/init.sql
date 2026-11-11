@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS "activity_performance_raw" (
     "timed_out" bigint NOT NULL,
     "queue_latencies" jsonb NOT NULL,
     "durations" jsonb NOT NULL,
+    "processed" boolean DEFAULT false NOT NULL,
     PRIMARY KEY ("id"),
     FOREIGN KEY ("activity_id", "namespace_id") REFERENCES "activities" ("id", "namespace_id") ON DELETE CASCADE
 );
@@ -173,6 +174,7 @@ CREATE TABLE IF NOT EXISTS "workflow_performance_raw" (
     "failed" bigint NOT NULL,
     "purged" bigint NOT NULL,
     "queue_latencies" jsonb NOT NULL,
+    "processed" boolean DEFAULT false NOT NULL,
     PRIMARY KEY ("id"),
     FOREIGN KEY ("workflow_id", "namespace_id") REFERENCES "workflows" ("id", "namespace_id") ON DELETE CASCADE
 );

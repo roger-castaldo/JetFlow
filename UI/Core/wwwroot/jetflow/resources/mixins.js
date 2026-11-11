@@ -164,3 +164,59 @@ export const shrinkString = (str, maxLength) => {
     }
     return str;
 };
+
+export const extractNumericalValueFromTimeSpan = (value) => {
+    if (!value) return 0;
+
+    const regex = /^(-)?(?:(\d+)\.)?(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?$/;
+    const match = regex.exec(value);
+
+    if (!match) return value;
+
+    const sign = match[1] ? -1 : 1;
+    const days = Number(match[2] || 0);
+    const hours = Number(match[3]);
+    const minutes = Number(match[4]);
+    const seconds = Number(match[5]);
+    const fraction = Number(`0.${match[6] || 0}`);
+
+    const totalMs = (sign * (
+        days * 86400000 +
+        hours * 3600000 +
+        minutes * 60000 +
+        seconds * 1000 +
+        fraction * 1000
+    ));
+
+    return totalMs;
+};
+
+export const formatTimeSpan = (value) => {
+    const msValue = extractNumericalValueFromTimeSpan(value);
+
+    if (msValue === 0) {
+        return '0 ms';
+    }
+
+    const isNegative = msValue < 0;
+    const totalMs = Math.abs(msValue);
+
+    let result;
+
+    if (totalMs < 0.001)
+        result = `${totalMs * 1000000} ns`;
+    else if (totalMs < 1)
+        result = `${(totalMs * 1000).toFixed(2)} μs`;
+    else if (totalMs < 1000)
+        result = `${totalMs.toFixed(2)} ms`;
+    else if (totalMs < 60000)
+        result = `${(totalMs / 1000).toFixed(2)} s`;
+    else if (totalMs < 3600000)
+        result = `${(totalMs / 60000).toFixed(2)} min`;
+    else if (totalMs < 86400000)
+        result = `${(totalMs / 3600000).toFixed(2)} hr`;
+    else
+        result = `${(totalMs / 86400000).toFixed(2)} days`;
+
+    return (isNegative ? '-' : '') + result;
+}

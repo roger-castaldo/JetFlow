@@ -70,6 +70,24 @@ AND w.""argument_definition"" IS NOT NULL;", [
         return (queryResult?.Any()??false ? JsonSerializer.Deserialize<JsonDocument>((string)queryResult.First()["argument_definition"]) : null);
     }
 
+    async ValueTask<IEnumerable<string>> IDbConnection.ListWorkflowsAsync(string? namespaceName)
+    {
+        var queryResults = await queryHelper.ExecuteReader(new(
+            @"SELECT w.""name""
+FROM ""workflows"" w
+INNER JOIN ""namespaces"" n
+    ON w.namespace_id = n.id
+WHERE n.name = @namespace
+AND w.""argument_definition"" IS NOT NULL;", [
+                    QueryHelper.CreateParameter("@namespace", namespaceName)
+                ]
+        ));
+        return (queryResults?.Any()??false ? 
+            queryResults!.Select(r => (string)r["name"]) :
+            []
+        );
+    }
+
     ValueTask IDbConnection.StoreActivityArgumentDefinitionAsync(string? namespaceName, string activityName, JsonDocument definition)
         => queryHelper.ExecuteCommand("CALL set_activity_argument_definition(@namespace, @activity, @definition)", [
                 QueryHelper.CreateParameter("@namespace", namespaceName),
@@ -92,6 +110,24 @@ AND a.""argument_definition"" IS NOT NULL;", [
                 ]
         ));
         return (queryResult?.Any()??false ? JsonSerializer.Deserialize<JsonDocument>((string)queryResult.First()["argument_definition"]) : null);
+    }
+
+    async ValueTask<IEnumerable<string>> IDbConnection.ListActivitiesAsync(string? namespaceName)
+    {
+        var queryResults = await queryHelper.ExecuteReader(new(
+            @"SELECT a.""name""
+FROM ""activities"" a
+INNER JOIN ""namespaces"" n
+    ON a.namespace_id = n.id
+WHERE n.name = @namespace
+AND a.""argument_definition"" IS NOT NULL;", [
+                    QueryHelper.CreateParameter("@namespace", namespaceName)
+                ]
+        ));
+        return (queryResults?.Any()??false ? 
+            queryResults!.Select(r => (string)r["name"]) :
+            []
+        );
     }
 
     ValueTask IDbConnection.RegisterNamespaceAsync(string? namespaceName)
@@ -344,8 +380,8 @@ ORDER BY wpr.window DESC
                 JsonSerializer.Deserialize<IEnumerable<TimeSpan>>((string)row["queue_latencies"])!)
             )?? [];
 
-    private PerformanceAggregationType CalculateAggregationType(DateTime startTime, DateTime endTime)
-        => (DateTime.Now.Subtract(startTime).TotalDays, endTime.Subtract(startTime).TotalDays) switch {
+    private PerformanceAggregationType CalculateAggregationType(DateTimeOffset startTime, DateTimeOffset endTime)
+        => (DateTimeOffset.Now.Subtract(startTime).TotalDays, endTime.Subtract(startTime).TotalDays) switch {
             var (historyDays, diffDays) when historyDays <= 3 && diffDays <= 0.5 => PerformanceAggregationType.OneMinute,
             var (historyDays, diffDays) when historyDays <= 3 && diffDays <= 1 => PerformanceAggregationType.FiveMinute,
             var (historyDays, _) when historyDays <= 3 => PerformanceAggregationType.OneHour,
@@ -356,32 +392,43 @@ ORDER BY wpr.window DESC
             _ => PerformanceAggregationType.OneDay
         };
 
-async ValueTask<IEnumerable<WorkflowPerformanceSample>> IDbConnection.ExtractWorkflowPerformanceDataAsync(string? namespaceName, string workflowName, DateTime startTime, DateTime endTime)
-        => (await ExtractWorkflowPerformanceAsync(namespaceName, startTime, endTime, workflowName))
+    async ValueTask<IEnumerable<WorkflowPerformanceSample>> IDbConnection.ExtractWorkflowPerformanceDataAsync(string? namespaceName, string workflowName, DateTime startTime, DateTime endTime)
+        => (await ExtractWorkflowPerformanceAsync(namespaceName, new(startTime, endTime), workflowName))
                 .Cast<WorkflowPerformanceSample>();
 
     ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> IDbConnection.ExtractWorkflowPerformanceDataAsync(string? namespaceName, DateTime startTime, DateTime endTime)
-        => ExtractWorkflowPerformanceAsync(namespaceName, startTime, endTime);
+        => ExtractWorkflowPerformanceAsync(namespaceName, new(startTime, endTime));
 
-    private async ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> ExtractWorkflowPerformanceAsync(string? namespaceName, DateTime startTime, DateTime endTime, string? workflowName = null)
+    ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> IDbConnection.GetLatestWorkflowPerformanceDataAsync(string? namespaceName)
+        => ExtractWorkflowPerformanceAsync(namespaceName);
+
+    private async ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> ExtractWorkflowPerformanceAsync(string? namespaceName, DateRange? dateRange = null, string? workflowName = null)
         => (await queryHelper.ExecuteReader(new(
-                @"SELECT wf.name, wp.started, wp.completed, wp.failed, wp.purged, wp.queue_latency_digest 
+                @$"SELECT wf.name, wp.bucket_start, wp.started, wp.completed, wp.failed, wp.purged, wp.queue_latency_digest 
 FROM ""workflow_performance"" wp 
 INNER JOIN ""workflows"" wf 
     ON wp.namespace_id = wf.namespace_id 
     AND wp.workflow_id = wf.id 
 INNER JOIN ""namespaces"" n
     ON wp.namespace_id = n.id
-WHERE wp.bucket_start >= @startTime
-AND wp.bucket_start <= @endTime 
-AND wp.aggregation_type = @aggregationType::performance_aggregation_types
+{(dateRange.HasValue 
+        ? "WHERE wp.bucket_start >= @startTime AND wp.bucket_start <= @endTime AND "
+        : @"INNER JOIN (SELECT cwp.workflow_id, cwp.namespace_id, MAX(cwp.bucket_start) as latest_bucket_start 
+FROM ""workflow_performance"" cwp 
+WHERE cwp.aggregation_type = @aggregationType::performance_aggregation_types
+GROUP BY cwp.workflow_id, cwp.namespace_id) c
+ON wp.namespace_id = c.namespace_id 
+AND wp.workflow_id = c.workflow_id
+WHERE wp.bucket_start = c.latest_bucket_start AND "
+)}
+wp.aggregation_type = @aggregationType::performance_aggregation_types
 AND (n.name = @namespace OR (@namespace IS NULL AND n.name IS NULL))
 AND (@workflowName IS NULL OR wf.name = @workflowName)
 ORDER BY wp.bucket_start ASC", 
                 [
-                    QueryHelper.CreateParameter("@startTime", startTime),
-                    QueryHelper.CreateParameter("@endTime", endTime),
-                    QueryHelper.CreateParameter("@aggregationType", CalculateAggregationType(startTime, endTime)),
+                    QueryHelper.CreateParameter("@startTime", dateRange?.Start ?? DateTimeOffset.MinValue),
+                    QueryHelper.CreateParameter("@endTime", dateRange?.End ?? DateTimeOffset.MaxValue),
+                    QueryHelper.CreateParameter("@aggregationType", dateRange.HasValue ? CalculateAggregationType(dateRange?.Start ?? DateTimeOffset.MinValue, dateRange?.End ?? DateTimeOffset.MaxValue) : PerformanceAggregationType.OneMinute),
                     QueryHelper.CreateParameter("@namespace", namespaceName),
                     QueryHelper.CreateParameter("@workflowName", workflowName)
                 ]
@@ -389,6 +436,7 @@ ORDER BY wp.bucket_start ASC",
                 var sketch = TimespanSketch.ReadFromByte((byte[])result["queue_latency_digest"]);
                 return new NamedWorkflowPerformanceSample(
                     (string)result["name"],
+                    (DateTime)result["bucket_start"],
                     (long)result["started"],
                     (long)result["completed"],
                     (long)result["failed"],
@@ -398,31 +446,42 @@ ORDER BY wp.bucket_start ASC",
             })?? [];
 
     async ValueTask<IEnumerable<ActivityPerformanceSample>> IDbConnection.ExtractActivityPerformanceDataAsync(string? namespaceName, string activityName, DateTime startTime, DateTime endTime)
-        => (await ExtractActivityPerformanceAsync(namespaceName, startTime, endTime, activityName))
+        => (await ExtractActivityPerformanceAsync(namespaceName, new(startTime, endTime), activityName))
             .Cast<ActivityPerformanceSample>();
 
     ValueTask<IEnumerable<NamedActivityPerformanceSample>> IDbConnection.ExtractActivityPerformanceDataAsync(string? namespaceName, DateTime startTime, DateTime endTime)
-        => ExtractActivityPerformanceAsync(namespaceName, startTime, endTime);
+        => ExtractActivityPerformanceAsync(namespaceName, new(startTime, endTime));
 
-    private async ValueTask<IEnumerable<NamedActivityPerformanceSample>> ExtractActivityPerformanceAsync(string? namespaceName, DateTime startTime, DateTime endTime, string? activityName = null)
+    ValueTask<IEnumerable<NamedActivityPerformanceSample>> IDbConnection.GetLatestActivityPerformanceDataAsync(string? namespaceName)
+        => ExtractActivityPerformanceAsync(namespaceName);
+
+    private async ValueTask<IEnumerable<NamedActivityPerformanceSample>> ExtractActivityPerformanceAsync(string? namespaceName, DateRange? dateRange = null, string? activityName = null)
         => (await queryHelper.ExecuteReader(new(
-                @"SELECT a.name, ap.started, ap.completed, ap.failed, ap.timed_out, ap.queue_latency_digest, ap.duration_digest
+                @$"SELECT a.name, ap.bucket_start, ap.started, ap.completed, ap.failed, ap.timed_out, ap.queue_latency_digest, ap.duration_digest
 FROM ""activity_performance"" ap 
 INNER JOIN ""activities"" a
     ON ap.namespace_id = a.namespace_id 
     AND ap.activity_id = a.id 
 INNER JOIN ""namespaces"" n
     ON ap.namespace_id = n.id
-WHERE ap.bucket_start >= @startTime
-AND ap.bucket_start <= @endTime 
-AND ap.aggregation_type = @aggregationType::performance_aggregation_types
+{(dateRange.HasValue 
+        ? "WHERE ap.bucket_start >= @startTime AND ap.bucket_start <= @endTime AND "
+        : @"INNER JOIN (SELECT cap.activity_id, cap.namespace_id, MAX(cap.bucket_start) as latest_bucket_start 
+FROM ""activity_performance"" cap 
+WHERE cap.aggregation_type = @aggregationType::performance_aggregation_types
+GROUP BY cap.activity_id, cap.namespace_id) c
+ON ap.namespace_id = c.namespace_id 
+AND ap.activity_id = c.activity_id
+WHERE ap.bucket_start = c.latest_bucket_start AND "
+)} 
+ap.aggregation_type = @aggregationType::performance_aggregation_types
 AND (n.name = @namespace OR (@namespace IS NULL AND n.name IS NULL))
 AND (@activityName IS NULL OR a.name = @activityName)
 ORDER BY ap.bucket_start ASC",
                 [
-                    QueryHelper.CreateParameter("@startTime", startTime),
-                    QueryHelper.CreateParameter("@endTime", endTime),
-                    QueryHelper.CreateParameter("@aggregationType", CalculateAggregationType(startTime, endTime)),
+                    QueryHelper.CreateParameter("@startTime", dateRange?.Start ?? DateTimeOffset.MinValue),
+                    QueryHelper.CreateParameter("@endTime", dateRange?.End ?? DateTimeOffset.MinValue),
+                    QueryHelper.CreateParameter("@aggregationType", dateRange.HasValue ? CalculateAggregationType(dateRange?.Start ?? DateTimeOffset.MinValue, dateRange?.End ?? DateTimeOffset.MinValue) : PerformanceAggregationType.OneMinute),
                     QueryHelper.CreateParameter("@namespace", namespaceName),
                     QueryHelper.CreateParameter("@activityName", activityName)
                 ]
@@ -431,6 +490,7 @@ ORDER BY ap.bucket_start ASC",
                 var durationSketch = TimespanSketch.ReadFromByte((byte[])result["duration_digest"]);
                 return new NamedActivityPerformanceSample(
                     (string)result["name"],
+                    (DateTime)result["bucket_start"],
                     (long)result["started"],
                     (long)result["completed"],
                     (long)result["failed"],

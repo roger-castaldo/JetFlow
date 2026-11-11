@@ -4,7 +4,7 @@
             <template #thead>
                 <tr>
                     <th colspan="100%">
-                        <WorkflowFilter @filterChanged="onFilterChanged"/>
+                        <WorkflowFilter :supportsDates="true" @filterChanged="onFilterChanged"/>
                     </th>
                 </tr>
                 <tr>
@@ -77,22 +77,22 @@
     };
     
     watch([
-        currentNamespace, 
-        ()=>filterArgs.value?.workflowName, 
-        ()=>filterArgs.value?.startedAt, 
-        ()=>filterArgs.value?.completedAt, 
-        ()=>filterArgs.value?.metadata, 
-        ()=>filterArgs.value?.argument
+        currentNamespace
     ], async ()=>{
+        await resetFiltering();
+    });
+
+    const onFilterChanged = async (newFilterArgs) => {
+        filterArgs.value = newFilterArgs;
+        await resetFiltering();
+    };
+
+    const resetFiltering = async () => {
         flows.value=[];
         hasMore.value=true;
         lastOffset.value=0;
         if (tableRef?.value.isAtEnd){
             await loadMore();
         }
-    });
-
-    const onFilterChanged = (newFilterArgs) => {
-        filterArgs.value = newFilterArgs;
-    };
+    }
 </script>

@@ -62,7 +62,39 @@
             </template>
         </ColumnContainer>
         <ColumnContainer :modifiers="[ColumnContainerModifiers.fullWidth]"
-                 :columns="[{name:'activityPerformance',size:ColumnSizes.six},{name:'workflowPerformance',size:ColumnSizes.six}]">
+                 :columns="[{name:'workflowPerformance',size:ColumnSizes.six},{name:'activityPerformance',size:ColumnSizes.six}]">
+                 <template #workflowPerformance>
+                <Table>
+                    <template #thead>
+                        <tr>
+                            <th colspan="100%" class="has-text-centered">{{ translate('screens.dashboard.workflowperformance') }}</th>
+                        </tr>
+                        <tr>
+                            <th>{{ translate('screens.dashboard.time') }}</th>
+                            <th>{{ translate('common.name') }}</th>
+                            <th>{{ translate('screens.dashboard.started') }}</th>
+                            <th>{{ translate('screens.dashboard.completed') }}</th>
+                            <th>{{ translate('screens.dashboard.failed') }}</th>
+                            <th>{{ translate('screens.dashboard.purged') }}</th>
+                            <th>{{ translate('screens.dashboard.avgqueuelatency') }}</th>
+                            <th>
+                                <Icon icon="magnifying-glass" class="is-clickable" @click="performanceDetailsType = 'workflow'"/>
+                            </th>
+                        </tr>
+                    </template>
+                    <template #tbody>
+                        <tr v-for="perf in workflowPerformance">
+                            <td>{{ formatTime(perf.window) }}</td>
+                            <td>{{ perf.name }}</td>
+                            <td>{{ perf.started }}</td>
+                            <td>{{ perf.completed }}</td>
+                            <td>{{ perf.failed }}</td>
+                            <td>{{ perf.purged }}</td>
+                            <td>{{ formatTimeSpan(perf.averageQueueLatencies) }}</td>
+                        </tr>
+                    </template>
+                </Table>
+            </template>
             <template #activityPerformance>
                 <Table>
                     <template #thead>
@@ -78,6 +110,9 @@
                             <th>{{ translate('screens.dashboard.timedout') }}</th>
                             <th>{{ translate('screens.dashboard.avgqueuelatency') }}</th>
                             <th>{{ translate('screens.dashboard.avgduration') }}</th>
+                            <th>
+                                <Icon icon="magnifying-glass"  class="is-clickable" @click="performanceDetailsType = 'activity'"/>
+                            </th>
                         </tr>
                     </template>
                     <template #tbody>
@@ -88,51 +123,24 @@
                             <td>{{ perf.completed }}</td>
                             <td>{{ perf.failed }}</td>
                             <td>{{ perf.timedOut }}</td>
-                            <td>{{ perf.averageQueueLatencies }}</td>
-                            <td>{{ perf.averageDurations }}</td>
-                        </tr>
-                    </template>
-                </Table>
-            </template>
-            <template #workflowPerformance>
-                <Table>
-                    <template #thead>
-                        <tr>
-                            <th colspan="100%" class="has-text-centered">{{ translate('screens.dashboard.workflowperformance') }}</th>
-                        </tr>
-                        <tr>
-                            <th>{{ translate('screens.dashboard.time') }}</th>
-                            <th>{{ translate('common.name') }}</th>
-                            <th>{{ translate('screens.dashboard.started') }}</th>
-                            <th>{{ translate('screens.dashboard.completed') }}</th>
-                            <th>{{ translate('screens.dashboard.failed') }}</th>
-                            <th>{{ translate('screens.dashboard.purged') }}</th>
-                            <th>{{ translate('screens.dashboard.avgqueuelatency') }}</th>
-                        </tr>
-                    </template>
-                    <template #tbody>
-                        <tr v-for="perf in workflowPerformance">
-                            <td>{{ formatTime(perf.window) }}</td>
-                            <td>{{ perf.name }}</td>
-                            <td>{{ perf.started }}</td>
-                            <td>{{ perf.completed }}</td>
-                            <td>{{ perf.failed }}</td>
-                            <td>{{ perf.purged }}</td>
-                            <td>{{ perf.averageQueueLatencies }}</td>
+                            <td>{{ formatTimeSpan(perf.averageQueueLatencies) }}</td>
+                            <td>{{ formatTimeSpan(perf.averageDurations) }}</td>
                         </tr>
                     </template>
                 </Table>
             </template>
         </ColumnContainer>
+        <PerformanceDetails v-if="performanceDetailsType" :show="true" :forWorkflow="performanceDetailsType === 'workflow'" @close="performanceDetailsType = null"/>
     </section>
 </template>
 
 <script setup>
     import {GetDashboardStream} from "services";
     import {ref, onUnmounted, inject, watch} from "vue";
-    import {ColumnContainerModifiers, ColumnContainer, ColumnSizes, Card, Table} from "components";
-    import {Constants} from "mixins";
+    import {ColumnContainerModifiers, ColumnContainer, ColumnSizes, Card, Table, Icon} from "components";
+    import {Constants, formatTimeSpan} from "mixins";
     import {translate, formatTime} from '../i18n';
+    import PerformanceDetails from "../components/PerformanceDetails.vue";
 
     const performanceCounters = ref({
         activeWorkflows:0,
@@ -143,6 +151,7 @@
     const workflowPerformance = ref([]);
     const workflowServiceability = ref([]);
     const activityServiceability = ref([]);
+    const performanceDetailsType = ref(null);
     const currentNamespace = inject(Constants.namespaceName);
 
     const establishDashboard = () =>
