@@ -25,7 +25,7 @@
         "fail":"Fail",
         "continue":"Continue",
         "stepcount":"Step Count",
-        "purgedelay":" (Purge Delay: {delay})",
+        "purgedelay":" ( Purge Delay: {delay} )",
         "workflowname":"Workflow: {workflowname}"
     },
     "screens":{
@@ -130,7 +130,13 @@
             "timedout":"Timed Out",
             "purged":"Purged",
             "queuelatencies":"Queue Latencies",
-            "durations":"Durations"
+            "durations":"Durations",
+            "counts":"Event Counts",
+            "back":"Back",
+            "cancel":"Cancel",
+            "update":"Update",
+            "startdate":"Start Date",
+            "enddate":"End Date"
         }
     }
 }
