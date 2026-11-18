@@ -59,13 +59,11 @@
     const filterFormRef = ref(null);
     const workflowDefinition = ref(null);
 
-    const workflowName = ref("Place Order"); // Replace with the actual workflow name you want to filter by
+    const workflowName = ref(null); // Replace with the actual workflow name you want to filter by
     const startedAt = ref(null); // Replace with actual startedAt if needed
     const completedAt = ref(null); // Replace with actual completedAt if needed
     const metadata = ref(null); // Replace with actual metadata if needed
-    const argument = ref([
-        {"$type":"startsWith", "PropertyName":"paymentInformation.lastName", "Value":"G"}
-    ]); // Replace with actual argument if needed
+    const argument = ref([]); // Replace with actual argument if needed
 
     const filterForm = computed(() => {
         let fields = [
@@ -153,6 +151,7 @@
                             type: 'select',
                             name: `${name}_filterType`,
                             values: [
+                                { value: null, label: '' },
                                 { value: 'equals', label: translate('components.workflowfilter.argumentFilters.equals') },
                                 { value: 'startsWith', label: translate('components.workflowfilter.argumentFilters.startsWith') },
                                 { value: 'endsWith', label: translate('components.workflowfilter.argumentFilters.endsWith') }
@@ -187,7 +186,6 @@
                 });
             }
         }
-        console.log(event);
     };
 
     const emit = defineEmits(['filterChanged']);
@@ -197,6 +195,20 @@
         workflowName.value = formData.workflowName;
         startedAt.value = (formData.startedAt_min || formData.startedAt_max) ? { Start: formData.startedAt_min, End: formData.startedAt_max } : null;
         completedAt.value = (formData.completedAt_min || formData.completedAt_max) ? { Start: formData.completedAt_min, End: formData.completedAt_max } : null;
+        argument.value=[];
+        const props = Object.keys(formData);
+        for(let x=0;x<props.length;x++){
+            if (props[x].endsWith('_filterType') && formData[props[x]]!==null){
+                let name = props[x].substring(0, props[x].length-'_filterType'.length);
+                if (formData[`${name}_filterValue`]!==null){
+                    argument.value.push({
+                        '$type':formData[props[x]],
+                        PropertyName:name,
+                        Value:formData[`${name}_filterValue`]
+                    });
+                }
+            }
+        }
         emit('filterChanged', {
             workflowName: workflowName.value,
             startedAt: startedAt.value,

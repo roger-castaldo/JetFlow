@@ -14,7 +14,12 @@ public sealed class ConnectionOptions
     /// </summary>
     /// <param name="options">The NatsOpts object containing the configuration options for the NATS connection.</param>
     public ConnectionOptions(NatsOpts options)
-        : this(new NatsConnection(options)) {
+        : this(new NatsConnection(options with
+        {
+            DrainSubscriptionsOnDispose = true,
+            ConsumerDrainOnDisposeTimeout = TimeSpan.FromSeconds(20),
+            DrainPingTimeout = TimeSpan.FromSeconds(5)
+        })) {
         CanDisposeConnection = true;
     }
 
@@ -59,4 +64,5 @@ public sealed class ConnectionOptions
     /// Specifies the IServiceProvider to be used for dependency injection when resolving services and dependencies within JetFlow. By providing a custom IServiceProvider, you can control how services are instantiated and managed, allowing for greater flexibility and customization of the dependency injection behavior in your application. The ServiceProvider property enables you to integrate JetFlow with your existing dependency injection framework, ensuring that all required services are properly resolved and available for use when executing workflows and interacting with NATS and JetStream.
     /// </summary>
     public IServiceProvider? ServiceProvider { get; init; } = null;
+    public CancellationToken ShutdownToken { get; init; } = CancellationToken.None;
 }

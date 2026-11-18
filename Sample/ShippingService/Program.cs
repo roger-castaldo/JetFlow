@@ -20,7 +20,8 @@ var primaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Client
     Url = config.GetConnectionString("nats")!
 })
 {
-    Namespace = Shared.Constants.PrimaryNamespace
+    Namespace = Shared.Constants.PrimaryNamespace,
+    ShutdownToken = sourceCancel.Token
 });
 await primaryConnection.RegisterWorkflowActivityAsync<ShipOrder, OrderShipment>();
 
@@ -29,7 +30,8 @@ var secondaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Clie
     Url = config.GetConnectionString("nats")!
 })
 {
-    Namespace = Shared.Constants.SecondayNamespace
+    Namespace = Shared.Constants.SecondayNamespace,
+    ShutdownToken = sourceCancel.Token
 });
 await secondaryConnection.RegisterWorkflowActivityAsync<ShipOrder, OrderShipment>();
 

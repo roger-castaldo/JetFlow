@@ -63,14 +63,16 @@ var primaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Client
     Url = config.GetConnectionString("nats")!
 })
 {
-    Namespace = Shared.Constants.PrimaryNamespace
+    Namespace = Shared.Constants.PrimaryNamespace,
+    ShutdownToken = sourceCancel.Token
 });
 var secondaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Client.Core.NatsOpts()
 {
     Url = config.GetConnectionString("nats")!
 })
 {
-    Namespace = Shared.Constants.SecondayNamespace
+    Namespace = Shared.Constants.SecondayNamespace,
+    ShutdownToken = sourceCancel.Token
 });
 
 var idx = 0;

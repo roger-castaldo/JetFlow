@@ -2,10 +2,9 @@ import { createI18n } from 'vue-i18n';
 import cronstrue from 'cronstrue/i18n';
 import { computed, ref } from 'vue';
 
-import en from './messages/en.json'
-import fr from './messages/fr.json'
+import {locales, messages} from './definitions.js';
 
-export const supportedLocales = ['en', 'fr'];
+export const supportedLocales = locales;
 
 const savedLocale = localStorage.getItem('locale');
 
@@ -17,10 +16,7 @@ export const i18n = createI18n({
   legacy: false,       // Composition API
   locale,
   fallbackLocale: 'en',
-  messages: {
-    en,
-    fr
-  }
+  messages: messages
 })
 
 export function setLocale(local) {

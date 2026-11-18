@@ -48,6 +48,8 @@ internal class TimespanSketch
 
     public static TimespanSketch ReadFromByte(byte[] data)
     {
+        if (data.Length==0)
+            return new();
         using var ms = new MemoryStream(data);
         var br = new BinaryReader(ms);
         var zeroCount = br.ReadInt64();

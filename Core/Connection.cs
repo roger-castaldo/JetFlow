@@ -43,7 +43,6 @@ public static class Connection
         private readonly MessageSerializer messageSerializer;
         private readonly InternalNatsConnection internalConnection;
         private readonly ServiceConnection serviceConnection;
-        private readonly Version? serverVersion;
         private readonly SubjectMapper subjectMapper;
         private readonly IServiceProvider? serviceProvider;
         private readonly CancellationTokenSource cancellationTokenSource = new();
@@ -51,15 +50,18 @@ public static class Connection
         private readonly MetricsHelper metricsHelper;
         private readonly bool canDisposeConnection;
 
-        private ConnectionInstance(INatsConnection connection, INatsJSContext natsJSContext, MessageSerializer messageSerializer, 
-            SubjectMapper subjectMapper, IServiceProvider? serviceProvider, ConnectionStores stores, bool canDisposeConnection)
+        private ConnectionInstance(InternalNatsConnection internalConnection, MessageSerializer messageSerializer, 
+            SubjectMapper subjectMapper, IServiceProvider? serviceProvider, ConnectionStores stores, bool canDisposeConnection, CancellationToken shutdownToken)
         {
             this.messageSerializer = messageSerializer;
             this.subjectMapper = subjectMapper;
             this.serviceProvider = serviceProvider;
             this.canDisposeConnection = canDisposeConnection;
-            serverVersion = (connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version));
-            internalConnection = new(connection, natsJSContext, serverVersion);
+            this.internalConnection = internalConnection;
+            if (shutdownToken.CanBeCanceled)
+                shutdownToken.Register(async () => {
+                    await ProcessShutdownAsync();
+                });
             serviceConnection = new(internalConnection, stores.TimerStore, stores.ConfigurationStore, stores.ArchiveStore, stores.LargeMessageStore, subjectMapper, messageSerializer);
             metricsHelper = new MetricsHelper(internalConnection, subjectMapper);
             subscriptions.Add(new ActivityTimeoutsSubscription(metricsHelper, serviceConnection, stores.ActivityTimeoutsConsumer, cancellationTokenSource.Token));
@@ -105,9 +107,9 @@ public static class Connection
             var archiveStore = await objContext.CreateObjectStoreAsync(subjectMapper.WorkflowArchiveObjectstore);
             var largeMessageStore = await objContext.CreateObjectStoreAsync(subjectMapper.LargeMessageObjectstore);
             var (activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer)= await StreamsHelper.EstablishBaseConsumersAsync(jsContext, subjectMapper);
-            return new ConnectionInstance(connection, jsContext, new(options.CompressionType, options.JsonTypeInfoResolver, (header)=>TraceHelper.AddMessageDecodedEvent(header)), subjectMapper, options.ServiceProvider,
+            return new ConnectionInstance(new(connection, jsContext, connection.ServerInfo==null ? null : new Version(connection.ServerInfo.Version)), new(options.CompressionType, options.JsonTypeInfoResolver, (header)=>TraceHelper.AddMessageDecodedEvent(header)), subjectMapper, options.ServiceProvider,
                 new(timerStore, configurationStore, archiveStore, largeMessageStore, activityTimeoutsConsumer, scheduledWorkflowConsumer, purgeWorkflowConsumer),
-                options.CanDisposeConnection
+                options.CanDisposeConnection, options.ShutdownToken
             );
         }
 
@@ -208,15 +210,15 @@ public static class Connection
 
         ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow>(IWorkflowSchedule schedule, WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
         {
-            if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
-                throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
+            if (internalConnection.ServerVersion!=null && internalConnection.ServerVersion<minScheduleVersionRequired)
+                throw new NotSupportedException($"Unable to support repeated schedules on nats version {internalConnection.ServerVersion}, you must upgrade to at least {minScheduleVersionRequired}");
             return serviceConnection.ScheduleWorkflowAsync<TWorkflow>(schedule, executionRequest, cancellationToken);
         }
 
         ValueTask<Guid> IConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(WorkflowExecutionRequest<TInput> executionRequest, IWorkflowSchedule schedule, CancellationToken cancellationToken)
         {
-            if (serverVersion!=null && serverVersion<minScheduleVersionRequired)
-                throw new NotSupportedException($"Unable to support repeated schedules on nats version {serverVersion}, you must upgrade to at least {minScheduleVersionRequired}");
+            if (internalConnection.ServerVersion!=null && internalConnection.ServerVersion<minScheduleVersionRequired)
+                throw new NotSupportedException($"Unable to support repeated schedules on nats version {internalConnection.ServerVersion}, you must upgrade to at least {minScheduleVersionRequired}");
             return serviceConnection.ScheduleWorkflowAsync<TWorkflow, TInput>(schedule, executionRequest, cancellationToken);
         }
 
@@ -246,7 +248,7 @@ public static class Connection
             return result.Success && result.Purged>0;
         }
 
-        async ValueTask IAsyncDisposable.DisposeAsync()
+        private async ValueTask ProcessShutdownAsync()
         {
             if (!cancellationTokenSource.IsCancellationRequested)
             {
@@ -260,5 +262,8 @@ public static class Connection
                     await internalConnection.DisposeAsync();
             }
         }
+
+        ValueTask IAsyncDisposable.DisposeAsync()
+            => ProcessShutdownAsync();
     }
 }

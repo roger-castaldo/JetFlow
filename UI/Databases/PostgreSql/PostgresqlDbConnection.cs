@@ -238,7 +238,7 @@ INNER JOIN archived_workflow_options awo
     AND aw.workflow_id = awo.workflow_id
     AND aw.namespace_id = awo.namespace_id
 WHERE n.name = @namespace
-AND w.name = @workflow
+AND (@workflow IS NULL OR w.name = @workflow)
 { string.Join('\n', filters.Select(f=> $"AND {f.queryPiece}")) }
 { metaFilter.queryPiece }
 LIMIT @pageSize OFFSET @offset;",
@@ -405,26 +405,36 @@ ORDER BY wpr.window DESC
     private async ValueTask<IEnumerable<NamedWorkflowPerformanceSample>> ExtractWorkflowPerformanceAsync(string? namespaceName, DateRange? dateRange = null, string? workflowName = null)
         => (await queryHelper.ExecuteReader(new(
                 @$"SELECT wf.name, wp.bucket_start, wp.started, wp.completed, wp.failed, wp.purged, wp.queue_latency_digest 
-FROM ""workflow_performance"" wp 
-INNER JOIN ""workflows"" wf 
-    ON wp.namespace_id = wf.namespace_id 
-    AND wp.workflow_id = wf.id 
+FROM ""workflows"" wf  
 INNER JOIN ""namespaces"" n
-    ON wp.namespace_id = n.id
+    ON wf.namespace_id = n.id
 {(dateRange.HasValue 
-        ? "WHERE wp.bucket_start >= @startTime AND wp.bucket_start <= @endTime AND "
-        : @"INNER JOIN (SELECT cwp.workflow_id, cwp.namespace_id, MAX(cwp.bucket_start) as latest_bucket_start 
-FROM ""workflow_performance"" cwp 
-WHERE cwp.aggregation_type = @aggregationType::performance_aggregation_types
-GROUP BY cwp.workflow_id, cwp.namespace_id) c
-ON wp.namespace_id = c.namespace_id 
-AND wp.workflow_id = c.workflow_id
-WHERE wp.bucket_start = c.latest_bucket_start AND "
+        ? @"INNER JOIN ""workflow_performance"" wp 
+    ON wp.namespace_id = wf.namespace_id 
+        AND wp.workflow_id = wf.id
+    WHERE wp.bucket_start >= @startTime AND wp.bucket_start <= @endTime AND 
+    wp.aggregation_type = @aggregationType::performance_aggregation_types AND
+"
+        : @"LEFT JOIN LATERAL (
+    SELECT
+        cwp.bucket_start,
+        cwp.started,
+        cwp.completed,
+        cwp.failed,
+        cwp.purged,
+        cwp.queue_latency_digest
+    FROM ""workflow_performance"" cwp
+    WHERE cwp.namespace_id = wf.namespace_id
+        AND cwp.workflow_id = wf.id
+        AND cwp.aggregation_type = @aggregationType::performance_aggregation_types
+    ORDER BY cwp.bucket_start DESC
+    LIMIT 1
+) wp ON TRUE 
+WHERE "
 )}
-wp.aggregation_type = @aggregationType::performance_aggregation_types
-AND (n.name = @namespace OR (@namespace IS NULL AND n.name IS NULL))
+(n.name = @namespace OR (@namespace IS NULL AND n.name IS NULL))
 AND (@workflowName IS NULL OR wf.name = @workflowName)
-ORDER BY wp.bucket_start ASC", 
+{(dateRange.HasValue ? "ORDER BY coalesce(wp.bucket_start, now()) ASC" : "")}", 
                 [
                     QueryHelper.CreateParameter("@startTime", dateRange?.Start ?? DateTimeOffset.MinValue),
                     QueryHelper.CreateParameter("@endTime", dateRange?.End ?? DateTimeOffset.MaxValue),
@@ -433,14 +443,14 @@ ORDER BY wp.bucket_start ASC",
                     QueryHelper.CreateParameter("@workflowName", workflowName)
                 ]
             )))?.Select(result=> {
-                var sketch = TimespanSketch.ReadFromByte((byte[])result["queue_latency_digest"]);
+                var sketch = TimespanSketch.ReadFromByte(GetQueryValue<byte[]>(result, "queue_latency_digest", []));
                 return new NamedWorkflowPerformanceSample(
                     (string)result["name"],
-                    (DateTime)result["bucket_start"],
-                    (long)result["started"],
-                    (long)result["completed"],
-                    (long)result["failed"],
-                    (long)result["purged"],
+                    GetQueryValue<DateTime>(result,"bucket_start",DateTime.MinValue),
+                    GetQueryValue<long>(result,"started",0),
+                    GetQueryValue<long>(result, "completed", 0),
+                    GetQueryValue<long>(result, "failed", 0),
+                    GetQueryValue<long>(result, "purged", 0),
                     new(sketch.GetQuantile(0.50), sketch.GetQuantile(0.95), sketch.GetQuantile(0.99))
                 );
             })?? [];
@@ -458,26 +468,32 @@ ORDER BY wp.bucket_start ASC",
     private async ValueTask<IEnumerable<NamedActivityPerformanceSample>> ExtractActivityPerformanceAsync(string? namespaceName, DateRange? dateRange = null, string? activityName = null)
         => (await queryHelper.ExecuteReader(new(
                 @$"SELECT a.name, ap.bucket_start, ap.started, ap.completed, ap.failed, ap.timed_out, ap.queue_latency_digest, ap.duration_digest
-FROM ""activity_performance"" ap 
-INNER JOIN ""activities"" a
+FROM ""activities"" a
+INNER JOIN ""namespaces"" n
+    ON a.namespace_id = n.id
+{(dateRange.HasValue 
+        ? @"INNER JOIN ""activity_performance"" ap 
     ON ap.namespace_id = a.namespace_id 
     AND ap.activity_id = a.id 
-INNER JOIN ""namespaces"" n
-    ON ap.namespace_id = n.id
-{(dateRange.HasValue 
-        ? "WHERE ap.bucket_start >= @startTime AND ap.bucket_start <= @endTime AND "
-        : @"INNER JOIN (SELECT cap.activity_id, cap.namespace_id, MAX(cap.bucket_start) as latest_bucket_start 
-FROM ""activity_performance"" cap 
-WHERE cap.aggregation_type = @aggregationType::performance_aggregation_types
-GROUP BY cap.activity_id, cap.namespace_id) c
-ON ap.namespace_id = c.namespace_id 
-AND ap.activity_id = c.activity_id
-WHERE ap.bucket_start = c.latest_bucket_start AND "
+WHERE ap.bucket_start >= @startTime AND 
+ap.bucket_start <= @endTime AND 
+ap.aggregation_type = @aggregationType::performance_aggregation_types AND 
+"
+        : @"LEFT JOIN LATERAL (
+    SELECT
+        awp.bucket_start, awp.started, awp.completed, awp.failed, awp.timed_out, awp.queue_latency_digest, awp.duration_digest
+    FROM ""activity_performance"" awp
+    WHERE awp.namespace_id = a.namespace_id
+        AND awp.activity_id = a.id
+        AND awp.aggregation_type = @aggregationType::performance_aggregation_types
+    ORDER BY awp.bucket_start DESC
+    LIMIT 1
+) ap ON TRUE 
+WHERE "
 )} 
-ap.aggregation_type = @aggregationType::performance_aggregation_types
-AND (n.name = @namespace OR (@namespace IS NULL AND n.name IS NULL))
+(n.name = @namespace OR (@namespace IS NULL AND n.name IS NULL))
 AND (@activityName IS NULL OR a.name = @activityName)
-ORDER BY ap.bucket_start ASC",
+{(dateRange.HasValue ? "ORDER BY coalesce(ap.bucket_start, now()) ASC" : "")}",
                 [
                     QueryHelper.CreateParameter("@startTime", dateRange?.Start ?? DateTimeOffset.MinValue),
                     QueryHelper.CreateParameter("@endTime", dateRange?.End ?? DateTimeOffset.MinValue),
@@ -486,19 +502,22 @@ ORDER BY ap.bucket_start ASC",
                     QueryHelper.CreateParameter("@activityName", activityName)
                 ]
             )))?.Select(result => {
-                var queueSketch = TimespanSketch.ReadFromByte((byte[])result["queue_latency_digest"]);
-                var durationSketch = TimespanSketch.ReadFromByte((byte[])result["duration_digest"]);
+                var queueSketch = TimespanSketch.ReadFromByte(GetQueryValue<byte[]>(result, "queue_latency_digest", []));
+                var durationSketch = TimespanSketch.ReadFromByte(GetQueryValue<byte[]>(result, "duration_digest", []));
                 return new NamedActivityPerformanceSample(
                     (string)result["name"],
-                    (DateTime)result["bucket_start"],
-                    (long)result["started"],
-                    (long)result["completed"],
-                    (long)result["failed"],
-                    (long)result["timed_out"],
+                    GetQueryValue<DateTime>(result, "bucket_start", DateTime.MinValue),
+                    GetQueryValue<long>(result, "started", 0),
+                    GetQueryValue<long>(result, "completed", 0),
+                    GetQueryValue<long>(result, "failed", 0),
+                    GetQueryValue<long>(result, "timed_out", 0),
                     new(queueSketch.GetQuantile(0.50), queueSketch.GetQuantile(0.95), queueSketch.GetQuantile(0.99)),
                     new(durationSketch.GetQuantile(0.50), durationSketch.GetQuantile(0.95), durationSketch.GetQuantile(0.99))
                 );
             })?? [];
+
+    private static T GetQueryValue<T>(Dictionary<string,object> result, string key, T whenNull)
+        => result.TryGetValue(key, out var res) && res!=null ? (T)res : whenNull;
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {

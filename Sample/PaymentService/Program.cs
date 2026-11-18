@@ -20,7 +20,8 @@ var primaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Client
     Url = config.GetConnectionString("nats")!
 })
 {
-    Namespace = Shared.Constants.PrimaryNamespace
+    Namespace = Shared.Constants.PrimaryNamespace,
+    ShutdownToken = sourceCancel.Token
 });
 await primaryConnection.RegisterWorkflowActivityWithReturnAsync<ProcessPayment, bool, PaymentRequest>();
 await primaryConnection.RegisterWorkflowActivityAsync<RefundPayment, PaymentRequest>();
@@ -30,7 +31,8 @@ var secondaryConnection = await Connection.CreateInstanceAsync(new(new NATS.Clie
     Url = config.GetConnectionString("nats")!
 })
 {
-    Namespace = Shared.Constants.SecondayNamespace
+    Namespace = Shared.Constants.SecondayNamespace,
+    ShutdownToken = sourceCancel.Token
 });
 await secondaryConnection.RegisterWorkflowActivityWithReturnAsync<ProcessPayment, bool, PaymentRequest>();
 await secondaryConnection.RegisterWorkflowActivityAsync<RefundPayment, PaymentRequest>();

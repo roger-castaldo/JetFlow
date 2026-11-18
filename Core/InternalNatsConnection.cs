@@ -7,6 +7,7 @@ namespace JetFlow;
 
 internal class InternalNatsConnection(INatsConnection connection, INatsJSContext jsContext, Version? serverVersion)
 {
+    public Version? ServerVersion = serverVersion;
     public int MaxMessagePayload => connection.ServerInfo?.MaxPayload??1_048_576;
 
     public INatsJSContext JSContext => jsContext;

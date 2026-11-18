@@ -47,16 +47,29 @@
                 </tr>
             </template>
         </Table>
-        <section v-show="chartedItem!==null" style="min-width:500px">
-            <Chart v-bind="charts.QueueTiming" :show="chartedItem!==null" />
-            <Chart v-if="!props.forWorkflow" v-bind="charts.PerformanceTiming" :show="chartedItem!==null" />
-            <Chart v-bind="charts.Numbers" :show="chartedItem!==null" />
+        <section v-show="chartedItem!==null" style="min-width:1024px">
+            <ColumnContainer :columns="[{name:'form',size:ColumnSizes.six},{name:'numbers',size:ColumnSizes.six}]">
+                <template #form>
+                    <ComponentForm ref="filterFormRef" :elements="filterForm" @buttonClicked="filterButtonClicked"/>
+                </template>
+                <template #numbers>
+                    <Chart v-bind="charts.Numbers"/>
+                </template>
+            </ColumnContainer>
+            <ColumnContainer :columns="[{name:'queue',size:ColumnSizes.six},{name:'performance',size:ColumnSizes.six}]">
+                <template #queue>
+                    <Chart v-bind="charts.QueueTiming"/>
+                </template>
+                <template #performance v-if="!props.forWorkflow">
+                    <Chart v-bind="charts.PerformanceTiming"/>
+                </template>
+            </ColumnContainer>
         </section>
     </Slideout>
 </template>
 
 <script setup>
-    import {Slideout, Table, ButtonRefresh, Chart, Icon, ChartTypes} from 'components';
+    import {Slideout, Table, ButtonRefresh, Chart, Icon, ChartTypes, ColumnContainer, ColumnSizes, ComponentForm} from 'components';
     import {Constants, formatTimeSpan, extractNumericalValueFromTimeSpan} from "mixins";
     import {translate, formatTime} from '../i18n';
     import {onMounted, ref, inject, computed} from 'vue';
@@ -79,6 +92,62 @@
 
     const performanceData = ref([]);
     const chartedItem = ref(null);
+    const filterFormRef = ref(null);
+
+    const filterForm = [
+        {
+            type:"date",
+            name:"startDate",
+            label:translate('components.performancedetails.startdate'),
+            includeTime:true,
+            required:true
+        },
+        {
+            type:"date",
+            name:"endDate",
+            label:translate('components.performancedetails.enddate'),
+            includeTime:true,
+            required:true
+        },
+        {
+            type:"button",
+            name:"back",
+            label:translate('components.performancedetails.back'),
+            form_columns:4
+        },
+        {
+            type:"button",
+            name:"cancel",
+            label:translate('components.performancedetails.cancel'),
+            form_columns:4
+        },
+        {
+            type:"button",
+            name:"update",
+            label:translate('components.performancedetails.update'),
+            form_columns:4
+        }
+    ];
+
+    const filterButtonClicked = async(name)=>{
+        switch(name){
+            case 'cancel':
+                filterFormRef.value.setValues({
+                    startDate:chartedItem.value.dateRange.start,
+                    endDate:chartedItem.value.dateRange.end
+                });
+                break;
+            case 'update':
+                var values = filterFormRef.value.getValues();
+                chartedItem.value.dateRange.start = values.startDate;
+                chartedItem.value.dateRange.end = values.endDate;
+                await reloadChartData();
+                break;
+            case 'back':
+                chartedItem.value=null;
+                break;
+        }
+    };
 
     const reloadPerformanceData = async () => {
         performanceData.value = [];
@@ -103,6 +172,10 @@
                 end: new Date()
             }
         };
+        filterFormRef.value.setValues({
+            startDate:chartedItem.value.dateRange.start,
+            endDate:chartedItem.value.dateRange.end
+        });
         reloadChartData();
     }
 
