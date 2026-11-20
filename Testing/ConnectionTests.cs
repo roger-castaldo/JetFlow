@@ -86,7 +86,7 @@ public class ConnectionTests
         Assert.IsNotNull(activityLocksStore);
         Assert.IsNotNull(activityLocksStore.Info.Config);
         Assert.AreEqual("KeyValue store for workflow timers", activityLocksStore.Info.Config.Description);
-        Assert.AreEqual(TimeSpan.FromMinutes(5), activityLocksStore.Info.Config.MaxAge);
+        Assert.AreEqual(TimeSpan.FromMinutes(2), activityLocksStore.Info.Config.MaxAge);
         Assert.AreEqual(1, activityLocksStore.Info.Config.MaxMsgsPerSubject);
         var workflowConfigStore = await jsContext.GetStreamAsync($"KV_{subjectMapper.WorkflowConfigKeystore}", cancellationToken: TestContext.CancellationToken);
         Assert.IsNotNull(workflowConfigStore);

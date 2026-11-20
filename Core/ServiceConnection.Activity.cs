@@ -227,12 +227,12 @@ internal partial class ServiceConnection
         await timerStore.PutAsync<byte[]>($"{GetTimerKey(message)}/done", [], cancellationToken: cancellationToken);
         await timerStore.DeleteAsync($"{GetTimerKey(message)}/active", cancellationToken: cancellationToken);
     }
-    public async ValueTask<(bool canRun, string activeKey)> CanActivityRun(EventMessage message, CancellationToken cancellationToken)
+    public async ValueTask<(ActivityRunStatus status, string activeKey)> CanActivityRun(EventMessage message, CancellationToken cancellationToken)
     {
         var keyBase = GetTimerKey(message);
         var doneValue = await timerStore.TryGetEntryAsync<byte[]>($"{keyBase}/done", cancellationToken: cancellationToken);
         if (doneValue.Success)
-            return (false, string.Empty);
+            return (ActivityRunStatus.AlreadyCompleted, string.Empty);
         var key = $"{keyBase}/active";
         var value = await timerStore.TryCreateAsync<byte[]>(key, [], cancellationToken: cancellationToken);
         if (value.Success)
@@ -256,9 +256,9 @@ internal partial class ServiceConnection
                     
                 }
             }
-            return (!isDone, key);
+            return ((isDone ? ActivityRunStatus.AlreadyCompleted : ActivityRunStatus.Acquired), key);
         }
-        return (false, key);
+        return (ActivityRunStatus.CurrentlyRunning, key);
     }
 
     private static bool MessageActivityMatches(INatsJSMsg<byte[]> msg, EventMessage message)
@@ -274,6 +274,6 @@ internal partial class ServiceConnection
     }
 
     public async ValueTask<ulong> KeepActivityAlive(EventMessage message, ulong revision, CancellationToken cancellationToken)
-        => await timerStore.UpdateAsync<byte[]>($"{GetTimerKey(message)}-active", [], revision, cancellationToken: cancellationToken);
+        => await timerStore.UpdateAsync<byte[]>($"{GetTimerKey(message)}/active", [], revision, cancellationToken: cancellationToken);
     #endregion
 }

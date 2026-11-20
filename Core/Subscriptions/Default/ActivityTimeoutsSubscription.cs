@@ -11,13 +11,13 @@ internal class ActivityTimeoutsSubscription(MetricsHelper metricsHelper, Service
         if (Equals(message.ActivityEventType, ActivityEventTypes.Timeout))
         {
             var (canRun, _) = await ServiceConnection.CanActivityRun(message, CancellationToken);
-            if (canRun)
+            if (canRun == ActivityRunStatus.Acquired)
             {
                 await ServiceConnection.MarkActivityDoneInStore(message, CancellationToken);
                 await metricsHelper.TimeoutActivityAsync(message, CancellationToken);
                 await RetryHelper.ProcessActivityRetryAsync(RetryTypes.Timeout, message, ServiceConnection, CancellationToken);
-                await message.AckAsync(CancellationToken);
             }
+            await message.AckAsync(CancellationToken);
         }
         else
             await message.NakAsync(CancellationToken);

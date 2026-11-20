@@ -70,3 +70,9 @@ internal class UnableToLocateStartMessageException : Exception
         : base($"Unable to locate start message for activity {activityName} in workflow {workflowName}:{instanceID}")
     { }
 }
+
+internal class WorkflowCancelledException : Exception
+{
+    internal WorkflowCancelledException(string? cancellationReason)
+        : base($"Workflow was cancelled externally: {cancellationReason}") { }
+}

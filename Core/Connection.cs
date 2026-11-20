@@ -94,7 +94,7 @@ public static class Connection
             {
                 Description = "KeyValue store for workflow timers",
                 History = 1, 
-                MaxAge = TimeSpan.FromMinutes(5)
+                MaxAge = TimeSpan.FromMinutes(2)
             });
             var configurationStore = await kc.CreateOrUpdateStoreAsync(new(subjectMapper.WorkflowConfigKeystore)
             {
@@ -247,6 +247,11 @@ public static class Connection
             );
             return result.Success && result.Purged>0;
         }
+
+        ValueTask IConnection.CancelWorkflowAsync<TWorkflow>(Guid workflowId, string? reason, CancellationToken cancellationToken)
+            => serviceConnection.CancelWorkflowAsync<TWorkflow>(workflowId, reason, cancellationToken);
+        ValueTask IConnection.CancelWorkflowAsync<TWorkflow, TInput>(Guid workflowId, string? reason, CancellationToken cancellationToken)
+            => serviceConnection.CancelWorkflowAsync<TWorkflow>(workflowId, reason, cancellationToken);
 
         private async ValueTask ProcessShutdownAsync()
         {

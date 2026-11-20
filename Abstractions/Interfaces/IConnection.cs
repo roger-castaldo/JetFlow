@@ -231,6 +231,9 @@ namespace JetFlow.Interfaces
         /// <returns><c>true</c> if the delayed workflow entry was found and removed; otherwise <c>false</c>.</returns>
         ValueTask<bool> RemoveDelayedWorkflowAsync<TWorkflow, TInput>(Guid scheduledId, CancellationToken cancellationToken = default)
             where TWorkflow : IWorkflow<TInput>;
-
+        ValueTask CancelWorkflowAsync<TWorkflow>(Guid workflowId,string? reason = null, CancellationToken cancellationToken = default)
+            where TWorkflow : IWorkflow;
+        ValueTask CancelWorkflowAsync<TWorkflow,TInput>(Guid workflowId,string? reason = null, CancellationToken cancellationToken = default)
+            where TWorkflow : IWorkflow<TInput>;
     }
 }

@@ -19,10 +19,19 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
     protected override async ValueTask ProcessMessageAsync(EventMessage message)
     {
         using var activityKeepaliveCTS = new CancellationTokenSource();
-        using var timeoutCts = (message.ActivityTimeout.HasValue ? new CancellationTokenSource(message.ActivityTimeout.Value) : null);
+        using var heartbeatFailedCTS = new CancellationTokenSource();
+        using var workflowCancelCTS = new CancellationTokenSource();
+
+        using var timeoutCts = message.ActivityTimeout.HasValue
+            ? new CancellationTokenSource(message.ActivityTimeout.Value)
+            : null;
+
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
             CancellationToken,
-            timeoutCts?.Token??CancellationToken.None);
+            timeoutCts?.Token ?? CancellationToken.None,
+            heartbeatFailedCTS.Token,
+            workflowCancelCTS.Token);
+        Task? keepaliveTask = null;
         var ackMessage = true;
         Activity? activity = null;
         try
@@ -31,31 +40,85 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
             {
                 if (!Equals(ActivityEventTypes.Start, message.ActivityEventType))
                     throw new InvalidOperationException($"Unsupported event type: {message.ActivityEventType}");
-                var (canRun, aliveKey) = await ServiceConnection.CanActivityRun(message, CancellationToken);
-                if (canRun)
+                var (runStatus, aliveKey) = await ServiceConnection.CanActivityRun(message, CancellationToken);
+                if (runStatus == ActivityRunStatus.Acquired)
                 {
+                    if (await ServiceConnection.IsWorkflowCancellationRequestedAsync(message,activityKeepaliveCTS.Token))
+                        workflowCancelCTS.Cancel();
                     var start = await MetricsHelper.StartActivityAsync(message, CancellationToken);
                     activity = TraceHelper.StartActivity(message);
-                    _ = Task.Run(async () =>
+                    keepaliveTask = Task.Run(async () =>
                     {
-                        ulong currentRevision = 1;
-                        while (!activityKeepaliveCTS.IsCancellationRequested)
+                        ulong currentRevision = 1; // Prefer acquired KV revision.
+
+                        try
                         {
-                            await Task.Delay(TimeSpan.FromMinutes(1), activityKeepaliveCTS.Token);
-                            currentRevision = await ServiceConnection.KeepActivityAlive(message, currentRevision, activityKeepaliveCTS.Token);
+                            while (true)
+                            {
+                                await Task.Delay(
+                                    TimeSpan.FromSeconds(30),
+                                    activityKeepaliveCTS.Token);
+
+                                if (await ServiceConnection.IsWorkflowCancellationRequestedAsync(
+                                        message,
+                                        activityKeepaliveCTS.Token))
+                                {
+                                    await workflowCancelCTS.CancelAsync();
+                                    return;
+                                }
+
+                                currentRevision = await ServiceConnection.KeepActivityAlive(
+                                    message,
+                                    currentRevision,
+                                    activityKeepaliveCTS.Token);
+
+                                await message.InProgressAsync(activityKeepaliveCTS.Token);
+                            }
+                        }
+                        catch (OperationCanceledException)
+                            when (activityKeepaliveCTS.IsCancellationRequested)
+                        {
+                            // Expected shutdown.
+                        }
+                        catch (Exception)
+                        {
+                            // The heartbeat failed unexpectedly.
+                            // Stop accepting activity execution as successful.
+                            await heartbeatFailedCTS.CancelAsync();
                         }
                     });
-                    await HandleActivityRunAsync(await WorkflowState.CreateAsync(ServiceConnection, messageSerializer, subjectMapper, message), message, linkedCts.Token)
-                        .WaitAsync(linkedCts.Token);
-                    await MetricsHelper.CompleteActivityAsync(message, start, CancellationToken);
-                    await ServiceConnection.MarkActivityDoneInStore(message, CancellationToken);
+                    await HandleActivityRunAsync(
+                        await WorkflowState.CreateAsync(
+                            ServiceConnection,
+                            messageSerializer,
+                            subjectMapper,
+                            message),
+                        message,
+                        linkedCts.Token
+                    ).WaitAsync(linkedCts.Token);
+
+                    linkedCts.Token.ThrowIfCancellationRequested();
+
+                    await MetricsHelper.CompleteActivityAsync(
+                        message, start, CancellationToken);
+
+                    await ServiceConnection.MarkActivityDoneInStore(
+                        message, CancellationToken);
                 }
+                else
+                    ackMessage=runStatus == ActivityRunStatus.AlreadyCompleted;
             }
             else
                 ackMessage=false;
         }
         catch (UnableToLocateStartMessageException) { /* if this occurs the system potentially has already purged the workflow and the activity was missed */}
         catch (WorkflowSuspendedException) { /* handle workflow suspension by doing nothing */}
+        catch (OperationCanceledException) when (workflowCancelCTS.IsCancellationRequested)
+        {
+            // External workflow cancellation.
+            // Do not retry or record an activity failure.
+            ackMessage = true;
+        }
         catch (OperationCanceledException) when (timeoutCts?.IsCancellationRequested??false)
         {
             // timed out
@@ -78,9 +141,17 @@ internal abstract class AWorkflowActivitySubscription<TWorkflowActivity>(TWorkfl
         try
         {
             await activityKeepaliveCTS.CancelAsync();
+
+            if (keepaliveTask is not null)
+                await keepaliveTask;
         }
-        catch { /* burying error in case cancellation fails*/ }
-        activity?.Dispose();
+        catch {
+            //unexpected error, burying
+        }
+        finally
+        {
+            activity?.Dispose();
+        }
         if (ackMessage)
             await message.AckAsync(CancellationToken);
         else

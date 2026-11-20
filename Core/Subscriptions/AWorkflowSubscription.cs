@@ -61,6 +61,8 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                     if (!isComplete)
                         throw new WorkflowSuspendedException();
                 }
+                if (context.IsCancelled)
+                    throw new WorkflowCancelledException(context.CancellationMessage);
                 if (!string.IsNullOrEmpty(message.ActivitySubjectName) && activityResultStatus.HasValue)
                 {
                     if (activityResultStatus.Value.HasFlag(ActivityResultStatus.Failure) && context.Options.ErrorOnActivityFailure)

@@ -34,11 +34,13 @@ internal record EventMessage
             await MessagesHelper.RetrieveMessageDataAsync(largeMessageStore, msg.Data, cancellationToken), 
             msg.Metadata,
             async(token)=>await msg.AckAsync(cancellationToken: token),
-            async (token) => await msg.NakAsync(cancellationToken: token)
+            async (token) => await msg.NakAsync(cancellationToken: token),
+            async (token) => await msg.AckProgressAsync(cancellationToken: token)
         );
 
     private readonly Func<CancellationToken, ValueTask> ack;
     private readonly Func<CancellationToken, ValueTask> nak;
+    private readonly Func<CancellationToken, ValueTask> inProgress;
 
     private static string? ExtractHeader(NatsHeaders? headers, string headerKey)
     {
@@ -63,7 +65,8 @@ internal record EventMessage
         return null;
     }
 
-    private EventMessage(string subject, NatsHeaders? headers, byte[]? data, NatsJSMsgMetadata? metadata, Func<CancellationToken,ValueTask> ack, Func<CancellationToken,ValueTask> nak)
+    private EventMessage(string subject, NatsHeaders? headers, byte[]? data, NatsJSMsgMetadata? metadata, 
+        Func<CancellationToken,ValueTask> ack, Func<CancellationToken,ValueTask> nak, Func<CancellationToken, ValueTask> inProgress)
     {
         RecievedTimestamp = DateTimeOffset.Now;
         var match = workflowSubjectRegex.Match(subject);
@@ -119,6 +122,7 @@ internal record EventMessage
         Metadata = metadata;
         this.ack = ack;
         this.nak = nak;
+        this.inProgress = inProgress;
     }
 
     public DateTimeOffset RecievedTimestamp { get; private init; }
@@ -165,4 +169,6 @@ internal record EventMessage
     }
     public ValueTask AckAsync(CancellationToken cancellationToken = default) => ack(cancellationToken);
     public ValueTask NakAsync(CancellationToken cancellationToken = default) => nak(cancellationToken);
+
+    public ValueTask InProgressAsync(CancellationToken cancellationToken = default) => inProgress(cancellationToken);
 }

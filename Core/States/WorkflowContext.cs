@@ -19,10 +19,12 @@ internal class WorkflowContext
     private readonly IReadOnlyCollection<INatsJSMsg<byte[]>> messages = [];
     private int index = 0;
     private uint activityIndex = 0;
-    public WorkflowOptions Options { get; private init; }
+    public WorkflowOptions Options { get; private init; } = new();
+    public bool IsCancelled { get; private init; } = false;
+    public string? CancellationMessage { get; private init; } = null;
 
     private WorkflowContext(ServiceConnection serviceConnection, SubjectMapper subjectMapper, 
-        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, IReadOnlyCollection<INatsJSMsg<byte[]>> messages, EventMessage startMessage, WorkflowOptions options)
+        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, IReadOnlyCollection<INatsJSMsg<byte[]>> messages, EventMessage startMessage)
         : base(startMessage, messageSerializer)
     {
         this.serviceConnection=serviceConnection;
@@ -30,7 +32,6 @@ internal class WorkflowContext
         this.metricsHelper=metricsHelper;
         this.message=message;
         this.messages=messages;
-        Options=options;
     }
 
     internal static async ValueTask<WorkflowContext> LoadAsync(ServiceConnection serviceConnection, SubjectMapper subjectMapper,
@@ -42,17 +43,26 @@ internal class WorkflowContext
                 subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId),
                 subjectMapper.WorkflowEnd(message.WorkflowSubjectName, message.WorkflowId),
                 subjectMapper.WorkflowDelayEnd(message.WorkflowSubjectName, message.WorkflowId),
-                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*")
+                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*"),
+                subjectMapper.WorkflowCancelled(message.WorkflowSubjectName, message.WorkflowId)
             );
         var msgs = new List<INatsJSMsg<byte[]>>();
         INatsJSMsg<byte[]>? startMessage = null;
         WorkflowOptions? options = null;
         var add = true;
+        bool isCancelled = false;
+        string? cancellationMessage = null;
         await foreach(var msg in enumerable)
         {
             if (Equals(msg.Subject, subjectMapper.WorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId)))
             {
                 options = InternalsSerializer.DeserializeWorkflowOptions(msg.Data!);
+                continue;
+            }
+            if (Equals(msg.Subject, subjectMapper.WorkflowCancelled(message.WorkflowSubjectName, message.WorkflowId)))
+            {
+                isCancelled=true;
+                cancellationMessage = await messageSerializer.DecodeAsync<string?>(message.Data, message.Headers);
                 continue;
             }
             if (Equals(subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId), msg.Subject))
@@ -67,7 +77,12 @@ internal class WorkflowContext
         if (startMessage==null)
             throw new UnableToLocateStartMessageException(message.ActivityName??message.ActivitySubjectName!, message.WorkflowName, message.WorkflowId);
         return new(serviceConnection, subjectMapper, messageSerializer, metricsHelper,
-            message, msgs.ToArray(), await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, startMessage!, CancellationToken.None), options!);
+            message, msgs.ToArray(), await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, startMessage!, CancellationToken.None))
+        {
+            Options = options!,
+            IsCancelled = isCancelled,
+            CancellationMessage = cancellationMessage
+        };
     }
 
     private async ValueTask<EventMessage?> GetNextMessageAsync(CancellationToken cancellationToken)

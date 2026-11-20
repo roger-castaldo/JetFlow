@@ -222,4 +222,24 @@ internal partial class ServiceConnection
                ), 
                cancellationToken: cancellationToken)
         );
+
+    public async ValueTask<bool> IsWorkflowCancellationRequestedAsync(EventMessage message, CancellationToken token)
+       => await (await JetStreamHelper.QueryStreamAsync(
+               connection.JSContext,
+               subjectMapper.WorkflowEventsStreamsName,
+               true,
+               subjectMapper.WorkflowCancelled(message.WorkflowSubjectName, message.WorkflowId)
+           )).CountAsync(token)>0;
+
+    public async ValueTask CancelWorkflowAsync<TWorkflow>(Guid id, string? reason, CancellationToken cancellationToken)
+    {
+        var (cleanedName, _) = NameHelper.GetWorkflowName<TWorkflow>();
+        var (data, headers) = await messageSerializer.EncodeAsync<string?>(reason);
+        await connection.PublishMessageAsync(new(
+            data,
+            subjectMapper.WorkflowCancelled(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, id.ToString()),
+            headers,
+            $"{cleanedName}-{id}-cancelled"
+        ));
+    }
 }
