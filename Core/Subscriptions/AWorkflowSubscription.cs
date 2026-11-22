@@ -50,7 +50,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                 if (!ValidOperations.Any(m => Equals(m, message.WorkflowEventType)))
                     throw new InvalidOperationException($"Unknown event type: {message.WorkflowEventType}");
                 await MetricsHelper.ProcessWorkflowMessageAsync(message, CancellationToken);
-                var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, MetricsHelper, message);
+                using var context = await WorkflowContext.LoadAsync(ServiceConnection, subjectMapper, messageSerializer, MetricsHelper, message);
                 startMessage=context.StartMessage;
                 var activityResultStatus = message.WorkflowStepResultStatus;
                 var errorMessage = (Equals(message.WorkflowStepResultStatus, ActivityResultStatus.Failure) && message.Data != null ? System.Text.Encoding.UTF8.GetString(message.Data) : null);

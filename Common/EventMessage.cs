@@ -38,6 +38,20 @@ internal record EventMessage
             async (token) => await msg.AckProgressAsync(cancellationToken: token)
         );
 
+    public static async ValueTask<EventMessage> CreateMessageAsync(INatsObjStore largeMessageStore, WorkflowHistoryMessage msg, ReadOnlyMemory<byte>? data, CancellationToken cancellationToken)
+        => new(
+            msg.Subject,
+            msg.Headers,
+            await MessagesHelper.RetrieveMessageDataAsync(
+                largeMessageStore,
+                data?.ToArray(),
+                cancellationToken),
+            null,
+            static _ => ValueTask.CompletedTask,
+            static _ => ValueTask.CompletedTask,
+            static _ => ValueTask.CompletedTask
+        );
+
     private readonly Func<CancellationToken, ValueTask> ack;
     private readonly Func<CancellationToken, ValueTask> nak;
     private readonly Func<CancellationToken, ValueTask> inProgress;

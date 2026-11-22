@@ -3,6 +3,7 @@ using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using Microsoft.Extensions.Logging.Abstractions;
+using NATS.Client.Core;
 using NATS.Client.JetStream;
 using System.Diagnostics;
 using System.Text;
@@ -10,28 +11,30 @@ using System.Text;
 namespace JetFlow.States;
 
 internal class WorkflowContext 
-    : AContext, IWorkflowContext
+    : AContext, IWorkflowContext, IDisposable
 {
     private readonly ServiceConnection serviceConnection;
     private readonly SubjectMapper subjectMapper;
     private readonly MetricsHelper metricsHelper;
     private readonly EventMessage message;
-    private readonly IReadOnlyCollection<INatsJSMsg<byte[]>> messages = [];
-    private int index = 0;
+    private readonly WorkflowHistory history;
+    private int index;
     private uint activityIndex = 0;
     public WorkflowOptions Options { get; private init; } = new();
     public bool IsCancelled { get; private init; } = false;
     public string? CancellationMessage { get; private init; } = null;
+    private readonly string workflowEndSubject;
 
     private WorkflowContext(ServiceConnection serviceConnection, SubjectMapper subjectMapper, 
-        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, IReadOnlyCollection<INatsJSMsg<byte[]>> messages, EventMessage startMessage)
+        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, WorkflowHistory history, EventMessage startMessage)
         : base(startMessage, messageSerializer)
     {
         this.serviceConnection=serviceConnection;
         this.subjectMapper=subjectMapper;
         this.metricsHelper=metricsHelper;
         this.message=message;
-        this.messages=messages;
+        this.history = history;
+        workflowEndSubject = subjectMapper.WorkflowEnd(message.WorkflowSubjectName, message.WorkflowId);
     }
 
     internal static async ValueTask<WorkflowContext> LoadAsync(ServiceConnection serviceConnection, SubjectMapper subjectMapper,
@@ -46,29 +49,32 @@ internal class WorkflowContext
                 subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*"),
                 subjectMapper.WorkflowCancelled(message.WorkflowSubjectName, message.WorkflowId)
             );
-        var msgs = new List<INatsJSMsg<byte[]>>();
+        var history = new WorkflowHistory();
         INatsJSMsg<byte[]>? startMessage = null;
         WorkflowOptions? options = null;
         var add = true;
         bool isCancelled = false;
         string? cancellationMessage = null;
+        var configureSubject = subjectMapper.WorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId);
+        var startSubject = subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId);
+        var cancelledSubject = subjectMapper.WorkflowCancelled(message.WorkflowSubjectName, message.WorkflowId);
         await foreach(var msg in enumerable)
         {
-            if (Equals(msg.Subject, subjectMapper.WorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId)))
+            if (Equals(msg.Subject, configureSubject))
             {
                 options = InternalsSerializer.DeserializeWorkflowOptions(msg.Data!);
                 continue;
             }
-            if (Equals(msg.Subject, subjectMapper.WorkflowCancelled(message.WorkflowSubjectName, message.WorkflowId)))
+            if (Equals(msg.Subject, cancelledSubject))
             {
                 isCancelled=true;
                 cancellationMessage = await messageSerializer.DecodeAsync<string?>(message.Data, message.Headers);
                 continue;
             }
-            if (Equals(subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId), msg.Subject))
+            if (Equals(msg.Subject, startSubject))
                 startMessage=msg;
             else if (add)
-                msgs.Add(msg);
+                history.Add(msg.Subject,msg.Headers,msg.Data);
             if (Equals(msg.Metadata?.Sequence, message.Metadata?.Sequence))
                 add=false;
             if (!add && startMessage!=null && options!=null)
@@ -77,7 +83,7 @@ internal class WorkflowContext
         if (startMessage==null)
             throw new UnableToLocateStartMessageException(message.ActivityName??message.ActivitySubjectName!, message.WorkflowName, message.WorkflowId);
         return new(serviceConnection, subjectMapper, messageSerializer, metricsHelper,
-            message, msgs.ToArray(), await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, startMessage!, CancellationToken.None))
+            message, history, await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, startMessage!, CancellationToken.None))
         {
             Options = options!,
             IsCancelled = isCancelled,
@@ -87,13 +93,13 @@ internal class WorkflowContext
 
     private async ValueTask<EventMessage?> GetNextMessageAsync(CancellationToken cancellationToken)
     {
-        if (index >= messages.Count)
+        if (index >= history.Count)
             return null;
-        var result = messages.ElementAt(index);
+        var result = history[index];
         index++;
-        if (Equals(result.Subject, subjectMapper.WorkflowEnd(message.WorkflowSubjectName, message.WorkflowId)))
+        if (Equals(result.Subject, workflowEndSubject))
             throw new WorkflowEndedException();
-        return await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, result, cancellationToken);
+        return await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, result, history.GetData(result), cancellationToken);
     }
 
     private async ValueTask<EventMessage?> GetNextActivityMessageAsync<TActivity>(CancellationToken cancellationToken)
@@ -247,7 +253,7 @@ internal class WorkflowContext
         List<string> errors = [];
         List<string> timeouts = [];
         uint cnt = 0;
-        foreach(var msg in messages.Where(m=>Equals(m.Subject, message.Subject) 
+        foreach(var msg in history.Where(m=>Equals(m.Subject, message.Subject) 
         && (m.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false)
         && Equals(activityId.ToString(), message.ActivityID.ToString())))
         {
@@ -258,7 +264,7 @@ internal class WorkflowContext
                 if (resultStatus == ActivityResultStatus.Timeout)
                     timeouts.Add($"{idx}: Activity timed out");
                 else if (resultStatus == ActivityResultStatus.Failure)
-                    errors.Add($"{idx}: {(msg.Data==null ? "Activity failed" : System.Text.Encoding.UTF8.GetString(msg.Data))}");
+                    errors.Add($"{idx}: {(msg.Data.Length==0 ? "Activity failed" : System.Text.Encoding.UTF8.GetString(history.GetData(msg)?.ToArray()?? []))}");
             }
         }
         return (
@@ -329,5 +335,10 @@ internal class WorkflowContext
         }
         await serviceConnection.StartChildWorkflowsAsync<TWorkflow, TInput>(activityIndex, message, executionRequest, cancellationToken);
         throw new WorkflowSuspendedException();
+    }
+
+    public void Dispose()
+    {
+        history.Dispose();
     }
 }

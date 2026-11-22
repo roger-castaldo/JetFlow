@@ -170,12 +170,13 @@ internal partial class ServiceConnection
             headers.Add(Constants.ParalellActivityIndexHeader, message.ParallelActivityIndex.ToString());
             headers.Add(Constants.ParallelActivityCountHeader, message.ParallelActivityCount.ToString());
         }
-        await connection.PurgeStreamAsync(
-            subjectMapper.ActivityQueueStream,
-            new()
-            {
-                Filter=subjectMapper.ActivityTimer(message.ActivitySubjectName!, message.WorkflowSubjectName, message.WorkflowId, message.ActivityInstanceID!),
-            }, cancellationToken: cancellationToken);
+        if (message.Headers?.ContainsKey(Constants.ActivityOverallTimeoutHeader) == true)
+            await connection.PurgeStreamAsync(
+                subjectMapper.ActivityQueueStream,
+                new()
+                {
+                    Filter=subjectMapper.ActivityTimer(message.ActivitySubjectName!, message.WorkflowSubjectName, message.WorkflowId, message.ActivityInstanceID!),
+                }, cancellationToken: cancellationToken);
         await connection.PublishMessageAsync(new(
                 data,
                 subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, message.ActivitySubjectName!),

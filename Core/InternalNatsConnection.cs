@@ -2,6 +2,8 @@
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace JetFlow;
 
@@ -21,7 +23,12 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
             => new(data, subject, headers, id, CreateScheduledString(delay), destinationSubject, timeout);
     }
 
-    private const int maxChunkSize = 1000;
+    private const int DefaultChunkSize = 1000;
+    private const int MaxBatchRetries = 8;
+    private const int BatchIncompleteError = 10176;
+    private const int BatchTooLargeError = 10199;
+    private const int TooManyBatchesError = 10210;
+    private int maxChunkSize = DefaultChunkSize;
     private const string TTLHeader = "Nats-TTL";
     private const string ScheduleTargetHeader = "Nats-Schedule-Target";
     private const string ScheduledTargetTTL = "Nats-Schedule-TTL";
@@ -32,6 +39,25 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
     private const string NatsCounterHeader = "Nats-Incr";
 
     private readonly bool allowsBatching = (serverVersion??new Version("0.0.0.0"))>=new Version("2.12");
+
+    private void ReduceChunkSize(int attemptedSize)
+    {
+        var newSize = Math.Max(1, attemptedSize / 2);
+
+        while (true)
+        {
+            var currentSize = Volatile.Read(ref maxChunkSize);
+
+            if (currentSize <= newSize)
+                return;
+
+            if (Interlocked.CompareExchange(
+                    ref maxChunkSize,
+                    newSize,
+                    currentSize) == currentSize)
+                return;
+        }
+    }
 
     private static string CreateTTLString(TimeSpan ttl)
     {
@@ -129,36 +155,134 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
             message.Data,
             AppendScheduleHeaders(AppendDefaultHeaders(message.Headers, message.Id, message.Timeout), message.DelayString, message.DestinationSubject, message.Timeout),
             cancellationToken);
+
+    private static TimeSpan GetBatchRetryDelay(int attempt)
+    {
+        var delay = Math.Min(
+            2000,
+            50 * Math.Pow(2, attempt - 1));
+
+        var jitter = Random.Shared.Next(10, 100);
+
+        return TimeSpan.FromMilliseconds(delay + jitter);
+    }
+
     public async ValueTask PublishMessagesAsync(IEnumerable<PublishMessage> messages, CancellationToken cancellationToken = default)
     {
-        var index = 0;
-        var total = messages.Count();
-        while(index<total)
+        var items = messages as PublishMessage[]
+            ?? messages.ToArray();
+
+        var offset = 0;
+        var retries = 0;
+
+        while (offset < items.Length)
         {
-            var chunk = messages.Skip(index).Take(maxChunkSize);
-            await PublishMessagesChunkAsync(chunk, chunk.Count(), cancellationToken);
-            index += maxChunkSize;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var count = Math.Min(
+                Volatile.Read(ref maxChunkSize),
+                items.Length - offset);
+
+            try
+            {
+                await PublishMessagesChunkAsync(items.AsMemory(offset, count), cancellationToken);
+
+                offset += count;
+                retries = 0;
+            }
+            catch (NatsJSApiException ex) when (
+                allowsBatching &&
+                count > 1 &&
+                retries < MaxBatchRetries &&
+                ex.Error.ErrCode is
+                    BatchTooLargeError or
+                    TooManyBatchesError or
+                    BatchIncompleteError)
+            {
+                Trace.WriteLine($"Atomic batching error {ex.Error.ErrCode}");
+
+                retries++;
+
+                if (ex.Error.ErrCode == BatchTooLargeError)
+                {
+                    ReduceChunkSize(count);
+                }
+
+                await Task.Delay(GetBatchRetryDelay(retries), cancellationToken);
+            }
         }
     }
 
-    private async ValueTask PublishMessagesChunkAsync(IEnumerable<PublishMessage> messages, int total, CancellationToken cancellationToken)
+    private static NatsHeaders CloneHeaders(NatsHeaders source)
     {
-        var index = 1;
-        var batchId = (total>1 ? Guid.CreateVersion7() : Guid.Empty);
-        foreach (var m in messages)
+        var result = new NatsHeaders();
+
+        foreach (var header in source)
+            result[header.Key] = header.Value;
+
+        return result;
+    }
+
+    private async ValueTask BeginBatchAsync(string subject, byte[] data, NatsHeaders headers, CancellationToken cancellationToken)
+    {
+        var response = await connection.RequestAsync<byte[], byte[]>(
+            subject,
+            data,
+            headers: headers,
+            cancellationToken: cancellationToken);
+
+        response.EnsureSuccess();
+
+        // NATS.Net represents an empty payload as null.
+        // Either representation indicates batch acceptance.
+        if (response.Data is null or { Length: 0 })
+            return;
+
+        var ack = JsonSerializer.Deserialize<PubAckResponse>(response.Data);
+
+        if (ack?.Error is { } error)
+            throw new NatsJSApiException(error);
+
+        throw new InvalidOperationException(
+            "Unexpected atomic batch acknowledgement.");
+    }
+
+    private async ValueTask PublishMessagesChunkAsync(ReadOnlyMemory<PublishMessage> messages, CancellationToken cancellationToken)
+    {
+        var total = messages.Length;
+
+        var atomicBatch = allowsBatching && total > 1;
+
+        var batchId = atomicBatch
+            ? Guid.CreateVersion7().ToString()
+            : null;
+
+        for (var index = 0; index < total; index++)
         {
-            var headers = AppendDefaultHeaders(m.Headers, m.Id, m.Timeout);
-            if (m is ScheduledPublishMessage sm)
-                headers = AppendScheduleHeaders(headers, sm.DelayString, sm.DestinationSubject, sm.Timeout);
-            if (allowsBatching && total>1)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var message = messages.Span[index];
+
+            var headers = AppendDefaultHeaders(CloneHeaders(message.Headers), message.Id, message.Timeout);
+
+            if (message is ScheduledPublishMessage scheduled)
+                headers = AppendScheduleHeaders(headers, scheduled.DelayString, scheduled.DestinationSubject, scheduled.Timeout);
+
+            var isLast = index == total - 1;
+
+            if (atomicBatch)
             {
-                headers.Add(BatchIdHeader, batchId.ToString());
-                headers.Add(BatchSequenceHeader, index.ToString());
-                if (index == total)
-                    headers.Add(BatchCommitHeader, "1");
+                headers[BatchIdHeader] = batchId!;
+                headers[BatchSequenceHeader] = (index + 1).ToString();
+
+                if (isLast)
+                    headers[BatchCommitHeader] = "1";
             }
-            await PublishMessageAsync(m.Subject, m.Data, headers, cancellationToken, total==1 || !allowsBatching || (allowsBatching && index==total));
-            index++;
+
+            if (atomicBatch && index == 0)
+                await BeginBatchAsync(message.Subject, message.Data, headers, cancellationToken);
+            else
+                await PublishMessageAsync(message.Subject, message.Data, headers, cancellationToken, ensureSuccess: !atomicBatch || isLast);
         }
     }
 
