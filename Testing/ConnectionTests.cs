@@ -263,7 +263,8 @@ public class ConnectionTests
             subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*"),
             subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*"),
             subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*"),
-            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*", "*"),
+            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*", "*","*"),
+            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*", "*","*", "*"),
             subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<WorkflowWithNoInput>().cleanedName, "*")
         ]));
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, workflowConsumer.Info.Config.AckPolicy);
@@ -280,7 +281,8 @@ public class ConnectionTests
             subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*"),
             subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*"),
             subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*"),
-            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*", "*"),
+            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*", "*", "*"),
+            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*", "*", "*", "*"),
             subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<WorkflowWithInput>().cleanedName, "*")
         ]));
         Assert.AreEqual(ConsumerConfigAckPolicy.Explicit, workflowWithInputConsumer.Info.Config.AckPolicy);

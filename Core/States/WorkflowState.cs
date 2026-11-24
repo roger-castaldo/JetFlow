@@ -1,8 +1,6 @@
 ﻿using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Serializers;
-using Microsoft.Extensions.DependencyInjection;
-using static NATS.Client.Core.NatsHeaders;
 
 namespace JetFlow.States;
 
@@ -41,7 +39,8 @@ internal class WorkflowState
             await using var query = await serviceConnection.QueryStreamAsync(
                 subjectMapper.WorkflowEventsStreamsName,
                 false,
-                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, NameHelper.CleanName(activityName))
+                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, NameHelper.CleanName(activityName),"*"),
+                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, NameHelper.CleanName(activityName), "*","*")
             );
             await foreach (var msg in query)
             {

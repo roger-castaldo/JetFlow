@@ -1,7 +1,4 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Buffers;
 
 namespace JetFlow;
 
@@ -14,13 +11,13 @@ internal sealed class PooledHistoryBuffer : IDisposable
 {
     private const int DefaultChunkSize = 64 * 1024;
 
-    private readonly ArrayPool<byte> _pool;
-    private readonly List<byte[]> _chunks = [];
-    private readonly int _chunkSize;
+    private readonly ArrayPool<byte> pool;
+    private readonly List<byte[]> chunks = [];
+    private readonly int chunkSize;
 
-    private int _currentChunkIndex = -1;
-    private int _position;
-    private bool _disposed;
+    private int currentChunkIndex = -1;
+    private int position;
+    private bool disposed;
 
     public PooledHistoryBuffer(
         int chunkSize = DefaultChunkSize,
@@ -28,27 +25,27 @@ internal sealed class PooledHistoryBuffer : IDisposable
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(chunkSize);
 
-        _chunkSize = chunkSize;
-        _pool = pool ?? ArrayPool<byte>.Shared;
+        this.chunkSize = chunkSize;
+        this.pool = pool ?? ArrayPool<byte>.Shared;
     }
 
-    public int ChunkCount => _chunks.Count;
+    public int ChunkCount => chunks.Count;
 
     public BufferPointer Write(ReadOnlySpan<byte> data)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(disposed, this);
 
         if (data.Length==0)
             return new(0, 0, 0);
 
         // Large messages get their own pooled array.
         // This avoids splitting a payload across chunks.
-        if (data.Length > _chunkSize)
+        if (data.Length > chunkSize)
         {
-            byte[] largeChunk = _pool.Rent(data.Length);
+            byte[] largeChunk = pool.Rent(data.Length);
 
-            int index = _chunks.Count;
-            _chunks.Add(largeChunk);
+            int index = chunks.Count;
+            chunks.Add(largeChunk);
 
             data.CopyTo(largeChunk);
 
@@ -59,55 +56,55 @@ internal sealed class PooledHistoryBuffer : IDisposable
         }
 
         // Allocate another fixed-size chunk when needed.
-        if (_currentChunkIndex < 0 ||
-            _chunks[_currentChunkIndex].Length - _position
+        if (currentChunkIndex < 0 ||
+            chunks[currentChunkIndex].Length - position
                 < data.Length)
         {
-            byte[] chunk = _pool.Rent(_chunkSize);
+            byte[] chunk = pool.Rent(chunkSize);
 
-            _currentChunkIndex = _chunks.Count;
-            _chunks.Add(chunk);
-            _position = 0;
+            currentChunkIndex = chunks.Count;
+            chunks.Add(chunk);
+            position = 0;
         }
 
-        int offset = _position;
+        int offset = position;
 
         data.CopyTo(
-            _chunks[_currentChunkIndex].AsSpan(offset));
+            chunks[currentChunkIndex].AsSpan(offset));
 
-        _position += data.Length;
+        position += data.Length;
 
         return new BufferPointer(
-            _currentChunkIndex,
+            currentChunkIndex,
             offset,
             data.Length);
     }
 
     public ReadOnlyMemory<byte>? GetMemory(BufferPointer pointer)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(disposed, this);
 
         if (pointer.Length==0)
             return null;
 
-        return _chunks[pointer.ChunkIndex]
+        return chunks[pointer.ChunkIndex]
             .AsMemory(pointer.Offset, pointer.Length);
     }
 
     public void Dispose()
     {
-        if (_disposed)
+        if (disposed)
             return;
 
-        _disposed = true;
+        disposed = true;
 
-        foreach (byte[] chunk in _chunks)
+        foreach (byte[] chunk in chunks)
         {
-            _pool.Return(chunk);
+            pool.Return(chunk);
         }
 
-        _chunks.Clear();
-        _currentChunkIndex = -1;
-        _position = 0;
+        chunks.Clear();
+        currentChunkIndex = -1;
+        position = 0;
     }
 }

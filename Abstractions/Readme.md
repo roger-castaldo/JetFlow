@@ -64,6 +64,11 @@
 - [CompressionTypes](#T-JetFlow-Configs-CompressionTypes 'JetFlow.Configs.CompressionTypes')
   - [Brotli](#F-JetFlow-Configs-CompressionTypes-Brotli 'JetFlow.Configs.CompressionTypes.Brotli')
   - [GZip](#F-JetFlow-Configs-CompressionTypes-GZip 'JetFlow.Configs.CompressionTypes.GZip')
+- [CronRegexPatterns](#T-JetFlow-CronRegexPatterns 'JetFlow.CronRegexPatterns')
+  - [CronRegex](#P-JetFlow-CronRegexPatterns-CronRegex 'JetFlow.CronRegexPatterns.CronRegex')
+- [CronRegex_0](#T-System-Text-RegularExpressions-Generated-CronRegex_0 'System.Text.RegularExpressions.Generated.CronRegex_0')
+  - [#ctor()](#M-System-Text-RegularExpressions-Generated-CronRegex_0-#ctor 'System.Text.RegularExpressions.Generated.CronRegex_0.#ctor')
+  - [Instance](#F-System-Text-RegularExpressions-Generated-CronRegex_0-Instance 'System.Text.RegularExpressions.Generated.CronRegex_0.Instance')
 - [IActivity](#T-JetFlow-Interfaces-IActivity 'JetFlow.Interfaces.IActivity')
   - [ExecuteAsync(state,cancellationToken)](#M-JetFlow-Interfaces-IActivity-ExecuteAsync-JetFlow-Interfaces-IWorkflowState,System-Threading-CancellationToken- 'JetFlow.Interfaces.IActivity.ExecuteAsync(JetFlow.Interfaces.IWorkflowState,System.Threading.CancellationToken)')
 - [IActivityWithReturn\`1](#T-JetFlow-Interfaces-IActivityWithReturn`1 'JetFlow.Interfaces.IActivityWithReturn`1')
@@ -125,6 +130,12 @@
 - [RetryTypes](#T-JetFlow-RetryTypes 'JetFlow.RetryTypes')
   - [Error](#F-JetFlow-RetryTypes-Error 'JetFlow.RetryTypes.Error')
   - [Timeout](#F-JetFlow-RetryTypes-Timeout 'JetFlow.RetryTypes.Timeout')
+- [Runner](#T-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-Runner 'System.Text.RegularExpressions.Generated.CronRegex_0.RunnerFactory.Runner')
+  - [Scan(inputSpan)](#M-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-Runner-Scan-System-ReadOnlySpan{System-Char}- 'System.Text.RegularExpressions.Generated.CronRegex_0.RunnerFactory.Runner.Scan(System.ReadOnlySpan{System.Char})')
+  - [TryFindNextPossibleStartingPosition(inputSpan)](#M-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-Runner-TryFindNextPossibleStartingPosition-System-ReadOnlySpan{System-Char}- 'System.Text.RegularExpressions.Generated.CronRegex_0.RunnerFactory.Runner.TryFindNextPossibleStartingPosition(System.ReadOnlySpan{System.Char})')
+  - [TryMatchAtCurrentPosition(inputSpan)](#M-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-Runner-TryMatchAtCurrentPosition-System-ReadOnlySpan{System-Char}- 'System.Text.RegularExpressions.Generated.CronRegex_0.RunnerFactory.Runner.TryMatchAtCurrentPosition(System.ReadOnlySpan{System.Char})')
+- [RunnerFactory](#T-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory 'System.Text.RegularExpressions.Generated.CronRegex_0.RunnerFactory')
+  - [CreateInstance()](#M-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-CreateInstance 'System.Text.RegularExpressions.Generated.CronRegex_0.RunnerFactory.CreateInstance')
 - [StepResult](#T-JetFlow-StepResult 'JetFlow.StepResult')
   - [#ctor(Index,Status,ErrorMessage)](#M-JetFlow-StepResult-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String- 'JetFlow.StepResult.#ctor(System.UInt64,JetFlow.ActivityResultStatus,System.String)')
   - [ErrorMessage](#P-JetFlow-StepResult-ErrorMessage 'JetFlow.StepResult.ErrorMessage')
@@ -133,6 +144,11 @@
 - [StepResult\`1](#T-JetFlow-StepResult`1 'JetFlow.StepResult`1')
   - [#ctor(Index,Status,ErrorMessage,Output)](#M-JetFlow-StepResult`1-#ctor-System-UInt64,JetFlow-ActivityResultStatus,System-String,`0- 'JetFlow.StepResult`1.#ctor(System.UInt64,JetFlow.ActivityResultStatus,System.String,`0)')
   - [Output](#P-JetFlow-StepResult`1-Output 'JetFlow.StepResult`1.Output')
+- [Utilities](#T-System-Text-RegularExpressions-Generated-Utilities 'System.Text.RegularExpressions.Generated.Utilities')
+  - [StackPop()](#M-System-Text-RegularExpressions-Generated-Utilities-StackPop-System-Int32[],System-Int32@,System-Int32@,System-Int32@- 'System.Text.RegularExpressions.Generated.Utilities.StackPop(System.Int32[],System.Int32@,System.Int32@,System.Int32@)')
+  - [StackPush()](#M-System-Text-RegularExpressions-Generated-Utilities-StackPush-System-Int32[]@,System-Int32@,System-Int32- 'System.Text.RegularExpressions.Generated.Utilities.StackPush(System.Int32[]@,System.Int32@,System.Int32)')
+  - [StackPush()](#M-System-Text-RegularExpressions-Generated-Utilities-StackPush-System-Int32[]@,System-Int32@,System-Int32,System-Int32- 'System.Text.RegularExpressions.Generated.Utilities.StackPush(System.Int32[]@,System.Int32@,System.Int32,System.Int32)')
+  - [StackPush()](#M-System-Text-RegularExpressions-Generated-Utilities-StackPush-System-Int32[]@,System-Int32@,System-Int32,System-Int32,System-Int32- 'System.Text.RegularExpressions.Generated.Utilities.StackPush(System.Int32[]@,System.Int32@,System.Int32,System.Int32,System.Int32)')
 - [WorkflowCompletionActions](#T-JetFlow-Configs-WorkflowCompletionActions 'JetFlow.Configs.WorkflowCompletionActions')
   - [Archive](#F-JetFlow-Configs-WorkflowCompletionActions-Archive 'JetFlow.Configs.WorkflowCompletionActions.Archive')
   - [Purge](#F-JetFlow-Configs-WorkflowCompletionActions-Purge 'JetFlow.Configs.WorkflowCompletionActions.Purge')
@@ -833,6 +849,65 @@ Brotli is a general-purpose lossless compression algorithm that offers high comp
 ##### Summary
 
 GZip is a widely used compression algorithm that provides a good balance between compression ratio and speed. It is suitable for compressing various types of data, including text and binary formats, making it a versatile option for NATS messages.
+
+<a name='T-JetFlow-CronRegexPatterns'></a>
+## CronRegexPatterns `type`
+
+##### Namespace
+
+JetFlow
+
+<a name='P-JetFlow-CronRegexPatterns-CronRegex'></a>
+### CronRegex `property`
+
+##### Remarks
+
+Pattern:
+
+```
+^\r\n        (?<seconds>(?:\\*|(?:[0-5]?\\d)(?:-[0-5]?\\d)?)(?:/\\d+)?(?:,(?:\\*|(?:[0-5]?\\d)(?:-[0-5]?\\d)?)(?:/\\d+)?)*)\\s+\r\n        (?<minutes>(?:\\*|(?:[0-5]?\\d)(?:-[0-5]?\\d)?)(?:/\\d+)?(?:,(?:\\*|(?:[0-5]?\\d)(?:-[0-5]?\\d)?)(?:/\\d+)?)*)\\s+\r\n        (?<hours>(?:\\*|(?:[01]?\\d|2[0-3])(?:-(?:[01]?\\d|2[0-3]))?)(?:/\\d+)?(?:,(?:\\*|(?:[01]?\\d|2[0-3])(?:-(?:[01]?\\d|2[0-3]))?)(?:/\\d+)?)*)\\s+\r\n        (?<dayOfMonth>(?:\\*|(?:[1-9]|[12]\\d|3[01])(?:-(?:[1-9]|[12]\\d|3[01]))?)(?:/\\d+)?(?:,(?:\\*|(?:[1-9]|[12]\\d|3[01])(?:-(?:[1-9]|[12]\\d|3[01]))?)(?:/\\d+)?)*)\\s+\r\n        (?<month>(?:\\*|(?:[1-9]|1[0-2])(?:-(?:[1-9]|1[0-2]))?)(?:/\\d+)?(?:,(?:\\*|(?:[1-9]|1[0-2])(?:-(?:[1-9]|1[0-2]))?)(?:/\\d+)?)*)\\s+\r\n        (?<dayOfWeek>(?:\\*|[1-7](?:-[1-7])?)(?:/\\d+)?(?:,(?:\\*|[1-7](?:-[1-7])?)(?:/\\d+)?)*)\r\n        $
+```
+
+Options:
+
+```
+RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace
+```
+
+Explanation:
+
+```
+○ Match if at the beginning of the string.
+```
+
+<a name='T-System-Text-RegularExpressions-Generated-CronRegex_0'></a>
+## CronRegex_0 `type`
+
+##### Namespace
+
+System.Text.RegularExpressions.Generated
+
+##### Summary
+
+Custom [Regex](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Text.RegularExpressions.Regex 'System.Text.RegularExpressions.Regex')-derived type for the CronRegex method.
+
+<a name='M-System-Text-RegularExpressions-Generated-CronRegex_0-#ctor'></a>
+### #ctor() `constructor`
+
+##### Summary
+
+Initializes the instance.
+
+##### Parameters
+
+This constructor has no parameters.
+
+<a name='F-System-Text-RegularExpressions-Generated-CronRegex_0-Instance'></a>
+### Instance `constants`
+
+##### Summary
+
+Cached, thread-safe singleton instance.
 
 <a name='T-JetFlow-Interfaces-IActivity'></a>
 ## IActivity `type`
@@ -2037,6 +2112,86 @@ Specifies that the retry was triggered due to an error, indicating that an excep
 
 Specifies that the retry was triggered due to a timeout, indicating that the operation took longer than expected to complete.
 
+<a name='T-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-Runner'></a>
+## Runner `type`
+
+##### Namespace
+
+System.Text.RegularExpressions.Generated.CronRegex_0.RunnerFactory
+
+##### Summary
+
+Provides the runner that contains the custom logic implementing the specified regular expression.
+
+<a name='M-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-Runner-Scan-System-ReadOnlySpan{System-Char}-'></a>
+### Scan(inputSpan) `method`
+
+##### Summary
+
+Scan the `inputSpan` starting from base.runtextstart for the next match.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| inputSpan | [System.ReadOnlySpan{System.Char}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.ReadOnlySpan 'System.ReadOnlySpan{System.Char}') | The text being scanned by the regular expression. |
+
+<a name='M-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-Runner-TryFindNextPossibleStartingPosition-System-ReadOnlySpan{System-Char}-'></a>
+### TryFindNextPossibleStartingPosition(inputSpan) `method`
+
+##### Summary
+
+Search `inputSpan` starting from base.runtextpos for the next location a match could possibly start.
+
+##### Returns
+
+true if a possible match was found; false if no more matches are possible.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| inputSpan | [System.ReadOnlySpan{System.Char}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.ReadOnlySpan 'System.ReadOnlySpan{System.Char}') | The text being scanned by the regular expression. |
+
+<a name='M-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-Runner-TryMatchAtCurrentPosition-System-ReadOnlySpan{System-Char}-'></a>
+### TryMatchAtCurrentPosition(inputSpan) `method`
+
+##### Summary
+
+Determine whether `inputSpan` at base.runtextpos is a match for the regular expression.
+
+##### Returns
+
+true if the regular expression matches at the current position; otherwise, false.
+
+##### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| inputSpan | [System.ReadOnlySpan{System.Char}](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.ReadOnlySpan 'System.ReadOnlySpan{System.Char}') | The text being scanned by the regular expression. |
+
+<a name='T-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory'></a>
+## RunnerFactory `type`
+
+##### Namespace
+
+System.Text.RegularExpressions.Generated.CronRegex_0
+
+##### Summary
+
+Provides a factory for creating [RegexRunner](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Text.RegularExpressions.RegexRunner 'System.Text.RegularExpressions.RegexRunner') instances to be used by methods on [Regex](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Text.RegularExpressions.Regex 'System.Text.RegularExpressions.Regex').
+
+<a name='M-System-Text-RegularExpressions-Generated-CronRegex_0-RunnerFactory-CreateInstance'></a>
+### CreateInstance() `method`
+
+##### Summary
+
+Creates an instance of a [RegexRunner](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Text.RegularExpressions.RegexRunner 'System.Text.RegularExpressions.RegexRunner') used by methods on [Regex](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Text.RegularExpressions.Regex 'System.Text.RegularExpressions.Regex').
+
+##### Parameters
+
+This method has no parameters.
+
 <a name='T-JetFlow-StepResult'></a>
 ## StepResult `type`
 
@@ -2145,6 +2300,61 @@ result. |
 ##### Summary
 
 The output value produced by the activity, or the default value for the type if no output was generated.
+
+<a name='T-System-Text-RegularExpressions-Generated-Utilities'></a>
+## Utilities `type`
+
+##### Namespace
+
+System.Text.RegularExpressions.Generated
+
+##### Summary
+
+Helper methods used by generated [Regex](http://msdn.microsoft.com/query/dev14.query?appId=Dev14IDEF1&l=EN-US&k=k:System.Text.RegularExpressions.Regex 'System.Text.RegularExpressions.Regex')-derived implementations.
+
+<a name='M-System-Text-RegularExpressions-Generated-Utilities-StackPop-System-Int32[],System-Int32@,System-Int32@,System-Int32@-'></a>
+### StackPop() `method`
+
+##### Summary
+
+Pops 2 values from the backtracking stack.
+
+##### Parameters
+
+This method has no parameters.
+
+<a name='M-System-Text-RegularExpressions-Generated-Utilities-StackPush-System-Int32[]@,System-Int32@,System-Int32-'></a>
+### StackPush() `method`
+
+##### Summary
+
+Pushes 1 value onto the backtracking stack.
+
+##### Parameters
+
+This method has no parameters.
+
+<a name='M-System-Text-RegularExpressions-Generated-Utilities-StackPush-System-Int32[]@,System-Int32@,System-Int32,System-Int32-'></a>
+### StackPush() `method`
+
+##### Summary
+
+Pushes 2 values onto the backtracking stack.
+
+##### Parameters
+
+This method has no parameters.
+
+<a name='M-System-Text-RegularExpressions-Generated-Utilities-StackPush-System-Int32[]@,System-Int32@,System-Int32,System-Int32,System-Int32-'></a>
+### StackPush() `method`
+
+##### Summary
+
+Pushes 3 values onto the backtracking stack.
+
+##### Parameters
+
+This method has no parameters.
 
 <a name='T-JetFlow-Configs-WorkflowCompletionActions'></a>
 ## WorkflowCompletionActions `type`

@@ -21,6 +21,8 @@ public class SubjectMapperTests
         var stepName = TestsHelper.GenerateRandomString(32);
         var activityName = TestsHelper.GenerateRandomString(32);
         var activityInstance = TestsHelper.GenerateRandomString(32);
+        var stepIndex = TestsHelper.GenerateRandomString(32);
+        var paralellIndex = TestsHelper.GenerateRandomString(32);
 
         //Verify
         Assert.AreEqual($"JETFLOW_{streamStart}WORKFLOW_EVENTS", subjectMapper.WorkflowEventsStreamsName);
@@ -35,9 +37,12 @@ public class SubjectMapperTests
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.suspended", subjectMapper.WorkflowSuspended(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.resumed", subjectMapper.WorkflowResumed(workflowName, instance));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.timer", subjectMapper.WorkflowTimer(workflowName, instance));
-        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepstart", subjectMapper.WorkflowStepStart(workflowName, instance, stepName));
-        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepend", subjectMapper.WorkflowStepEnd(workflowName, instance, stepName));
-        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepretry", subjectMapper.WorkflowStepRetry(workflowName, instance, stepName));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{stepIndex}.stepstart", subjectMapper.WorkflowStepStart(workflowName, instance, stepName,stepIndex));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{stepIndex}.stepend", subjectMapper.WorkflowStepEnd(workflowName, instance, stepName, stepIndex));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{stepIndex}.stepretry", subjectMapper.WorkflowStepRetry(workflowName, instance, stepName, stepIndex));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{stepIndex}.{paralellIndex}.stepstart", subjectMapper.WorkflowStepStart(workflowName, instance, stepName, stepIndex, paralellIndex));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{stepIndex}.{paralellIndex}.stepend", subjectMapper.WorkflowStepEnd(workflowName, instance, stepName, stepIndex, paralellIndex));
+        Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{stepIndex}.{paralellIndex}.stepretry", subjectMapper.WorkflowStepRetry(workflowName, instance, stepName, stepIndex, paralellIndex));
         Assert.AreEqual($"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.>", subjectMapper.WorkflowPurgeFilter(workflowName, instance));
         
         Assert.AreEqual($"JETFLOW_{streamStart}ACTIVITY_QUEUE", subjectMapper.ActivityQueueStream);

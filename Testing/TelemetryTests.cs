@@ -135,7 +135,7 @@ public class TelemetryTests
         Assert.IsTrue(stepStart.Events.All(e =>
             Equals(e.Name, TraceConstants.MessagePublished)
             && (
-                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepStart(name.cleanedName, runId.ToString(), timeoutActivityName.cleanedName)))
+                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.WorkflowStepStart(name.cleanedName, runId.ToString(), timeoutActivityName.cleanedName, "*")))
                 || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.ActivityStart(timeoutActivityName.cleanedName, name.cleanedName, runId.ToString(), "*")))
             )
         ));
@@ -156,7 +156,7 @@ public class TelemetryTests
         Assert.IsNotNull(activityStart.GetTagItem(TraceConstants.ActivityTimeoutIdTag));
         Assert.HasCount(3, activityStart.Events);
         Assert.IsTrue(activityStart.Events.All(e =>
-            (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepEnd(name.cleanedName, runId.ToString(), timeoutActivityName.cleanedName))))
+            (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.WorkflowStepEnd(name.cleanedName, runId.ToString(), timeoutActivityName.cleanedName, "*"))))
             || (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.ActiveActivitiesCounter)))
             || (Equals(e.Name, TraceConstants.MessageDecoded) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageContentHeaderTag) && Equals(t.Value, "application/json")))
         ));
@@ -179,7 +179,7 @@ public class TelemetryTests
         Assert.IsTrue(stepStart.Events.All(e =>
             Equals(e.Name, TraceConstants.MessagePublished)
             && (
-                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepStart(name.cleanedName, runId.ToString(), notImplementedName.cleanedName)))
+                e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.WorkflowStepStart(name.cleanedName, runId.ToString(), notImplementedName.cleanedName, "*")))
                 || e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.ActivityStart(notImplementedName.cleanedName, name.cleanedName, runId.ToString(), "*")))
             )
         ));
@@ -199,7 +199,7 @@ public class TelemetryTests
         Assert.IsNotNull(activityStart.GetTagItem(TraceConstants.ActivityIdTag));
         Assert.HasCount(2, activityStart.Events);
         Assert.IsTrue(activityStart.Events.All(e =>
-            Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.WorkflowStepEnd(name.cleanedName, runId.ToString(), notImplementedName.cleanedName)))
+            Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && TestsHelper.SubjectMatches(t.Value, subjectMapper.WorkflowStepEnd(name.cleanedName, runId.ToString(), notImplementedName.cleanedName, "*")))
             || (Equals(e.Name, TraceConstants.MessagePublished) && e.Tags.All(t => Equals(t.Key, TraceConstants.MessageSubjectTag) && Equals(t.Value, subjectMapper.ActiveActivitiesCounter)))
         ));
         Assert.HasCount(1, activityStart.Links);

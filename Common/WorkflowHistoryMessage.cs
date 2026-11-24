@@ -1,8 +1,6 @@
 ﻿using NATS.Client.Core;
-using System;
+using NATS.Client.JetStream;
 using System.Collections;
-using System.Collections.Generic;
-using System.Text;
 
 namespace JetFlow;
 
@@ -15,40 +13,37 @@ internal sealed class WorkflowHistory :
     IEnumerable<WorkflowHistoryMessage>,
     IDisposable
 {
-    private readonly PooledHistoryBuffer _buffer = new();
-    private readonly List<WorkflowHistoryMessage> _messages = [];
+    private readonly PooledHistoryBuffer buffer = new();
+    private readonly List<WorkflowHistoryMessage> messages = [];
 
-    public int Count => _messages.Count;
+    public int Count => messages.Count;
 
-    public void Add(
-        string subject,
-        NatsHeaders? headers,
-        ReadOnlySpan<byte> data)
+    public void Add(INatsJSMsg<byte[]> message)
     {
-        BufferPointer pointer = _buffer.Write(data);
+        BufferPointer pointer = buffer.Write(message.Data);
 
-        _messages.Add(new WorkflowHistoryMessage(
-            subject,
-            headers,
+        messages.Add(new WorkflowHistoryMessage(
+            message.Subject,
+            message.Headers,
             pointer));
     }
 
     public WorkflowHistoryMessage this[int index]
-        => _messages[index];
+        => messages[index];
 
     public ReadOnlyMemory<byte>? GetData(
         WorkflowHistoryMessage message)
-        => _buffer.GetMemory(message.Data);
+        => buffer.GetMemory(message.Data);
 
     public IEnumerator<WorkflowHistoryMessage> GetEnumerator()
-        => _messages.GetEnumerator();
+        => messages.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator()
         => GetEnumerator();
 
     public void Dispose()
     {
-        _messages.Clear();
-        _buffer.Dispose();
+        messages.Clear();
+        buffer.Dispose();
     }
 }

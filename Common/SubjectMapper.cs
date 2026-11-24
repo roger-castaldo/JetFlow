@@ -49,12 +49,12 @@ internal class SubjectMapper
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.timer";
     public string WorkflowPurged(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.purged";
-    public string WorkflowStepStart(string workflowName, string instance, string stepName)
-        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepstart";
-    public string WorkflowStepEnd(string workflowName, string instance, string stepName)
-        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepend";
-    public string WorkflowStepRetry(string workflowName, string instance, string stepName)
-        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.stepretry";
+    public string WorkflowStepStart(string workflowName, string instance, string stepName, string activityId, string? parallelIndex=null)
+        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{activityId}{(parallelIndex!=null ? $".{parallelIndex}" : "")}.stepstart";
+    public string WorkflowStepEnd(string workflowName, string instance, string stepName, string activityId, string? parallelIndex=null)
+        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{activityId}{(parallelIndex!=null ? $".{parallelIndex}" : "")}.stepend";
+    public string WorkflowStepRetry(string workflowName, string instance, string stepName, string activityId, string? parallelIndex=null)
+        => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.{stepName}.{activityId}{(parallelIndex!=null ? $".{parallelIndex}" : "")}.stepretry";
     public string WorkflowPurgeFilter(string workflowName, string instance)
         => $"jetflow.{subjectNamespace}wkf.{workflowName}.{instance}.>";
     public string WorkflowConsumerName<TWorkflow>()

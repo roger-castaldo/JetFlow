@@ -2,11 +2,8 @@
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Serializers;
-using Microsoft.Extensions.Logging.Abstractions;
-using NATS.Client.Core;
 using NATS.Client.JetStream;
-using System.Diagnostics;
-using System.Text;
+using static JetFlow.EventMessage;
 
 namespace JetFlow.States;
 
@@ -46,7 +43,8 @@ internal class WorkflowContext
                 subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId),
                 subjectMapper.WorkflowEnd(message.WorkflowSubjectName, message.WorkflowId),
                 subjectMapper.WorkflowDelayEnd(message.WorkflowSubjectName, message.WorkflowId),
-                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*"),
+                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*", "*"),
+                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*", "*", "*"),
                 subjectMapper.WorkflowCancelled(message.WorkflowSubjectName, message.WorkflowId)
             );
         var history = new WorkflowHistory();
@@ -74,7 +72,7 @@ internal class WorkflowContext
             if (Equals(msg.Subject, startSubject))
                 startMessage=msg;
             else if (add)
-                history.Add(msg.Subject,msg.Headers,msg.Data);
+                history.Add(msg);
             if (Equals(msg.Metadata?.Sequence, message.Metadata?.Sequence))
                 add=false;
             if (!add && startMessage!=null && options!=null)
@@ -253,18 +251,18 @@ internal class WorkflowContext
         List<string> errors = [];
         List<string> timeouts = [];
         uint cnt = 0;
-        foreach(var msg in history.Where(m=>Equals(m.Subject, message.Subject) 
-        && (m.Headers?.TryGetValue(Constants.ActivityIDHeader, out var activityId)??false)
-        && Equals(activityId.ToString(), message.ActivityID.ToString())))
+        foreach(var msg in history
+            .Select(msg =>EventMessage.ExtractParallelActivityFromMessage(msg))
+            .OfType<ParallelActivityExtract>()
+            .Where(msg=>Equals(message.ActivitySubjectName, msg.ActivitySubjectName) && Equals(message.ActivityID, msg.ActivityId)))
         {
             cnt++;
-            var idx = ((msg.Headers?.TryGetValue(Constants.ParalellActivityIndexHeader, out var paindex)??false) ? uint.Parse(paindex.ToString()!) : 0);
-            if ((msg.Headers?.TryGetValue(Constants.ActivityResultHeader, out var status)??false) && Enum.TryParse<ActivityResultStatus>(status.ToString(), out var resultStatus))
+            if (msg.Status.HasValue)
             {
-                if (resultStatus == ActivityResultStatus.Timeout)
-                    timeouts.Add($"{idx}: Activity timed out");
-                else if (resultStatus == ActivityResultStatus.Failure)
-                    errors.Add($"{idx}: {(msg.Data.Length==0 ? "Activity failed" : System.Text.Encoding.UTF8.GetString(history.GetData(msg)?.ToArray()?? []))}");
+                if (msg.Status.Value == ActivityResultStatus.Timeout)
+                    timeouts.Add($"{msg.ParallelIndex}: Activity timed out");
+                else if (msg.Status.Value == ActivityResultStatus.Failure)
+                    errors.Add($"{msg.ParallelIndex}: {(msg.OriginalMessage.Data.Length==0 ? "Activity failed" : System.Text.Encoding.UTF8.GetString(history.GetData(msg.OriginalMessage)?.ToArray()?? []))}");
             }
         }
         return (

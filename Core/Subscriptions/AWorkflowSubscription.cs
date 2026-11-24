@@ -36,7 +36,7 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
                 await ProcessEndOperation(message);
                 await message.AckAsync(CancellationToken);
             }
-            catch
+            catch(Exception e)
             {
                 await message.NakAsync(CancellationToken);
             }

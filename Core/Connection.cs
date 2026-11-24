@@ -166,7 +166,8 @@ public static class Connection
                             subjectMapper.WorkflowPurge(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"),
                             subjectMapper.WorkflowEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"),
                             subjectMapper.WorkflowDelayEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*"),
-                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*", "*"),
+                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*", "*", "*"),
+                            subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*", "*", "*", "*"),
                             subjectMapper.WorkflowResumed(NameHelper.GetWorkflowName<TWorkflow>().cleanedName, "*")
                         ],
                         AckPolicy = NATS.Client.JetStream.Models.ConsumerConfigAckPolicy.Explicit,

@@ -1,6 +1,5 @@
 ﻿using JetFlow.Helpers;
 using NATS.Client.Core;
-using System.Text.RegularExpressions;
 using NATS.Client.JetStream;
 using Microsoft.Extensions.Primitives;
 using System.Globalization;
@@ -15,16 +14,20 @@ internal record EventMessage
         Constants.WorkflowTraceSpanHeaderKey,
         Constants.WorkflowNameHeader
     ];
-    private static readonly Regex workflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?(wkf|swf)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)(?:\.(?<stepName>[^.]+))?\.(?<eventType>start|end|delaystart|delayend|timer|archived|config|stepstart|stepend|stepretry|suspended|resumed)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
-    private static readonly Regex activitySubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?act\.(?<activityName>[^.]+)\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)\.(?<activityInstance>[^.]+)\.(?<eventType>start|timer|timeout)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
-    private static readonly Regex purgeWorkflowSubjectRegex = new(@"^jetflow\.(?<namespace>[^.]+\.)?purge\.(?<workflowName>[^.]+)\.(?<instance>[^.]+)$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+    public readonly record struct ParallelActivityExtract(string ActivitySubjectName, uint? ActivityId, uint? ParallelIndex, ActivityResultStatus? Status, WorkflowHistoryMessage OriginalMessage);
 
-    public static (string workflowName, string instance) ExtractWorkflowFromSubject(string subject)
+    public static ParallelActivityExtract? ExtractParallelActivityFromMessage(WorkflowHistoryMessage msg)
     {
-        var match = workflowSubjectRegex.Match(subject);
-        if (match.Success)
-            return (match.Groups["workflowName"].Value, match.Groups["instance"].Value);
-        throw new ArgumentException(nameof(subject));
+        var match = RegexPatterns.WorkflowSubjectRegex.Match(msg.Subject);
+        if (match.Success && match.Groups["stepName"].Success)
+            return new(
+                match.Groups["stepName"].Value,
+                match.Groups["activityId"].Success ? uint.Parse(match.Groups["activityId"].Value) : null,
+                match.Groups["parallelIndex"].Success ? uint.Parse(match.Groups["parallelIndex"].Value) : null,
+                (msg.Headers?.TryGetValue(Constants.ActivityResultHeader, out var status)??false) && Enum.TryParse<ActivityResultStatus>(status.ToString(), out var resultStatus) ? resultStatus : null,
+                msg
+            );
+        return null;
     }
 
     public static async ValueTask<EventMessage> CreateMessageAsync(INatsObjStore largeMessageStore, INatsJSMsg<byte[]> msg, CancellationToken cancellationToken)
@@ -83,15 +86,15 @@ internal record EventMessage
         Func<CancellationToken,ValueTask> ack, Func<CancellationToken,ValueTask> nak, Func<CancellationToken, ValueTask> inProgress)
     {
         RecievedTimestamp = DateTimeOffset.Now;
-        var match = workflowSubjectRegex.Match(subject);
+        var match = RegexPatterns.WorkflowSubjectRegex.Match(subject);
         if (match.Success)
         {
             WorkflowEventType = Enum.Parse<WorkflowEventTypes>(match.Groups["eventType"].Value, true);
-            ActivitySubjectName = match.Groups["stepName"].Success ? match.Groups["stepName"].Value : null;       
+            ActivitySubjectName = match.Groups["stepName"].Success ? match.Groups["stepName"].Value : null;
         }
         else
         {
-            match = activitySubjectRegex.Match(subject);
+            match = RegexPatterns.ActivitySubjectRegex.Match(subject);
             if (match.Success)
             {
                 ActivitySubjectName = match.Groups["activityName"].Value;
@@ -110,15 +113,15 @@ internal record EventMessage
             }
             else
             {
-                match = purgeWorkflowSubjectRegex.Match(subject);
+                match = RegexPatterns.PurgeWorkflowSubjectRegex.Match(subject);
                 if (!match.Success)
                     throw new ArgumentException($"Invalid subject format: {subject}", nameof(subject));
             }
         }
-        ActivityID = ExtractHeader<uint>(headers, Constants.ActivityIDHeader, value => uint.Parse(value));
+        ActivityID = match.Groups["activityId"].Success ? uint.Parse(match.Groups["activityId"].Value) : ExtractHeader<uint>(headers, Constants.ActivityIDHeader, value => uint.Parse(value));
+        ParallelActivityIndex = match.Groups["parallelIndex"].Success ? uint.Parse(match.Groups["parallelIndex"].Value) : ExtractHeader<uint>(headers, Constants.ParalellActivityIndexHeader, value => uint.Parse(value));
         ActivityName = ExtractHeader(headers, Constants.ActivityNameHeader);
         WorkflowStepResultStatus = ExtractHeader<ActivityResultStatus>(headers, Constants.ActivityResultHeader, value => Enum.Parse<ActivityResultStatus>(value, true));
-        ParallelActivityIndex = ExtractHeader<uint>(headers, Constants.ParalellActivityIndexHeader, value => uint.Parse(value));
         ParallelActivityCount = ExtractHeader<uint>(headers, Constants.ParallelActivityCountHeader, value => uint.Parse(value));
         Namespace = match.Groups["namespace"].Success ? match.Groups["namespace"].Value : null;
         WorkflowSubjectName = match.Groups["workflowName"].Value;

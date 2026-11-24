@@ -236,7 +236,10 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
         // NATS.Net represents an empty payload as null.
         // Either representation indicates batch acceptance.
         if (response.Data is null or { Length: 0 })
+        {
+            TraceHelper.AddPublishEvent(subject);
             return;
+        }
 
         var ack = JsonSerializer.Deserialize<PubAckResponse>(response.Data);
 

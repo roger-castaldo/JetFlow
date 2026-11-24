@@ -3,7 +3,6 @@ using NATS.Client.Core;
 using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using System.Text.RegularExpressions;
 
 namespace JetFlow.Serializers;
 
@@ -11,11 +10,6 @@ internal class MessageSerializer
 {
     private const int CompressionThreshold = 32 * 1024; // 32 KB
     private const string JsonEncoding = "application/json";
-    private const string BrotliEncoding = "/brotli";
-    private const string GZipEncoding = "/gzip";
-
-    private static readonly Regex regContentEncoding = new($"^(?<contenttype>(?!(?:{BrotliEncoding}|{GZipEncoding})$).+?)(?<compression>{BrotliEncoding}|{GZipEncoding})?$", RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(500));
-
     private readonly JsonSerializerOptions options;
     private readonly CompressionTypes compressionType;
     private readonly Action<string> decodedEventCall;
@@ -38,14 +32,14 @@ internal class MessageSerializer
         string encoding = JsonEncoding;
         if (headers != null && headers.TryGetValue(Constants.ContentEncodingHeader, out var headerVal))
             encoding = headerVal.ToString() ?? JsonEncoding;
-        var match = regContentEncoding.Match(encoding);
+        var match = RegexPatterns.ContentEncoding.Match(encoding);
         if (!match.Success)
             throw new InvalidContentTypeException(encoding);
 
         using Stream input = (match.Groups["compression"].Success ? match.Groups["compression"].Value : string.Empty).ToLowerInvariant() switch
         {
-            BrotliEncoding => new BrotliStream(new MemoryStream(data), CompressionMode.Decompress),
-            GZipEncoding => new GZipStream(new MemoryStream(data), CompressionMode.Decompress),
+            RegexPatterns.BrotliEncoding => new BrotliStream(new MemoryStream(data), CompressionMode.Decompress),
+            RegexPatterns.GZipEncoding => new GZipStream(new MemoryStream(data), CompressionMode.Decompress),
             _ => new MemoryStream(data)
         };
 
@@ -69,13 +63,13 @@ internal class MessageSerializer
             using var output = new MemoryStream();
             if (Equals(compressionType, CompressionTypes.Brotli))
             {
-                encoding+=BrotliEncoding;
+                encoding+=RegexPatterns.BrotliEncoding;
                 using var brotli = new BrotliStream(output, CompressionLevel.Optimal, leaveOpen: true);
                 await brotli.WriteAsync(data);
             }
             else
             {
-                encoding+=GZipEncoding;
+                encoding+=RegexPatterns.GZipEncoding;
                 using var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true);
                 await gzip.WriteAsync(data);
             }

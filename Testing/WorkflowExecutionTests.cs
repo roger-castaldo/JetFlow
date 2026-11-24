@@ -237,7 +237,7 @@ public class WorkflowExecutionTests
             {
                 if (Equals(msg.Subject, subjectMapper.WorkflowDelayStart(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString())))
                 {
-                    await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString(), NameHelper.GetActivityName<EmptyActivity>().cleanedName), [], cancellationToken: TestContext.CancellationToken);
+                    await natsConnection.PublishAsync<byte[]>(subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString(), NameHelper.GetActivityName<EmptyActivity>().cleanedName, "3"), [], cancellationToken: TestContext.CancellationToken);
                     break;
                 }
             }
@@ -257,7 +257,7 @@ public class WorkflowExecutionTests
         var endMessage = await messageSerializer.DecodeAsync<WorkflowEnd>(result.Data, result.Headers);
         Assert.IsNotNull(endMessage);
         Assert.IsFalse(endMessage.IsSuccess);
-        Assert.AreEqual($"Expected delay finished event but recieved {subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString(), NameHelper.GetActivityName<EmptyActivity>().cleanedName)}", endMessage.ErrorMessage);
+        Assert.AreEqual($"Expected delay finished event but recieved {subjectMapper.WorkflowStepEnd(NameHelper.GetWorkflowName<InvalidDelayStepWorkflow>().cleanedName, id.ToString(), NameHelper.GetActivityName<EmptyActivity>().cleanedName,"3")}", endMessage.ErrorMessage);
     }
 
     [ActivityName("No Action Activity")]
@@ -510,9 +510,12 @@ public class WorkflowExecutionTests
             subjectMapper.WorkflowDelayStart(workflowName.cleanedName, runId.ToString()),
             subjectMapper.WorkflowDelayEnd(workflowName.cleanedName, runId.ToString()),
             subjectMapper.WorkflowTimer(workflowName.cleanedName, runId.ToString()),
-            subjectMapper.WorkflowStepStart(workflowName.cleanedName, runId.ToString(), "*"),
-            subjectMapper.WorkflowStepEnd(workflowName.cleanedName, runId.ToString(), "*"),
-            subjectMapper.WorkflowStepRetry(workflowName.cleanedName, runId.ToString(), "*")
+            subjectMapper.WorkflowStepStart(workflowName.cleanedName, runId.ToString(), "*", "*"),
+            subjectMapper.WorkflowStepEnd(workflowName.cleanedName, runId.ToString(), "*", "*"),
+            subjectMapper.WorkflowStepRetry(workflowName.cleanedName, runId.ToString(), "*", "*"),
+            subjectMapper.WorkflowStepStart(workflowName.cleanedName, runId.ToString(), "*", "*", "*"),
+            subjectMapper.WorkflowStepEnd(workflowName.cleanedName, runId.ToString(), "*", "*", "*"),
+            subjectMapper.WorkflowStepRetry(workflowName.cleanedName, runId.ToString(), "*", "*", "*")
         );
         Assert.IsEmpty(messages);
 

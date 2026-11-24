@@ -34,7 +34,7 @@ internal partial class ServiceConnection
     private PublishMessage CreateWorkflowActivityStartMessage(string activityName, uint stepIndex, byte[] data, NatsHeaders headers, EventMessage message,uint? idx=null)
         => new(
                 data,
-                subjectMapper.WorkflowStepStart(message.WorkflowSubjectName, message.WorkflowId, activityName),
+                subjectMapper.WorkflowStepStart(message.WorkflowSubjectName, message.WorkflowId, activityName, stepIndex.ToString(),idx?.ToString()),
                 message.InjectHeaders(headers),
                 $"{message.WorkflowSubjectName}-{message.WorkflowId}-{activityName}-{stepIndex}-start{idx}"
             );
@@ -83,7 +83,7 @@ internal partial class ServiceConnection
             }, cancellationToken: cancellationToken);
         await connection.PublishMessageAsync(new(
                 UTF8Encoding.UTF8.GetBytes(retryType.ToString()),
-                subjectMapper.WorkflowStepRetry(message.WorkflowSubjectName, message.WorkflowId, message.ActivitySubjectName!),
+                subjectMapper.WorkflowStepRetry(message.WorkflowSubjectName, message.WorkflowId, message.ActivitySubjectName!, message.ActivityID.ToString()!, message.ParallelActivityIndex?.ToString()),
                 AppendActivityId(message.InjectHeaders(null),message),
                 $"{message.WorkflowSubjectName}-{message.WorkflowId}-{message.ActivitySubjectName}-{message.ActivityID}-retry-{message.ActivityAttempt}"
             ), cancellationToken: cancellationToken);
@@ -166,10 +166,7 @@ internal partial class ServiceConnection
         headers.Add(Constants.ActivityResultHeader, status.ToString());
         headers.Add(Constants.ActivityNameHeader, message.ActivityName);
         if (message.ParallelActivityIndex.HasValue)
-        {
-            headers.Add(Constants.ParalellActivityIndexHeader, message.ParallelActivityIndex.ToString());
             headers.Add(Constants.ParallelActivityCountHeader, message.ParallelActivityCount.ToString());
-        }
         if (message.Headers?.ContainsKey(Constants.ActivityOverallTimeoutHeader) == true)
             await connection.PurgeStreamAsync(
                 subjectMapper.ActivityQueueStream,
@@ -179,7 +176,7 @@ internal partial class ServiceConnection
                 }, cancellationToken: cancellationToken);
         await connection.PublishMessageAsync(new(
                 data,
-                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, message.ActivitySubjectName!),
+                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, message.ActivitySubjectName!, message.ActivityID.ToString()!, message.ParallelActivityIndex?.ToString()),
                 headers,
                 $"{message.WorkflowSubjectName}-{message.WorkflowId}-{message.ActivitySubjectName}-{message.ActivityID}-end{message.ParallelActivityIndex}"
             ), cancellationToken);
@@ -241,7 +238,7 @@ internal partial class ServiceConnection
             await using var query = await QueryStreamAsync(
                 subjectMapper.WorkflowEventsStreamsName,
                 true,
-                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, message.ActivitySubjectName!)
+                subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, message.ActivitySubjectName!, message.ActivityID.ToString()!, message.ParallelActivityIndex?.ToString())
             );
             var isDone = false;
             var hasAny = true;

@@ -3,7 +3,6 @@ using JetFlow.Interfaces;
 using JetFlow.Serializers;
 using NATS.Client.Core;
 using System.Text;
-using System.Xml.Linq;
 
 namespace JetFlow;
 
@@ -77,10 +76,10 @@ internal partial class ServiceConnection
         headers.TryAdd(Constants.ActivityNameHeader, activityRawName);
         headers.TryAdd(Constants.ChildWorkflowNameHeader, rawName);
         headers.TryAdd(Constants.ChildWorkflowIdHeader, id.ToString());
-        headers.TryAdd(Constants.ActivityIDHeader, activityIndex.ToString());
         messages = messages.Append(new(
             data,
-            subjectMapper.WorkflowStepStart(message.WorkflowSubjectName, message.WorkflowId, activityCleanedName),
+            subjectMapper.WorkflowStepStart(message.WorkflowSubjectName, message.WorkflowId, activityCleanedName, activityIndex.ToString(),
+            headers.TryGetValue(Constants.ParalellActivityIndexHeader, out var pindex) ? pindex.ToString() : null),
             headers,
             $"{message.WorkflowSubjectName}-{message.WorkflowId}-{activityRawName}-{activityIndex}-start{id}"
         ));
@@ -149,17 +148,13 @@ internal partial class ServiceConnection
         {
             NatsHeaders endHeaders = [
                 new(Constants.ActivityNameHeader, startMessage.ParentWorkflowActivityName),
-                new(Constants.ActivityIDHeader, startMessage.ActivityID?.ToString()),
                 new(Constants.ActivityResultHeader, (workflowEnd.IsSuccess ? ActivityResultStatus.Success : ActivityResultStatus.Failure).ToString())
             ];
             if (startMessage.ParallelActivityIndex.HasValue)
-            {
-                endHeaders.Add(Constants.ParalellActivityIndexHeader, startMessage.ParallelActivityIndex?.ToString());
                 endHeaders.Add(Constants.ParallelActivityCountHeader, startMessage.ParallelActivityCount?.ToString());
-            }
             messages = messages.Append(new(
                 (workflowEnd.IsSuccess? [] : UTF8Encoding.UTF8.GetBytes(workflowEnd.ErrorMessage!)),
-                subjectMapper.WorkflowStepEnd(startMessage.ParentWorkflowSubject, startMessage.ParentWorkflowId, startMessage.ParentWorkflowActivitySubject!),
+                subjectMapper.WorkflowStepEnd(startMessage.ParentWorkflowSubject, startMessage.ParentWorkflowId, startMessage.ParentWorkflowActivitySubject!, startMessage.ActivityID.ToString()!, startMessage.ParallelActivityIndex?.ToString()),
                 endHeaders,
                 $"child-{message.WorkflowSubjectName}-{message.WorkflowId}-end"
             ));

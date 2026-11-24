@@ -3,7 +3,6 @@ using JetFlow;
 using Microsoft.Extensions.Configuration;
 using Shared.dto;
 using Shared.Workflows;
-using System.Security.Cryptography;
 
 var itemGenerator = new Faker<OrderItem>()
     .CustomInstantiator(f => new(

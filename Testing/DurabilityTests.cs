@@ -6,12 +6,8 @@ using JetFlow.Testing.Helpers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Net;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace JetFlow.Testing;
 
@@ -21,20 +17,11 @@ public class DurabilityTests
     private static NatsTestHarness? natsTestHarness;
     public TestContext TestContext { get; set; }
 
-    [ClassInitialize]
-    public static async Task Init(TestContext testContext)
+    [TestInitialize]
+    public async Task InitializeTest()
     {
         natsTestHarness = new NatsTestHarness();
         await natsTestHarness.StartAsync();
-    }
-
-    [ClassCleanup]
-    public static async Task Cleanup()
-        => await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
-
-    [TestInitialize]
-    public void InitializeTest()
-    {
         GC.Collect(
             GC.MaxGeneration,
             GCCollectionMode.Forced,
@@ -48,6 +35,12 @@ public class DurabilityTests
             GCCollectionMode.Forced,
             blocking: true,
             compacting: true);
+    }
+
+    [TestCleanup]
+    public async Task Cleanup()
+    {
+        await (natsTestHarness?.DisposeAsync()??ValueTask.CompletedTask);
     }
 
     [ActivityName("Counting Activity With IO")]
