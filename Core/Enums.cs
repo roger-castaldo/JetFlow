@@ -6,3 +6,12 @@ internal enum ActivityRunStatus
     AlreadyCompleted,
     CurrentlyRunning
 }
+
+internal enum WorkflowExitType
+{
+    Activity,
+    ChildWorkflow,
+    Delay,
+    ExternalEvent,
+    Complete
+}

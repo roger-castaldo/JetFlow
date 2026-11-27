@@ -1,4 +1,4 @@
-using Projects;
+using AppHost.NUI;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -9,32 +9,33 @@ var jetflowdb = builder.AddPostgres("postgres")
 
 var nats = builder.AddNats("nats")
     .WithJetStream()
-    .WithDataVolume();
+    .WithDataVolume()
+    .WithNui();
 
-builder.AddProject<InventoryService>("inventory")
+builder.AddDotnetProject("inventory","../InventoryService/InventoryService.csproj")
     .WithReference(nats)
     .WaitFor(nats);
 
-builder.AddProject<PaymentService>("payment")
+builder.AddDotnetProject("payment","../PaymentService/PaymentService.csproj")
     .WithReference(nats)
     .WaitFor(nats);
 
-var processor = builder.AddProject<OrderProcessor>("orderProcessor")
+var processor = builder.AddDotnetProject("orderProcessor","../OrderProcessor/OrderProcessor.csproj")
     .WithReference(nats)
     .WaitFor(nats);
 
-builder.AddProject<ShippingService>("shipping")
+builder.AddDotnetProject("shipping","../ShippingService/ShippingService.csproj")
     .WithReference(nats)
     .WaitFor(nats);
 
-builder.AddProject<WebUI>("webui")
+builder.AddDotnetProject("webui","../WebUI/WebUI.csproj")
     .WithReference(jetflowdb)
     .WithReference(nats)
     .WaitFor(jetflowdb)
     .WaitFor(nats)
     .WithExternalHttpEndpoints();
 
-builder.AddProject<OrderSubmitter>("ordersubmitter")
+builder.AddDotnetProject("ordersubmitter","../OrderSubmitter/OrderSubmitter.csproj")
     .WithReference(nats)
     .WaitFor(nats)
     .WaitFor(processor);

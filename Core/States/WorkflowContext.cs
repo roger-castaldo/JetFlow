@@ -2,7 +2,9 @@
 using JetFlow.Helpers;
 using JetFlow.Interfaces;
 using JetFlow.Serializers;
+using Microsoft.Extensions.Caching.Memory;
 using NATS.Client.JetStream;
+using System.Diagnostics;
 using static JetFlow.EventMessage;
 
 namespace JetFlow.States;
@@ -11,34 +13,37 @@ internal class WorkflowContext
     : AContext, IWorkflowContext, IDisposable
 {
     private readonly ServiceConnection serviceConnection;
-    private readonly SubjectMapper subjectMapper;
     private readonly MetricsHelper metricsHelper;
     private readonly EventMessage message;
     private readonly WorkflowHistory history;
     private int index;
     private uint activityIndex = 0;
-    public WorkflowOptions Options { get; private init; } = new();
+    public WorkflowOptions Options => history.Options??new();
     public bool IsCancelled { get; private init; } = false;
     public string? CancellationMessage { get; private init; } = null;
     private readonly string workflowEndSubject;
+    private readonly long start;
 
     private WorkflowContext(ServiceConnection serviceConnection, SubjectMapper subjectMapper, 
-        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, WorkflowHistory history, EventMessage startMessage)
-        : base(startMessage, messageSerializer)
+        MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message, WorkflowHistory history)
+        : base(history.StartMessage!, messageSerializer)
     {
         this.serviceConnection=serviceConnection;
-        this.subjectMapper=subjectMapper;
         this.metricsHelper=metricsHelper;
         this.message=message;
         this.history = history;
         workflowEndSubject = subjectMapper.WorkflowEnd(message.WorkflowSubjectName, message.WorkflowId);
+        start = Stopwatch.GetTimestamp();
     }
 
     internal static async ValueTask<WorkflowContext> LoadAsync(ServiceConnection serviceConnection, SubjectMapper subjectMapper,
         MessageSerializer messageSerializer, MetricsHelper metricsHelper, EventMessage message)
     {
+        var history = HistoryCacheHelper.ObtainHistory(message);
+        var start = Stopwatch.GetTimestamp();
         await using var enumerable = await serviceConnection.QueryStreamAsync(subjectMapper.WorkflowEventsStreamsName,
                 false,
+                history.LastSequenceNumber,
                 subjectMapper.WorkflowConfigure(message.WorkflowSubjectName, message.WorkflowId),
                 subjectMapper.WorkflowStart(message.WorkflowSubjectName, message.WorkflowId),
                 subjectMapper.WorkflowEnd(message.WorkflowSubjectName, message.WorkflowId),
@@ -47,9 +52,6 @@ internal class WorkflowContext
                 subjectMapper.WorkflowStepEnd(message.WorkflowSubjectName, message.WorkflowId, "*", "*", "*"),
                 subjectMapper.WorkflowCancelled(message.WorkflowSubjectName, message.WorkflowId)
             );
-        var history = new WorkflowHistory();
-        INatsJSMsg<byte[]>? startMessage = null;
-        WorkflowOptions? options = null;
         var add = true;
         bool isCancelled = false;
         string? cancellationMessage = null;
@@ -60,7 +62,7 @@ internal class WorkflowContext
         {
             if (Equals(msg.Subject, configureSubject))
             {
-                options = InternalsSerializer.DeserializeWorkflowOptions(msg.Data!);
+                history.Options = InternalsSerializer.DeserializeWorkflowOptions(msg.Data!);
                 continue;
             }
             if (Equals(msg.Subject, cancelledSubject))
@@ -70,20 +72,21 @@ internal class WorkflowContext
                 continue;
             }
             if (Equals(msg.Subject, startSubject))
-                startMessage=msg;
+                history.StartMessage = await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, msg, CancellationToken.None);
             else if (add)
                 history.Add(msg);
             if (Equals(msg.Metadata?.Sequence, message.Metadata?.Sequence))
                 add=false;
-            if (!add && startMessage!=null && options!=null)
+            if (!add && history.StartMessage!=null && history.Options!=null)
                 break;
         }
-        if (startMessage==null)
+        if (history.StartMessage==null)
             throw new UnableToLocateStartMessageException(message.ActivityName??message.ActivitySubjectName!, message.WorkflowName, message.WorkflowId);
+        var estimatedLoadTime = Stopwatch.GetElapsedTime(start);
+        history.EstimatedLoadTime+=estimatedLoadTime;
         return new(serviceConnection, subjectMapper, messageSerializer, metricsHelper,
-            message, history, await EventMessage.CreateMessageAsync(serviceConnection.LargeMessageStore, startMessage!, CancellationToken.None))
+            message, history)
         {
-            Options = options!,
             IsCancelled = isCancelled,
             CancellationMessage = cancellationMessage
         };
@@ -146,13 +149,19 @@ internal class WorkflowContext
         );
     }
 
+    private WorkflowSuspendedException SuspendWorkflow(WorkflowExitType exitType = WorkflowExitType.Activity, TimeSpan? delayDuration = null)
+    {
+        HistoryCacheHelper.CacheHistory(message, history, exitType, delayDuration);
+        return new();
+    }
+
     private async ValueTask<StepResult> HandleNextActivityAsync<TActivity>(Func<ValueTask> invokeCall, CancellationToken cancellationToken)
     {
         var (result,_,_) = await GetNextActivityAsync<TActivity>(cancellationToken);
         if (result!=null)
             return result;
         await invokeCall();
-        throw new WorkflowSuspendedException();
+        throw SuspendWorkflow();
     }
 
     ValueTask<StepResult> IWorkflowContext.ExecuteActivityAsync<TActivity>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken)
@@ -167,7 +176,7 @@ internal class WorkflowContext
         if (result!=null)
             return result;
         await invokeCall();
-        throw new WorkflowSuspendedException();
+        throw SuspendWorkflow();
     }
 
     ValueTask<StepResult<TOutput>> IWorkflowContext.ExecuteActivityAsync<TActivity, TOutput>(ActivityExecutionRequest executionRequest, CancellationToken cancellationToken)
@@ -191,7 +200,7 @@ internal class WorkflowContext
             return results.OrderBy(x=>x.index).Select(x=>x.result);
         }
         await serviceConnection.StartActivitiesAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken);
-        throw new WorkflowSuspendedException();
+        throw SuspendWorkflow();
     }
 
     async ValueTask<IEnumerable<StepResult<TOutput>>> IWorkflowContext.ExecuteActivitiesAsync<TActivity, TOutput, TInput>(ActivityExecutionRequest<IEnumerable<TInput>> executionRequest, CancellationToken cancellationToken)
@@ -209,7 +218,7 @@ internal class WorkflowContext
             return results.OrderBy(x => x.index).Select(x => x.result);
         }
         await serviceConnection.StartActivitiesAsync<TActivity, TInput>(activityIndex, executionRequest, message, cancellationToken);
-        throw new WorkflowSuspendedException();
+        throw SuspendWorkflow();
     }
 
     async ValueTask IWorkflowContext.WaitAsync(TimeSpan delay, CancellationToken cancellationToken)
@@ -223,7 +232,7 @@ internal class WorkflowContext
         }
         await serviceConnection.StartWorkflowDelayAsync(message, delay, cancellationToken);
         await metricsHelper.SuspendWorkflowAsync(cancellationToken);
-        throw new WorkflowSuspendedException();
+        throw SuspendWorkflow(WorkflowExitType.Delay, delay);
     }
 
     async ValueTask IWorkflowContext.SuspendAsync(CancellationToken cancellationToken)
@@ -243,7 +252,7 @@ internal class WorkflowContext
         }
         await serviceConnection.SuspendWorkflowAsync(message, index, cancellationToken);
         await metricsHelper.SuspendWorkflowAsync(cancellationToken);
-        throw new WorkflowSuspendedException();
+        throw SuspendWorkflow(WorkflowExitType.ExternalEvent);
     }
 
     internal (bool isComplete, ActivityResultStatus status, string? errorMessage, string? timeoutMessage) ExtractParallelActivityStatus()
@@ -310,7 +319,7 @@ internal class WorkflowContext
         if (result!=null)
             return result;
         await invokeCall();
-        throw new WorkflowSuspendedException();
+        throw SuspendWorkflow(WorkflowExitType.ChildWorkflow);
     }
 
     ValueTask<StepResult> IWorkflowContext.ExecuteChildWorkflowAsync<TWorkflow>(WorkflowExecutionRequest? executionRequest, CancellationToken cancellationToken)
@@ -332,11 +341,12 @@ internal class WorkflowContext
             return results.OrderBy(x => x.index).Select(x => x.result);
         }
         await serviceConnection.StartChildWorkflowsAsync<TWorkflow, TInput>(activityIndex, message, executionRequest, cancellationToken);
-        throw new WorkflowSuspendedException();
+        throw SuspendWorkflow(WorkflowExitType.ChildWorkflow);
     }
 
     public void Dispose()
     {
-        history.Dispose();
+        if (!HistoryCacheHelper.IsCached(message))
+            history.Dispose();
     }
 }

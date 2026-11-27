@@ -22,4 +22,8 @@
 		<None Include="$(TargetDir)JetFlow.Common.dll" Pack="true" PackagePath="lib/$(TargetFramework)" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="11.0.0" />
+	</ItemGroup>
+
 </Project>

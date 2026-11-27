@@ -1,4 +1,5 @@
-﻿using NATS.Client.Core;
+﻿using JetFlow.Configs;
+using NATS.Client.Core;
 using NATS.Client.JetStream;
 using System.Collections;
 
@@ -17,10 +18,15 @@ internal sealed class WorkflowHistory :
     private readonly List<WorkflowHistoryMessage> messages = [];
 
     public int Count => messages.Count;
+    public ulong LastSequenceNumber { get; private set; } = 0;
+    public TimeSpan EstimatedLoadTime { get; set; } = TimeSpan.Zero;
+    public EventMessage? StartMessage { get; set; }
+    public WorkflowOptions? Options { get; set; }
 
     public void Add(INatsJSMsg<byte[]> message)
     {
         BufferPointer pointer = buffer.Write(message.Data);
+        LastSequenceNumber = message.Metadata?.Sequence.Stream??LastSequenceNumber;
 
         messages.Add(new WorkflowHistoryMessage(
             message.Subject,

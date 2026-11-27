@@ -86,12 +86,14 @@ internal abstract class AWorkflowSubscription<TWorkflow>(
             catch (Exception ex)
             {
                 Activity.Current?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                HistoryCacheHelper.EndWorkflow(message);
                 await MetricsHelper.EndWorkflowAsync(message.WorkflowName, false, CancellationToken);
                 await ServiceConnection.EndWorkflowAsync(startMessage, message, new(DateTime.UtcNow, ex.Message), CancellationToken);
             }
             await message.AckAsync(CancellationToken);
             if (isCompleted)
             {
+                HistoryCacheHelper.EndWorkflow(message);
                 await MetricsHelper.EndWorkflowAsync(message.WorkflowName, true, CancellationToken);
                 await ServiceConnection.EndWorkflowAsync(startMessage, message, new(DateTime.UtcNow, null), CancellationToken);
             }

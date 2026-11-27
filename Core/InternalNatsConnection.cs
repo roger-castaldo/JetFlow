@@ -199,8 +199,6 @@ internal class InternalNatsConnection(INatsConnection connection, INatsJSContext
                     TooManyBatchesError or
                     BatchIncompleteError)
             {
-                Trace.WriteLine($"Atomic batching error {ex.Error.ErrCode}");
-
                 retries++;
 
                 if (ex.Error.ErrCode == BatchTooLargeError)

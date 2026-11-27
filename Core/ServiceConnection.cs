@@ -18,6 +18,8 @@ internal partial class ServiceConnection(InternalNatsConnection connection,
     public INatsObjStore ArchiveStore => archiveStore;
     public ValueTask<IJetstreamQuery> QueryStreamAsync(string streamName, bool headersOnly, params string[] filterSubjects)
         => JetStreamHelper.QueryStreamAsync(connection.JSContext, streamName, headersOnly, filterSubjects);
+    public ValueTask<IJetstreamQuery> QueryStreamAsync(string streamName, bool headersOnly, ulong startOffset, params string[] filterSubjects)
+        => JetStreamHelper.QueryStreamAsync(connection.JSContext, streamName, headersOnly, startOffset, filterSubjects);
 
     private ValueTask<(byte[] data, NatsHeaders headers)> EncodeMessageAsync<TMessage>(TMessage? message, string workflowName, string workflowInstanceId, CancellationToken cancellationToken)
         => MessagesHelper.EncodeMessageAsync<TMessage>(MaxMessagePayload, LargeMessageStore, messageSerializer, message, workflowName, workflowInstanceId, cancellationToken);
